@@ -46,7 +46,7 @@ jobs:
         with:
           WORKING_DIR: ${{ env.WORKING_DIR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TFCMT_CONFIG: ${{ github.workspace }}/zig/tfcmt/template.yml
+          TFCMT_CONFIG: ${{ github.workspace }}/zig/tfcmt.yml
           GITHUB_ACTOR: ${{ github.actor }}
           WORKFLOW_NAME: ${{ github.workflow }}
 
