@@ -9,7 +9,7 @@ inputs:
   TFLINT_VERSION:
     description: "TFLint version to install"
     required: false
-    default: "v0.59."
+    default: "v0.59.1"
   TFCMT_VERSION:
     description: "TFCMT version to install"
     required: false
