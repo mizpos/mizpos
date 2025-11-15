@@ -30,3 +30,9 @@ variable "frontend_url" {
   type        = string
   # GitHub secretから渡される想定
 }
+
+variable "enable_custom_domain" {
+  description = "Enable custom domain (requires validated ACM certificate)"
+  type        = bool
+  default     = false
+}

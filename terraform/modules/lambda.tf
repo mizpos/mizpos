@@ -30,8 +30,7 @@ resource "aws_lambda_function" "accounts" {
   lifecycle {
     ignore_changes = [
       filename,
-      source_code_hash,
-      last_modified
+      source_code_hash
     ]
   }
 }
@@ -73,8 +72,7 @@ resource "aws_lambda_function" "stock" {
   lifecycle {
     ignore_changes = [
       filename,
-      source_code_hash,
-      last_modified
+      source_code_hash
     ]
   }
 }
@@ -120,8 +118,7 @@ resource "aws_lambda_function" "sales" {
   lifecycle {
     ignore_changes = [
       filename,
-      source_code_hash,
-      last_modified
+      source_code_hash
     ]
   }
 }

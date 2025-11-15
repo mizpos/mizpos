@@ -33,6 +33,7 @@ module "mizpos_infrastructure" {
   aws_region   = "ap-northeast-1"
 
   # GitHub Secretsから渡される想定
-  domain_name  = var.domain_name
-  frontend_url = var.frontend_url
+  domain_name          = var.domain_name
+  frontend_url         = var.frontend_url
+  enable_custom_domain = var.enable_custom_domain
 }

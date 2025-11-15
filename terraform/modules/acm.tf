@@ -14,8 +14,10 @@ resource "aws_acm_certificate" "api" {
   }
 }
 
-# API Gateway用のカスタムドメイン
+# API Gateway用のカスタムドメイン（証明書検証後に有効化）
 resource "aws_apigatewayv2_domain_name" "api" {
+  count = var.enable_custom_domain ? 1 : 0
+
   domain_name = "api.${var.domain_name}"
 
   domain_name_configuration {
@@ -33,7 +35,9 @@ resource "aws_apigatewayv2_domain_name" "api" {
 
 # API Mappings
 resource "aws_apigatewayv2_api_mapping" "api" {
+  count = var.enable_custom_domain ? 1 : 0
+
   api_id      = aws_apigatewayv2_api.main.id
-  domain_name = aws_apigatewayv2_domain_name.api.id
+  domain_name = aws_apigatewayv2_domain_name.api[0].id
   stage       = aws_apigatewayv2_stage.main.id
 }

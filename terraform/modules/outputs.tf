@@ -106,12 +106,12 @@ output "api_gateway_endpoint" {
 
 output "api_gateway_custom_domain" {
   description = "API Gateway Custom Domain"
-  value       = aws_apigatewayv2_domain_name.api.domain_name
+  value       = var.enable_custom_domain ? aws_apigatewayv2_domain_name.api[0].domain_name : ""
 }
 
 output "api_gateway_domain_name_target" {
   description = "API Gateway Custom Domain Target for DNS"
-  value       = aws_apigatewayv2_domain_name.api.domain_name_configuration[0].target_domain_name
+  value       = var.enable_custom_domain ? aws_apigatewayv2_domain_name.api[0].domain_name_configuration[0].target_domain_name : ""
 }
 
 # Secrets Manager Outputs
