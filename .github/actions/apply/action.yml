@@ -38,13 +38,19 @@ runs:
         filter_mode: "nofilter"
         flags: "--module"
 
-    - name: Terraform Plan
-      if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    - name: Terraform Plan (PR)
+      if: github.event_name == 'pull_request'
       shell: bash
       run: tfcmt -config ${{ inputs.TFCMT_CONFIG }} -var Pusher:${{ inputs.GITHUB_ACTOR }} -var WorkingDir:${{ inputs.WORKING_DIR }} -var target:${{ inputs.WORKFLOW_NAME }} plan -patch -skip-no-changes -- terraform plan -refresh=true -out=tfplan -no-color -lock=false -parallelism=50
       working-directory: ${{ inputs.WORKING_DIR }}
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+
+    - name: Terraform Plan (not Pull Request)
+      if: github.event_name != 'pull_request'
+      shell: bash
+      run: terraform plan -refresh=true -out=tfplan -no-color -lock=false -parallelism=50
+      working-directory: ${{ inputs.WORKING_DIR }}
 
     - name: Convert terraform plan to json
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
@@ -58,10 +64,16 @@ runs:
         name: tfplan.json
         path: ${{ inputs.WORKING_DIR }}/tfplan.json
 
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    - name: Terraform Apply (PR/push)
+      if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch'
       shell: bash
       run: tfcmt -config ${{ inputs.TFCMT_CONFIG }} -var Pusher:${{ inputs.GITHUB_ACTOR }} -var WorkingDir:${{ inputs.WORKING_DIR }} -var target:${{ inputs.WORKFLOW_NAME }} apply -- terraform apply -refresh=true -auto-approve -no-color
       working-directory: ${{ inputs.WORKING_DIR }}
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+
+    - name: Terraform Apply (workflow_dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      shell: bash
+      run: terraform apply -refresh=true -auto-approve -no-color
+      working-directory: ${{ inputs.WORKING_DIR }}

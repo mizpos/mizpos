@@ -3,9 +3,9 @@ name: tf-plan-apply-mizpos-dev
 on:
   push:
     branches: [main]
-    # paths:
-      # - "terraform/**"
-      # - "lambda/**"
+    paths:
+      - "terraform/**"
+      - "lambda/**"
   workflow_dispatch:
 
 env:
