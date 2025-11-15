@@ -25,11 +25,13 @@ runs:
 
     - name: install dependencies
       shell: bash
+      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
       run: |
         uv sync
 
     - name: Create requirements.txt
       shell: bash
+      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
       run: |
         uv pip compile pyproject.toml > requirements.txt
 
@@ -37,10 +39,10 @@ runs:
       shell: bash
       env:
         ENV: ${{ inputs.ENV }}
+      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
       run: |
         export AWS_ACCOUNT_ID
         echo "Installing dependencies for ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
-        cd ${{ github.workspace }}/${{ inputs.LAMBDA_FUNTION_PATH }}
         pip install -r requirements.txt -t .
         echo "Deploying ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
         lambroll deploy \
