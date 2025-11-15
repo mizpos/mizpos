@@ -3,8 +3,6 @@
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
-*.tfvars
-!*.tfvars.example
 
 # Crash log files
 crash.log
