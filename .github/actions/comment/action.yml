@@ -14,6 +14,10 @@ inputs:
     description: "TFCMT version to install"
     required: false
     default: "v4.14.12"
+  GITHUB_COMMENT_VERSION:
+    description: "Github Comment version to install"
+    required: false
+    default: "v6.3.5"
 
 runs:
   using: "composite"
