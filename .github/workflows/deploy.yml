@@ -16,7 +16,7 @@ env:
 
 permissions:
   id-token: write
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -60,7 +60,7 @@ jobs:
       - name: Install Lambroll
         shell: bash
         run: |
-          curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ env.LAMBROLL_VERSION }}/lambroll_${{ env.LAMBROLL_VERSION }}_linux_amd64.tar.gz | tar -xz
+          curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ env.LAMBROLL_VERSION }}/lambroll_v${{ env.LAMBROLL_VERSION }}_linux_amd64.tar.gz | tar -xz
           sudo mv lambroll /usr/local/bin/
 
       - name: Deploy "MAIN" Lambda Functions
