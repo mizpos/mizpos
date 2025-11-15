@@ -1,0 +1,67 @@
+name: "Terraform Plan Apply"
+description: "Run Terraform plan and apply with tfcmt integration"
+
+inputs:
+  WORKING_DIR:
+    description: "ディレクトリ"
+    required: true
+  GITHUB_TOKEN:
+    description: "自動生成のGH Token"
+    required: true
+  TFCMT_CONFIG:
+    description: "tfcmt の設定ファイルのパス"
+    required: true
+  GITHUB_ACTOR:
+    description: "ワークフローをトリガーした GitHub のアクター"
+    required: true
+  WORKFLOW_NAME:
+    description: "ワークフローの名前"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Terraform Init
+      shell: bash
+      run: terraform init
+      working-directory: ${{ inputs.WORKING_DIR }}
+
+    - name: tflint
+      if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+      uses: reviewdog/action-tflint@master
+      continue-on-error: true
+      with:
+        github_token: ${{ inputs.GITHUB_TOKEN }}
+        working_directory: ${{ inputs.WORKING_DIR }}
+        reporter: github-pr-review
+        fail_on_error: "false"
+        filter_mode: "nofilter"
+        flags: "--module"
+
+    - name: Terraform Plan
+      if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+      shell: bash
+      run: tfcmt -config ${{ inputs.TFCMT_CONFIG }} -var Pusher:${{ inputs.GITHUB_ACTOR }} -var WorkingDir:${{ inputs.WORKING_DIR }} -var target:${{ inputs.WORKFLOW_NAME }} plan -patch -skip-no-changes -- terraform plan -refresh=true -out=tfplan -no-color -lock=false -parallelism=50
+      working-directory: ${{ inputs.WORKING_DIR }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+
+    - name: Convert terraform plan to json
+      if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+      shell: bash
+      run: terraform show -json tfplan > tfplan.json
+      working-directory: ${{ inputs.WORKING_DIR }}
+
+    - name: Upload Generated Config as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tfplan.json
+        path: ${{ inputs.WORKING_DIR }}/tfplan.json
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+      shell: bash
+      run: tfcmt -config ${{ inputs.TFCMT_CONFIG }} -var Pusher:${{ inputs.GITHUB_ACTOR }} -var WorkingDir:${{ inputs.WORKING_DIR }} -var target:${{ inputs.WORKFLOW_NAME }} apply -- terraform apply -refresh=true -auto-approve -no-color
+      working-directory: ${{ inputs.WORKING_DIR }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}

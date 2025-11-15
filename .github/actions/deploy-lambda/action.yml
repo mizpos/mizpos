@@ -1,0 +1,50 @@
+name: "Deploy Lambda Functions"
+description: "Deploy Lambda Functions"
+
+inputs:
+  WORKING_DIR:
+    description: "ディレクトリ"
+    required: true
+  ENV:
+    description: "Env"
+    required: true
+  AWS_ACCOUNT_ID:
+    description: "AWS Account ID"
+    required: true
+  LAMBDA_FUNTION_PATH:
+    description: "Lambda Function Path"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: install uv
+      shell: bash
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    - name: install dependencies
+      shell: bash
+      run: |
+        uv sync
+
+    - name: Create requirements.txt
+      shell: bash
+      run: |
+        uv pip compile pyproject.toml > requirements.txt
+
+    - name: Deploy Lambda Functions
+      shell: bash
+      env:
+        ENV: ${{ inputs.ENV }}
+      run: |
+        export AWS_ACCOUNT_ID
+        echo "Installing dependencies for ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
+        cd ${{ github.workspace }}/${{ inputs.LAMBDA_FUNTION_PATH }}
+        pip install -r requirements.txt -t .
+        echo "Deploying ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
+        lambroll deploy \
+          --function function.jsonnet \
+          --ext-str ENV=${{ inputs.ENV }} \
+          --src . \
+          --exclude-file .lambdaignore

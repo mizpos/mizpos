@@ -1,0 +1,7 @@
+[project]
+name = "stripe-online"
+version = "0.1.0"
+description = "支払い、販売関係のLambda関数（Stipeの登録関連 + 販売時の在庫処理）"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []

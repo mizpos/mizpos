@@ -1,0 +1,7 @@
+[project]
+name = "stock"
+version = "0.1.0"
+description = "在庫管理（入出庫）や商品情報管理のためのエンドポイント"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []

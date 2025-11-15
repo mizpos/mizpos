@@ -1,0 +1,27 @@
+name: Format Check
+
+on:
+  pull_request:
+    branches: [main]
+env:
+  TF_VERSION: 1.13.5
+jobs:
+  terraform:
+    name: fmt-all
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform fmt
+        working-directory: infra
+        run: |
+          terraform fmt -recursive -diff=true -check=true

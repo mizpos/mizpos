@@ -1,0 +1,7 @@
+[project]
+name = "accounts"
+version = "0.1.0"
+description = "アカウント・Role等管理用"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []

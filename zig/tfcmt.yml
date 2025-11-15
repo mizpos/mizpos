@@ -1,0 +1,127 @@
+ci:
+  pr:
+    - when: add-or-update
+      label: "add-or-update"
+      template: |
+        ## Terraform Plan ({{ .Vars.target }})
+
+        {{ if .Link }}{{ .Link }}{{ end }}
+
+        ### Plan Result
+
+        <details>
+        <summary>詳細を表示</summary>
+
+        ```hcl
+        {{ .Result }}
+        ```
+
+        </details>
+
+        ### 概要
+
+        {{ .ChangedResult }}
+
+        - 作成者: @{{ .Vars.Pusher }}
+        - ディレクトリ: `{{ .Vars.WorkingDir }}`
+        - ワークフロー名: `{{ .Vars.target }}`
+
+    - when: destroy
+      label: "destroy"
+      template: |
+        > [!CAUTION]
+        > このPlanを実行するとリソースが破壊される！注意！
+
+        ## :warning: Terraform DESTROY Plan ({{ .Vars.target }})
+
+        {{ if .Link }}{{ .Link }}{{ end }}
+
+        ### プラン結果
+
+        <details>
+        <summary>詳細を表示</summary>
+
+        ```hcl
+        {{ .Result }}
+        ```
+
+        </details>
+
+        ### 概要
+
+        {{ .ChangedResult }}
+
+        - 作成者: @{{ .Vars.Pusher }}
+        - ディレクトリ: `{{ .Vars.WorkingDir }}`
+        - ワークフロー名: `{{ .Vars.target }}`
+
+    - when: no-changes
+      label: "no-changes"
+      template: |
+        ## Terraform Plan ({{ .Vars.target }})
+
+        {{ if .Link }}{{ .Link }}{{ end }}
+
+        インフラへの変更なし
+
+        - 作成者: @{{ .Vars.Pusher }}
+        - ディレクトリ: `{{ .Vars.WorkingDir }}`
+        - ワークフロー名: `{{ .Vars.target }}`
+
+    - when: plan-error
+      label: "error"
+      template: |
+        ## :x: Terraform Plan Failed ({{ .Vars.target }})
+
+        {{ if .Link }}{{ .Link }}{{ end }}
+
+        ### エラー
+
+        <details>
+        <summary>詳細を表示</summary>
+
+        ```
+        {{ .Result }}
+        ```
+
+        </details>
+
+        - 作成者: @{{ .Vars.Pusher }}
+        - ディレクトリ: `{{ .Vars.WorkingDir }}`
+        - ワークフロー名: `{{ .Vars.target }}`
+
+terraform:
+  plan:
+    template: |
+      {{ .Title }} <sup>[CIへのリンク]( {{ .Link }} )</sup>
+      {{ .Message }}
+      {{ if .Result }}
+      <details><summary>詳細を表示</summary>
+
+      ```hcl
+      {{ .Result }}
+      ```
+
+      </details>
+      {{ end }}
+
+  apply:
+    template: |
+      ## :white_check_mark: Terraform Apply Result ({{ .Vars.target }})
+
+      {{ if .Link }}{{ .Link }}{{ end }}
+
+      ### 適用結果
+
+      <details>
+      <summary>詳細を表示</summary>
+
+      ```
+      {{ .Result }}
+      ```
+
+      </details>
+
+      - 作成者: @{{ .Vars.Pusher }}
+      - ディレクトリ: `{{ .Vars.WorkingDir }}`
+      - ワークフロー名: `{{ .Vars.target }}`

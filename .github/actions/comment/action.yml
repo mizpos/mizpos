@@ -1,0 +1,43 @@
+name: "Setup Terraform Tools"
+description: "Setup Terraform and related tools for infrastructure management"
+
+inputs:
+  TF_VERSION:
+    description: "Terraform version to install"
+    required: true
+    default: "1.13.5"
+  TFLINT_VERSION:
+    description: "TFLint version to install"
+    required: false
+    default: "v0.59."
+  TFCMT_VERSION:
+    description: "TFCMT version to install"
+    required: false
+    default: "v4.14.12"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.TF_VERSION }}
+
+    - name: Install tflint
+      uses: terraform-linters/setup-tflint@v4
+      with:
+        tflint_version: ${{ inputs.TFLINT_VERSION }}
+
+    - name: Install tfcmt
+      shell: bash
+      run: |
+        wget https://github.com/suzuki-shunsuke/tfcmt/releases/download/${{ inputs.TFCMT_VERSION }}/tfcmt_linux_amd64.tar.gz
+        tar xvf tfcmt_linux_amd64.tar.gz
+        sudo mv tfcmt /usr/local/bin/
+
+    - name: Install github-comment
+      shell: bash
+      run: |
+        wget https://github.com/suzuki-shunsuke/github-comment/releases/download/v${{ inputs.GITHUB_COMMENT_VERSION }}/github-comment_${{ inputs.GITHUB_COMMENT_VERSION }}_linux_amd64.tar.gz
+        tar xvf github-comment_${{ inputs.GITHUB_COMMENT_VERSION }}_linux_amd64.tar.gz
+        sudo mv github-comment /usr/local/bin/
