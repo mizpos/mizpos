@@ -8,7 +8,9 @@ from mangum import Mangum
 
 from auth import get_current_user
 from models import (
+    AdminResetPasswordRequest,
     AssignRoleRequest,
+    ChangePasswordRequest,
     ConfirmEmailRequest,
     CreateUserRequest,
     ResendConfirmationRequest,
@@ -18,6 +20,8 @@ from services import (
     DynamoDBClientError,
     UsernameExistsException,
     admin_confirm_user,
+    admin_reset_user_password,
+    change_user_password,
     confirm_user_email,
     create_cognito_user,
     delete_cognito_user,
@@ -209,6 +213,51 @@ async def admin_confirm_user_endpoint(user_id: str, current_user: dict = Depends
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# パスワード変更エンドポイント
+@router.post("/auth/change-password", response_model=dict)
+async def change_password(request: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    """現在のユーザーのパスワードを変更"""
+    try:
+        access_token = current_user.get("access_token")
+        if not access_token:
+            raise HTTPException(status_code=401, detail="Access token not found")
+
+        change_user_password(access_token, request.old_password, request.new_password)
+        return {"message": "Password changed successfully"}
+    except Exception as e:
+        error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
+        if error_code == "NotAuthorizedException":
+            raise HTTPException(status_code=400, detail="Incorrect old password") from e
+        if error_code == "InvalidPasswordException":
+            raise HTTPException(status_code=400, detail="New password does not meet requirements") from e
+        if error_code == "LimitExceededException":
+            raise HTTPException(status_code=429, detail="Too many requests") from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/users/{user_id}/reset-password", response_model=dict)
+async def admin_reset_password(
+    user_id: str, request: AdminResetPasswordRequest, current_user: dict = Depends(get_current_user)
+):
+    """管理者によるユーザーのパスワードリセット"""
+    try:
+        user_response = users_table.get_item(Key={"user_id": user_id})
+        user = user_response.get("Item")
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        admin_reset_user_password(user["email"], request.new_password)
+        return {"message": "Password reset successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
+        if error_code == "InvalidPasswordException":
+            raise HTTPException(status_code=400, detail="New password does not meet requirements") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

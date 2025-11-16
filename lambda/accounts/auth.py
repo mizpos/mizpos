@@ -160,6 +160,7 @@ async def get_current_user(
         "username": claims.get("username"),
         "email": claims.get("email"),
         "cognito_groups": claims.get("cognito:groups", []),
+        "access_token": token,
     }
 
 

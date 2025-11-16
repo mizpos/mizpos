@@ -112,6 +112,25 @@ def get_user_status(email: str) -> dict:
     }
 
 
+def change_user_password(access_token: str, old_password: str, new_password: str) -> None:
+    """ユーザー自身がパスワードを変更"""
+    cognito.change_password(
+        PreviousPassword=old_password,
+        ProposedPassword=new_password,
+        AccessToken=access_token,
+    )
+
+
+def admin_reset_user_password(email: str, new_password: str) -> None:
+    """管理者がユーザーのパスワードをリセット"""
+    cognito.admin_set_user_password(
+        UserPoolId=USER_POOL_ID,
+        Username=email,
+        Password=new_password,
+        Permanent=True,
+    )
+
+
 def delete_cognito_user(email: str) -> None:
     """Cognitoからユーザーを削除"""
     try:
