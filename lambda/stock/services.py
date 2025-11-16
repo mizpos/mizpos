@@ -1,9 +1,11 @@
 import os
 import time
+import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from models import VariantType
@@ -13,12 +15,17 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
 STOCK_HISTORY_TABLE = os.environ.get("STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history")
 PUBLISHERS_TABLE = os.environ.get("PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers")
+CDN_BUCKET_NAME = os.environ.get("CDN_BUCKET_NAME", f"{ENVIRONMENT}-mizpos-cdn-assets")
+CDN_DOMAIN = os.environ.get("CDN_DOMAIN", "")
 
 # AWS クライアント
 dynamodb = boto3.resource("dynamodb")
 stock_table = dynamodb.Table(STOCK_TABLE)
 stock_history_table = dynamodb.Table(STOCK_HISTORY_TABLE)
 publishers_table = dynamodb.Table(PUBLISHERS_TABLE)
+
+# S3クライアント（Presigned URL生成用）
+s3_client = boto3.client("s3", config=Config(signature_version="s3v4"))
 
 
 def dynamo_to_dict(item: dict) -> dict:
@@ -100,6 +107,66 @@ def list_publishers() -> list[dict]:
     """全出版社/サークル一覧を取得"""
     response = publishers_table.scan()
     return [dynamo_to_dict(item) for item in response.get("Items", [])]
+
+
+def generate_presigned_upload_url(
+    filename: str,
+    content_type: str,
+    upload_type: str = "book_cover",
+    expires_in: int = 3600,
+) -> dict:
+    """
+    S3へのアップロード用Presigned URLを生成
+
+    Args:
+        filename: オリジナルファイル名
+        content_type: MIMEタイプ
+        upload_type: アップロードの種類（ディレクトリ分け用）
+        expires_in: URLの有効期限（秒）
+
+    Returns:
+        dict: upload_url, cdn_url, object_key, expires_in
+    """
+    # ファイル名から拡張子を取得
+    if "." in filename:
+        ext = filename.rsplit(".", 1)[-1].lower()
+    else:
+        ext = ""
+
+    # 乱数プレフィックスを生成（UUID）
+    random_prefix = str(uuid.uuid4())
+
+    # オブジェクトキーを構築（乱数_オリジナルファイル名）
+    safe_filename = filename.replace(" ", "_").replace("/", "_")
+    if ext:
+        object_key = f"{upload_type}/{random_prefix}_{safe_filename}"
+    else:
+        object_key = f"{upload_type}/{random_prefix}_{safe_filename}"
+
+    # Presigned URLを生成
+    presigned_url = s3_client.generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": CDN_BUCKET_NAME,
+            "Key": object_key,
+            "ContentType": content_type,
+        },
+        ExpiresIn=expires_in,
+    )
+
+    # CDN URLを構築
+    if CDN_DOMAIN:
+        cdn_url = f"https://{CDN_DOMAIN}/{object_key}"
+    else:
+        # CloudFrontが設定されていない場合はS3のURLを返す
+        cdn_url = f"https://{CDN_BUCKET_NAME}.s3.amazonaws.com/{object_key}"
+
+    return {
+        "upload_url": presigned_url,
+        "cdn_url": cdn_url,
+        "object_key": object_key,
+        "expires_in": expires_in,
+    }
 
 
 # エクスポート

@@ -179,6 +179,14 @@ resource "aws_iam_role_policy" "lambda_stock" {
           aws_dynamodb_table.publishers.arn,
           "${aws_dynamodb_table.publishers.arn}/index/*"
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.cdn_assets.arn}/*"
       }
     ]
   })

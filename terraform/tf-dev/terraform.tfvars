@@ -4,4 +4,4 @@
 
 domain_name          = "stg-pos.miz.cab"
 frontend_url         = "https://app.stg-pos.miz.cab"
-enable_custom_domain = false
+enable_custom_domain = true

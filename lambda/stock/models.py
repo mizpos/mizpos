@@ -50,7 +50,7 @@ class PublisherBase(BaseModel):
     contact_email: str | None = Field(default=None, max_length=200, description="連絡先メール")
     commission_rate: float = Field(default=0.0, ge=0, le=100, description="委託手数料率（%）")
     stripe_online_fee_rate: float = Field(default=3.6, ge=0, le=100, description="Stripeオンライン決済手数料率（%）")
-    stripe_terminal_fee_rate: float = Field(default=2.7, ge=0, le=100, description="Stripe端末決済手数料率（%）")
+    stripe_terminal_fee_rate: float = Field(default=3.6, ge=0, le=100, description="Stripe端末決済手数料率（%）")
 
 
 class CreatePublisherRequest(PublisherBase):
@@ -137,3 +137,23 @@ class BarcodeResponse(BaseModel):
     jan_barcode_1: str
     jan_barcode_2: str
     full_display: str
+
+
+# Upload用モデル
+class UploadType(str, Enum):
+    BOOK_COVER = "book_cover"
+    PUBLISHER_LOGO = "publisher_logo"
+    OTHER = "other"
+
+
+class UploadRequest(BaseModel):
+    filename: str = Field(..., min_length=1, max_length=255, description="アップロードするファイル名")
+    content_type: str = Field(..., description="MIMEタイプ（例: image/jpeg）")
+    upload_type: UploadType = Field(default=UploadType.BOOK_COVER, description="アップロードの種類")
+
+
+class UploadResponse(BaseModel):
+    upload_url: str = Field(..., description="アップロード用のPresigned URL")
+    cdn_url: str = Field(..., description="アップロード完了後のCDN URL")
+    object_key: str = Field(..., description="S3オブジェクトキー")
+    expires_in: int = Field(..., description="URLの有効期限（秒）")
