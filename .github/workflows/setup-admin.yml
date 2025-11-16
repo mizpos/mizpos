@@ -1,0 +1,72 @@
+name: Setup Initial Admin User
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment (dev/prod)"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+      email:
+        description: "Admin email address"
+        required: true
+        type: string
+      password:
+        description: "Admin password (must meet Cognito requirements)"
+        required: true
+        type: string
+      display_name:
+        description: "Display name"
+        required: false
+        default: "管理者"
+        type: string
+
+env:
+  AWS_REGION: ap-northeast-1
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  setup-admin:
+    name: Create Admin User
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install boto3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: terraform/tf-${{ inputs.environment }}
+        run: terraform init
+
+      - name: Create Admin User
+        run: |
+          python scripts/setup_admin_user.py \
+            --environment "${{ inputs.environment }}" \
+            --email "${{ inputs.email }}" \
+            --password "${{ inputs.password }}" \
+            --display-name "${{ inputs.display_name }}"

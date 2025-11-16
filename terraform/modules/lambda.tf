@@ -16,10 +16,11 @@ resource "aws_lambda_function" "accounts" {
 
   environment {
     variables = {
-      ENVIRONMENT  = var.environment
-      USERS_TABLE  = aws_dynamodb_table.users.name
-      ROLES_TABLE  = aws_dynamodb_table.roles.name
-      USER_POOL_ID = aws_cognito_user_pool.main.id
+      ENVIRONMENT       = var.environment
+      USERS_TABLE       = aws_dynamodb_table.users.name
+      ROLES_TABLE       = aws_dynamodb_table.roles.name
+      USER_POOL_ID      = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.main.id
     }
   }
 
@@ -62,6 +63,8 @@ resource "aws_lambda_function" "stock" {
       ENVIRONMENT         = var.environment
       STOCK_TABLE         = aws_dynamodb_table.stock.name
       STOCK_HISTORY_TABLE = aws_dynamodb_table.stock_history.name
+      USER_POOL_ID        = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID   = aws_cognito_user_pool_client.main.id
     }
   }
 
@@ -101,13 +104,15 @@ resource "aws_lambda_function" "sales" {
 
   environment {
     variables = {
-      ENVIRONMENT                = var.environment
-      SALES_TABLE                = aws_dynamodb_table.sales.name
-      STOCK_TABLE                = aws_dynamodb_table.stock.name
-      STOCK_HISTORY_TABLE        = aws_dynamodb_table.stock_history.name
-      EVENTS_TABLE               = aws_dynamodb_table.events.name
-      STRIPE_SECRET_ARN          = aws_secretsmanager_secret.stripe_api_key.arn
-      STRIPE_TERMINAL_SECRET_ARN = aws_secretsmanager_secret.stripe_terminal_config.arn
+      ENVIRONMENT         = var.environment
+      SALES_TABLE         = aws_dynamodb_table.sales.name
+      STOCK_TABLE         = aws_dynamodb_table.stock.name
+      STOCK_HISTORY_TABLE = aws_dynamodb_table.stock_history.name
+      EVENTS_TABLE        = aws_dynamodb_table.events.name
+      CONFIG_TABLE        = aws_dynamodb_table.config.name
+      STRIPE_SECRET_ARN   = aws_secretsmanager_secret.stripe_api_key.arn
+      USER_POOL_ID        = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID   = aws_cognito_user_pool_client.main.id
     }
   }
 

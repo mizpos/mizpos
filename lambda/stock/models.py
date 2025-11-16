@@ -16,8 +16,11 @@ class ProductBase(BaseModel):
     price: float = Field(..., ge=0)
     image_url: str = Field(default="", max_length=500)
     author: str = Field(default="", max_length=100)
-    publisher: str = Field(default="", max_length=100)
+    publisher: str = Field(default="", max_length=100)  # 後方互換性のため残す
+    publisher_id: str | None = Field(default=None, description="出版社/サークルID")
     variant_type: VariantType = Field(default=VariantType.PHYSICAL)
+    isdn: str | None = Field(default=None, max_length=50, description="国際標準同人誌番号")
+    download_url: str | None = Field(default=None, max_length=1000, description="ダウンロードリンク")
 
 
 class CreateProductRequest(ProductBase):
@@ -33,8 +36,45 @@ class UpdateProductRequest(BaseModel):
     image_url: str | None = Field(default=None, max_length=500)
     author: str | None = Field(default=None, max_length=100)
     publisher: str | None = Field(default=None, max_length=100)
+    publisher_id: str | None = Field(default=None, description="出版社/サークルID")
     variant_type: VariantType | None = None
+    isdn: str | None = Field(default=None, max_length=50, description="国際標準同人誌番号")
+    download_url: str | None = Field(default=None, max_length=1000, description="ダウンロードリンク")
     is_active: bool | None = None
+
+
+# Publisher (サークル/出版社) モデル
+class PublisherBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200, description="サークル/出版社名")
+    description: str = Field(default="", max_length=2000, description="説明")
+    contact_email: str | None = Field(default=None, max_length=200, description="連絡先メール")
+    commission_rate: float = Field(default=0.0, ge=0, le=100, description="委託手数料率（%）")
+    stripe_online_fee_rate: float = Field(default=3.6, ge=0, le=100, description="Stripeオンライン決済手数料率（%）")
+    stripe_terminal_fee_rate: float = Field(default=2.7, ge=0, le=100, description="Stripe端末決済手数料率（%）")
+
+
+class CreatePublisherRequest(PublisherBase):
+    pass
+
+
+class UpdatePublisherRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    contact_email: str | None = Field(default=None, max_length=200)
+    commission_rate: float | None = Field(default=None, ge=0, le=100)
+    stripe_online_fee_rate: float | None = Field(default=None, ge=0, le=100)
+    stripe_terminal_fee_rate: float | None = Field(default=None, ge=0, le=100)
+    is_active: bool | None = None
+
+
+class PublisherResponse(PublisherBase):
+    publisher_id: str
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
 
 
 class AdjustStockRequest(BaseModel):
@@ -43,8 +83,19 @@ class AdjustStockRequest(BaseModel):
     operator_id: str = Field(default="", max_length=100)
 
 
-class ProductResponse(ProductBase):
+class ProductResponse(BaseModel):
     product_id: str
+    name: str
+    description: str
+    category: str
+    price: float
+    image_url: str
+    author: str
+    publisher: str
+    publisher_id: str | None = None
+    variant_type: str
+    isdn: str | None = None
+    download_url: str | None = None
     stock_quantity: int
     is_active: bool
     created_at: str

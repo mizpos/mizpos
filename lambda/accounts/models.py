@@ -24,6 +24,15 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
+class ConfirmEmailRequest(BaseModel):
+    email: EmailStr
+    confirmation_code: str = Field(..., min_length=6, max_length=6)
+
+
+class ResendConfirmationRequest(BaseModel):
+    email: EmailStr
+
+
 class AssignRoleRequest(BaseModel):
     event_id: str = Field(..., min_length=1)
     role_type: str = Field(..., pattern="^(admin|sales|viewer)$")

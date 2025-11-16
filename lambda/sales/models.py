@@ -63,6 +63,39 @@ class CreateEventRequest(BaseModel):
     end_date: int = Field(..., description="Unix timestamp (milliseconds)")
 
 
+# 設定管理用モデル
+class StripeTerminalConfigRequest(BaseModel):
+    location_id: str = Field(..., min_length=1, description="Stripe Terminal Location ID")
+    reader_id: str | None = Field(default=None, description="Stripe Terminal Reader ID (optional)")
+    description: str | None = Field(default=None, description="設定の説明")
+
+
+class StripeTerminalConfigResponse(BaseModel):
+    config_key: str
+    location_id: str
+    reader_id: str | None = None
+    description: str | None = None
+    updated_at: str
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class ConfigResponse(BaseModel):
+    config_key: str
+    value: dict
+    updated_at: str
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class UpdateConfigRequest(BaseModel):
+    value: dict = Field(..., description="設定値（任意のJSONオブジェクト）")
+
+
 class SaleResponse(BaseModel):
     sale_id: str
     timestamp: int

@@ -7,11 +7,7 @@ resource "aws_apigatewayv2_api" "main" {
   description   = "mizpos API Gateway for ${var.environment} environment"
 
   cors_configuration {
-    allow_origins = [
-      var.frontend_url,
-      "http://localhost:3000",
-      "http://localhost:5173"
-    ]
+    allow_origins = ["*"]
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["content-type", "authorization"]
     max_age       = 300
@@ -103,40 +99,45 @@ resource "aws_apigatewayv2_integration" "sales" {
   payload_format_version = "2.0"
 }
 
-# Routes - accounts
+# Routes - accounts (JWT validation handled by Lambda)
 resource "aws_apigatewayv2_route" "accounts" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /accounts/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
 
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "NONE"
 }
 
-# Routes - stock
+# Routes - stock (JWT validation handled by Lambda)
 resource "aws_apigatewayv2_route" "stock" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /stock/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.stock.id}"
 
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "NONE"
 }
 
-# Routes - sales
+# Routes - sales (JWT validation handled by Lambda)
 resource "aws_apigatewayv2_route" "sales" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /sales/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
 
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  authorization_type = "NONE"
 }
 
-# OpenAPI Documentation Route (public access)
+# OpenAPI Documentation Routes (public access)
 resource "aws_apigatewayv2_route" "openapi_accounts" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "GET /accounts/openapi.json"
+  target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "docs_accounts" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /accounts/docs"
   target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
 
   authorization_type = "NONE"
@@ -150,9 +151,25 @@ resource "aws_apigatewayv2_route" "openapi_stock" {
   authorization_type = "NONE"
 }
 
+resource "aws_apigatewayv2_route" "docs_stock" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /stock/docs"
+  target    = "integrations/${aws_apigatewayv2_integration.stock.id}"
+
+  authorization_type = "NONE"
+}
+
 resource "aws_apigatewayv2_route" "openapi_sales" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "GET /sales/openapi.json"
+  target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "docs_sales" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /sales/docs"
   target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
 
   authorization_type = "NONE"

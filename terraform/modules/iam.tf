@@ -109,8 +109,11 @@ resource "aws_iam_role_policy" "lambda_accounts" {
       {
         Effect = "Allow"
         Action = [
+          "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminDeleteUser",
           "cognito-idp:AdminGetUser",
           "cognito-idp:AdminUpdateUserAttributes",
+          "cognito-idp:AdminSetUserPassword",
           "cognito-idp:ListUsers"
         ]
         Resource = aws_cognito_user_pool.main.arn
@@ -235,7 +238,8 @@ resource "aws_iam_role_policy" "lambda_sales" {
           aws_dynamodb_table.stock_history.arn,
           "${aws_dynamodb_table.stock_history.arn}/index/*",
           aws_dynamodb_table.events.arn,
-          "${aws_dynamodb_table.events.arn}/index/*"
+          "${aws_dynamodb_table.events.arn}/index/*",
+          aws_dynamodb_table.config.arn
         ]
       },
       {
