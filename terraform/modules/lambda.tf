@@ -65,6 +65,8 @@ resource "aws_lambda_function" "stock" {
       STOCK_HISTORY_TABLE = aws_dynamodb_table.stock_history.name
       USER_POOL_ID        = aws_cognito_user_pool.main.id
       COGNITO_CLIENT_ID   = aws_cognito_user_pool_client.main.id
+      CDN_BUCKET_NAME     = aws_s3_bucket.cdn_assets.id
+      CDN_DOMAIN          = var.enable_custom_domain ? "cdn.${var.domain_name}" : aws_cloudfront_distribution.cdn_assets.domain_name
     }
   }
 

@@ -24,7 +24,11 @@ const navItems: NavItem[] = [
   { label: "ダッシュボード", href: "/", icon: <IconHome size={20} /> },
   { label: "在庫管理", href: "/stock", icon: <IconBox size={20} /> },
   { label: "商品管理", href: "/products", icon: <IconPackage size={20} /> },
-  { label: "サークル管理", href: "/publishers", icon: <IconBuildingStore size={20} /> },
+  {
+    label: "サークル管理",
+    href: "/publishers",
+    icon: <IconBuildingStore size={20} />,
+  },
   { label: "売上管理", href: "/sales", icon: <IconShoppingCart size={20} /> },
   { label: "レポート", href: "/reports", icon: <IconChartBar size={20} /> },
   { label: "ユーザー管理", href: "/users", icon: <IconUsers size={20} /> },
@@ -68,7 +72,7 @@ export function Sidebar() {
             letterSpacing: "tight",
           })}
         >
-          MizPOS Admin
+          版元管理センター
         </h1>
       </div>
 
@@ -174,7 +178,9 @@ export function Sidebar() {
             width: "100%",
             textDecoration: "none",
             backgroundColor:
-              currentPath === "/change-password" ? "primary.600" : "transparent",
+              currentPath === "/change-password"
+                ? "primary.600"
+                : "transparent",
             color: currentPath === "/change-password" ? "white" : "gray.300",
             transition: "all 0.2s",
             marginBottom: "2",

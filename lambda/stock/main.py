@@ -17,11 +17,14 @@ from models import (
     GenerateISDNRequest,
     UpdateProductRequest,
     UpdatePublisherRequest,
+    UploadRequest,
+    UploadResponse,
 )
 from isdn import generate_full_barcode_info, generate_isdn, validate_isdn
 from services import (
     build_update_expression,
     dynamo_to_dict,
+    generate_presigned_upload_url,
     get_publisher,
     list_publishers,
     publishers_table,
@@ -433,6 +436,48 @@ async def get_product_barcode(
     except HTTPException:
         raise
     except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# アップロードエンドポイント
+@router.post("/uploads", response_model=UploadResponse)
+async def create_upload_url(
+    request: UploadRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    CDNへのアップロード用Presigned URLを生成
+
+    クライアントは返却されたupload_urlに対して、指定したcontent_typeで
+    PUTリクエストを送信することでファイルをアップロードできます。
+    アップロード完了後、cdn_urlでファイルにアクセスできます。
+    """
+    try:
+        # 許可されたMIMEタイプのチェック
+        allowed_types = [
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "image/svg+xml",
+        ]
+        if request.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Content type {request.content_type} is not allowed. Allowed types: {', '.join(allowed_types)}",
+            )
+
+        # Presigned URLを生成
+        upload_info = generate_presigned_upload_url(
+            filename=request.filename,
+            content_type=request.content_type,
+            upload_type=request.upload_type.value,
+        )
+
+        return UploadResponse(**upload_info)
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

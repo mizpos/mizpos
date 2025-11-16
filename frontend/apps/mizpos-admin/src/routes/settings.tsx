@@ -39,9 +39,12 @@ const API_GATEWAY_BASE =
 
 async function fetchConfig(configKey: string) {
   const headers = await getAuthHeaders();
-  const response = await fetch(`${API_GATEWAY_BASE}/sales/config/${configKey}`, {
-    headers,
-  });
+  const response = await fetch(
+    `${API_GATEWAY_BASE}/sales/config/${configKey}`,
+    {
+      headers,
+    }
+  );
   if (response.status === 404) {
     return null;
   }
@@ -57,11 +60,14 @@ async function saveConfig(
   value: BrandSettings | PaymentSettings | ConsignmentSettings
 ) {
   const headers = await getAuthHeaders();
-  const response = await fetch(`${API_GATEWAY_BASE}/sales/config/${configKey}`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify({ value }),
-  });
+  const response = await fetch(
+    `${API_GATEWAY_BASE}/sales/config/${configKey}`,
+    {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ value }),
+    }
+  );
   if (!response.ok) {
     throw new Error(`Failed to save config: ${response.statusText}`);
   }
@@ -85,11 +91,12 @@ function SettingsPage() {
     stripePublicKey: "",
   });
 
-  const [consignmentSettings, setConsignmentSettings] = useState<ConsignmentSettings>({
-    defaultCommissionRate: 30,
-    stripeOnlineFeeRate: 3.6,
-    stripeTerminalFeeRate: 2.7,
-  });
+  const [consignmentSettings, setConsignmentSettings] =
+    useState<ConsignmentSettings>({
+      defaultCommissionRate: 30,
+      stripeOnlineFeeRate: 3.6,
+      stripeTerminalFeeRate: 3.6,
+    });
 
   // パスワード変更用の状態
   const [oldPassword, setOldPassword] = useState("");
@@ -98,9 +105,9 @@ function SettingsPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"brand" | "payment" | "consignment" | "account">(
-    "brand"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "brand" | "payment" | "consignment" | "account"
+  >("brand");
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Load settings from backend
@@ -109,15 +116,18 @@ function SettingsPage() {
     queryFn: () => fetchConfig("brand_settings"),
   });
 
-  const { data: loadedPaymentSettings, isLoading: isLoadingPayment } = useQuery({
-    queryKey: ["config", "payment_settings"],
-    queryFn: () => fetchConfig("payment_settings"),
-  });
+  const { data: loadedPaymentSettings, isLoading: isLoadingPayment } = useQuery(
+    {
+      queryKey: ["config", "payment_settings"],
+      queryFn: () => fetchConfig("payment_settings"),
+    }
+  );
 
-  const { data: loadedConsignmentSettings, isLoading: isLoadingConsignment } = useQuery({
-    queryKey: ["config", "consignment_settings"],
-    queryFn: () => fetchConfig("consignment_settings"),
-  });
+  const { data: loadedConsignmentSettings, isLoading: isLoadingConsignment } =
+    useQuery({
+      queryKey: ["config", "consignment_settings"],
+      queryFn: () => fetchConfig("consignment_settings"),
+    });
 
   // Update local state when data is loaded
   useEffect(() => {
@@ -286,7 +296,8 @@ function SettingsPage() {
                 fontWeight: "medium",
                 color: activeTab === tab.key ? "primary.600" : "gray.500",
                 borderBottom: "2px solid",
-                borderColor: activeTab === tab.key ? "primary.600" : "transparent",
+                borderColor:
+                  activeTab === tab.key ? "primary.600" : "transparent",
                 marginBottom: "-1px",
                 transition: "colors 0.2s",
                 _hover: {
@@ -319,7 +330,13 @@ function SettingsPage() {
             >
               ブランド設定
             </h3>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "4",
+              })}
+            >
               <div>
                 <label htmlFor="storeName" className={labelClass}>
                   ストア名
@@ -328,7 +345,12 @@ function SettingsPage() {
                   id="storeName"
                   type="text"
                   value={brandSettings.storeName}
-                  onChange={(e) => setBrandSettings({ ...brandSettings, storeName: e.target.value })}
+                  onChange={(e) =>
+                    setBrandSettings({
+                      ...brandSettings,
+                      storeName: e.target.value,
+                    })
+                  }
                   className={inputClass}
                 />
               </div>
@@ -340,7 +362,10 @@ function SettingsPage() {
                   id="storeDescription"
                   value={brandSettings.storeDescription}
                   onChange={(e) =>
-                    setBrandSettings({ ...brandSettings, storeDescription: e.target.value })
+                    setBrandSettings({
+                      ...brandSettings,
+                      storeDescription: e.target.value,
+                    })
                   }
                   rows={3}
                   className={`${inputClass} ${css({ resize: "vertical" })}`}
@@ -355,7 +380,10 @@ function SettingsPage() {
                   type="email"
                   value={brandSettings.contactEmail}
                   onChange={(e) =>
-                    setBrandSettings({ ...brandSettings, contactEmail: e.target.value })
+                    setBrandSettings({
+                      ...brandSettings,
+                      contactEmail: e.target.value,
+                    })
                   }
                   className={inputClass}
                 />
@@ -368,7 +396,12 @@ function SettingsPage() {
                   id="logoUrl"
                   type="url"
                   value={brandSettings.logoUrl}
-                  onChange={(e) => setBrandSettings({ ...brandSettings, logoUrl: e.target.value })}
+                  onChange={(e) =>
+                    setBrandSettings({
+                      ...brandSettings,
+                      logoUrl: e.target.value,
+                    })
+                  }
                   className={inputClass}
                   placeholder="https://..."
                 />
@@ -397,7 +430,13 @@ function SettingsPage() {
             >
               決済設定
             </h3>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "4",
+              })}
+            >
               <div
                 className={css({
                   display: "flex",
@@ -405,7 +444,13 @@ function SettingsPage() {
                   gap: "3",
                 })}
               >
-                <label className={css({ display: "flex", alignItems: "center", gap: "2" })}>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                  })}
+                >
                   <input
                     type="checkbox"
                     checked={paymentSettings.enableStripeOnline}
@@ -421,7 +466,13 @@ function SettingsPage() {
                     Stripeオンライン決済を有効にする
                   </span>
                 </label>
-                <label className={css({ display: "flex", alignItems: "center", gap: "2" })}>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                  })}
+                >
                   <input
                     type="checkbox"
                     checked={paymentSettings.enableStripeTerminal}
@@ -437,7 +488,13 @@ function SettingsPage() {
                     Stripe端末決済を有効にする
                   </span>
                 </label>
-                <label className={css({ display: "flex", alignItems: "center", gap: "2" })}>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                  })}
+                >
                   <input
                     type="checkbox"
                     checked={paymentSettings.enableCash}
@@ -464,12 +521,21 @@ function SettingsPage() {
                   type="text"
                   value={paymentSettings.stripePublicKey}
                   onChange={(e) =>
-                    setPaymentSettings({ ...paymentSettings, stripePublicKey: e.target.value })
+                    setPaymentSettings({
+                      ...paymentSettings,
+                      stripePublicKey: e.target.value,
+                    })
                   }
                   className={inputClass}
                   placeholder="pk_..."
                 />
-                <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginTop: "1",
+                  })}
+                >
                   秘密キーはAWS Secrets Managerで管理されます
                 </p>
               </div>
@@ -497,10 +563,22 @@ function SettingsPage() {
             >
               委託販売設定
             </h3>
-            <p className={css({ fontSize: "sm", color: "gray.500", marginBottom: "4" })}>
+            <p
+              className={css({
+                fontSize: "sm",
+                color: "gray.500",
+                marginBottom: "4",
+              })}
+            >
               委託販売時の手数料率を設定します。売上から手数料を差し引いた金額が委託元への支払い額となります。
             </p>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "4",
+              })}
+            >
               <div>
                 <label htmlFor="defaultCommissionRate" className={labelClass}>
                   デフォルト委託手数料率 (%)
@@ -570,18 +648,38 @@ function SettingsPage() {
                   marginTop: "2",
                 })}
               >
-                <h4 className={css({ fontSize: "sm", fontWeight: "semibold", marginBottom: "2" })}>
+                <h4
+                  className={css({
+                    fontSize: "sm",
+                    fontWeight: "semibold",
+                    marginBottom: "2",
+                  })}
+                >
                   計算例
                 </h4>
                 <p className={css({ fontSize: "xs", color: "gray.600" })}>
                   ¥1,000の商品をStripeオンラインで販売した場合:
                 </p>
-                <ul className={css({ fontSize: "xs", color: "gray.600", marginTop: "1" })}>
+                <ul
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.600",
+                    marginTop: "1",
+                  })}
+                >
                   <li>
-                    Stripe手数料: ¥{(1000 * (consignmentSettings.stripeOnlineFeeRate / 100)).toFixed(0)}
+                    Stripe手数料: ¥
+                    {(
+                      1000 *
+                      (consignmentSettings.stripeOnlineFeeRate / 100)
+                    ).toFixed(0)}
                   </li>
                   <li>
-                    委託手数料: ¥{(1000 * (consignmentSettings.defaultCommissionRate / 100)).toFixed(0)}
+                    委託手数料: ¥
+                    {(
+                      1000 *
+                      (consignmentSettings.defaultCommissionRate / 100)
+                    ).toFixed(0)}
                   </li>
                   <li>
                     委託元への支払い: ¥
@@ -627,7 +725,13 @@ function SettingsPage() {
                 marginBottom: "6",
               })}
             >
-              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", marginBottom: "2" })}>
+              <h4
+                className={css({
+                  fontSize: "sm",
+                  fontWeight: "semibold",
+                  marginBottom: "2",
+                })}
+              >
                 現在のユーザー
               </h4>
               <p className={css({ fontSize: "sm", color: "gray.600" })}>
@@ -637,7 +741,13 @@ function SettingsPage() {
 
             {/* Password Change Form */}
             <div>
-              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "4" })}>
+              <h4
+                className={css({
+                  fontSize: "md",
+                  fontWeight: "semibold",
+                  marginBottom: "4",
+                })}
+              >
                 パスワード変更
               </h4>
 
@@ -675,7 +785,13 @@ function SettingsPage() {
                 </div>
               )}
 
-              <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4",
+                })}
+              >
                 <div>
                   <label htmlFor="oldPassword" className={labelClass}>
                     現在のパスワード
@@ -701,7 +817,13 @@ function SettingsPage() {
                     className={inputClass}
                     autoComplete="new-password"
                   />
-                  <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginTop: "1",
+                    })}
+                  >
                     8文字以上、大文字・小文字・数字・特殊文字を含む必要があります
                   </p>
                 </div>
@@ -730,7 +852,9 @@ function SettingsPage() {
                     }
                   >
                     <IconLock size={18} />
-                    {passwordMutation.isPending ? "変更中..." : "パスワードを変更"}
+                    {passwordMutation.isPending
+                      ? "変更中..."
+                      : "パスワードを変更"}
                   </Button>
                 </div>
               </div>
@@ -740,8 +864,17 @@ function SettingsPage() {
 
         {/* Save Button */}
         {activeTab !== "account" && (
-          <div className={css({ marginTop: "6", display: "flex", justifyContent: "flex-end" })}>
-            <Button onClick={handleSave} disabled={saveMutation.isPending || isLoading}>
+          <div
+            className={css({
+              marginTop: "6",
+              display: "flex",
+              justifyContent: "flex-end",
+            })}
+          >
+            <Button
+              onClick={handleSave}
+              disabled={saveMutation.isPending || isLoading}
+            >
               <IconDeviceFloppy size={18} />
               {saveMutation.isPending ? "保存中..." : "設定を保存"}
             </Button>

@@ -303,7 +303,7 @@ def calculate_commission_fees(
             if payment_method == "stripe_online":
                 payment_fee_rate = float(publisher.get("stripe_online_fee_rate", 3.6))
             elif payment_method == "stripe_terminal":
-                payment_fee_rate = float(publisher.get("stripe_terminal_fee_rate", 2.7))
+                payment_fee_rate = float(publisher.get("stripe_terminal_fee_rate", 3.6))
             else:  # cash
                 payment_fee_rate = 0.0
             publisher_name = publisher.get("name", "")
