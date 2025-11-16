@@ -92,6 +92,10 @@ class ConfigResponse(BaseModel):
         from_attributes = True
 
 
+class UpdateConfigRequest(BaseModel):
+    value: dict = Field(..., description="設定値（任意のJSONオブジェクト）")
+
+
 class SaleResponse(BaseModel):
     sale_id: str
     timestamp: int

@@ -12,11 +12,13 @@ from models import VariantType
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
 STOCK_HISTORY_TABLE = os.environ.get("STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history")
+PUBLISHERS_TABLE = os.environ.get("PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers")
 
 # AWS クライアント
 dynamodb = boto3.resource("dynamodb")
 stock_table = dynamodb.Table(STOCK_TABLE)
 stock_history_table = dynamodb.Table(STOCK_HISTORY_TABLE)
+publishers_table = dynamodb.Table(PUBLISHERS_TABLE)
 
 
 def dynamo_to_dict(item: dict) -> dict:
@@ -60,7 +62,7 @@ def build_update_expression(request_dict: dict) -> tuple[list[str], dict]:
 
     for field, value in request_dict.items():
         if value is not None:
-            if field == "price":
+            if field in ("price", "commission_rate", "stripe_online_fee_rate", "stripe_terminal_fee_rate"):
                 value = Decimal(str(value))
             elif field == "variant_type":
                 value = value.value if isinstance(value, VariantType) else value
@@ -68,6 +70,22 @@ def build_update_expression(request_dict: dict) -> tuple[list[str], dict]:
             expression_values[f":{field}"] = value
 
     return update_expressions, expression_values
+
+
+def get_publisher(publisher_id: str) -> dict | None:
+    """出版社/サークル情報を取得"""
+    try:
+        response = publishers_table.get_item(Key={"publisher_id": publisher_id})
+        item = response.get("Item")
+        return dynamo_to_dict(item) if item else None
+    except ClientError:
+        return None
+
+
+def list_publishers() -> list[dict]:
+    """全出版社/サークル一覧を取得"""
+    response = publishers_table.scan()
+    return [dynamo_to_dict(item) for item in response.get("Items", [])]
 
 
 # エクスポート

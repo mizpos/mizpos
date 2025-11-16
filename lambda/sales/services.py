@@ -18,6 +18,7 @@ STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
 STOCK_HISTORY_TABLE = os.environ.get("STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history")
 EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
 CONFIG_TABLE = os.environ.get("CONFIG_TABLE", f"{ENVIRONMENT}-mizpos-config")
+PUBLISHERS_TABLE = os.environ.get("PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers")
 STRIPE_SECRET_ARN = os.environ.get("STRIPE_SECRET_ARN", "")
 
 # AWS クライアント
@@ -28,6 +29,7 @@ stock_table = dynamodb.Table(STOCK_TABLE)
 stock_history_table = dynamodb.Table(STOCK_HISTORY_TABLE)
 events_table = dynamodb.Table(EVENTS_TABLE)
 config_table = dynamodb.Table(CONFIG_TABLE)
+publishers_table = dynamodb.Table(PUBLISHERS_TABLE)
 
 
 def init_stripe() -> None:
@@ -234,6 +236,110 @@ def get_products_info(cart_items: list[CartItem]) -> dict:
         if prod_resp.get("Item"):
             products_info[item.product_id] = dynamo_to_dict(prod_resp["Item"])
     return products_info
+
+
+def get_publisher_info(publisher_id: str) -> dict | None:
+    """出版社/サークル情報を取得"""
+    if not publisher_id:
+        return None
+    try:
+        response = publishers_table.get_item(Key={"publisher_id": publisher_id})
+        item = response.get("Item")
+        return dynamo_to_dict(item) if item else None
+    except ClientError:
+        return None
+
+
+def calculate_commission_fees(
+    reserved_items: list[dict],
+    products_info: dict,
+    payment_method: str,
+) -> dict:
+    """
+    販売時の手数料を計算（委託販売レポート用）
+
+    Returns:
+        {
+            "items": [
+                {
+                    "product_id": str,
+                    "publisher_id": str | None,
+                    "publisher_name": str,
+                    "subtotal": float,
+                    "commission_rate": float,
+                    "commission_amount": float,
+                    "payment_fee_rate": float,
+                    "payment_fee_amount": float,
+                    "net_amount": float,  # 委託元への支払い額
+                }
+            ],
+            "total_commission": float,
+            "total_payment_fee": float,
+            "total_net_amount": float,
+        }
+    """
+    result_items = []
+    total_commission = 0.0
+    total_payment_fee = 0.0
+    total_net = 0.0
+
+    # 出版社情報をキャッシュ
+    publisher_cache = {}
+
+    for item in reserved_items:
+        product_id = item["product_id"]
+        product_info = products_info.get(product_id, {})
+        publisher_id = product_info.get("publisher_id")
+
+        # 出版社情報を取得
+        if publisher_id and publisher_id not in publisher_cache:
+            publisher_cache[publisher_id] = get_publisher_info(publisher_id)
+
+        publisher = publisher_cache.get(publisher_id) if publisher_id else None
+
+        # 手数料率を取得
+        if publisher:
+            commission_rate = float(publisher.get("commission_rate", 0.0))
+            if payment_method == "stripe_online":
+                payment_fee_rate = float(publisher.get("stripe_online_fee_rate", 3.6))
+            elif payment_method == "stripe_terminal":
+                payment_fee_rate = float(publisher.get("stripe_terminal_fee_rate", 2.7))
+            else:  # cash
+                payment_fee_rate = 0.0
+            publisher_name = publisher.get("name", "")
+        else:
+            # 出版社情報がない場合はデフォルト値
+            commission_rate = 0.0
+            payment_fee_rate = 0.0
+            publisher_name = product_info.get("publisher", "")
+
+        subtotal = item["subtotal"]
+        commission_amount = subtotal * (commission_rate / 100)
+        payment_fee_amount = subtotal * (payment_fee_rate / 100)
+        net_amount = subtotal - commission_amount - payment_fee_amount
+
+        result_items.append({
+            "product_id": product_id,
+            "publisher_id": publisher_id,
+            "publisher_name": publisher_name,
+            "subtotal": subtotal,
+            "commission_rate": commission_rate,
+            "commission_amount": commission_amount,
+            "payment_fee_rate": payment_fee_rate,
+            "payment_fee_amount": payment_fee_amount,
+            "net_amount": net_amount,
+        })
+
+        total_commission += commission_amount
+        total_payment_fee += payment_fee_amount
+        total_net += net_amount
+
+    return {
+        "items": result_items,
+        "total_commission": total_commission,
+        "total_payment_fee": total_payment_fee,
+        "total_net_amount": total_net,
+    }
 
 
 # 設定管理関数

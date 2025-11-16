@@ -231,3 +231,23 @@ resource "aws_dynamodb_table" "config" {
     Name = "${var.environment}-mizpos-config"
   }
 }
+
+# Publishers table - 出版社/サークル情報（委託販売設定含む）
+resource "aws_dynamodb_table" "publishers" {
+  name         = "${var.environment}-mizpos-publishers"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "publisher_id"
+
+  attribute {
+    name = "publisher_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-publishers"
+  }
+}

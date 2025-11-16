@@ -67,6 +67,11 @@ output "dynamodb_config_table_name" {
   value       = aws_dynamodb_table.config.name
 }
 
+output "dynamodb_publishers_table_name" {
+  description = "DynamoDB Publishers Table Name"
+  value       = aws_dynamodb_table.publishers.name
+}
+
 # Lambda Outputs
 output "lambda_accounts_function_name" {
   description = "Lambda Accounts Function Name"

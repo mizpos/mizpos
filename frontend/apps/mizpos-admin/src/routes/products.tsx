@@ -24,12 +24,19 @@ interface Product {
   image_url: string;
   author: string;
   publisher: string;
+  publisher_id?: string;
   variant_type: "physical" | "digital" | "both";
+  isdn?: string;
+  download_url?: string;
   stock_quantity: number;
   is_active: boolean;
 }
 
-type CreateProductForm = StockComponents["schemas"]["CreateProductRequest"];
+type CreateProductForm = StockComponents["schemas"]["CreateProductRequest"] & {
+  publisher_id?: string;
+  isdn?: string;
+  download_url?: string;
+};
 
 function ProductsPage() {
   const queryClient = useQueryClient();
@@ -46,7 +53,10 @@ function ProductsPage() {
     image_url: "",
     author: "",
     publisher: "",
+    publisher_id: "",
     variant_type: "physical",
+    isdn: "",
+    download_url: "",
     stock_quantity: 0,
     operator_id: user?.userId || "",
   };
@@ -496,7 +506,7 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
 
       <div>
         <label htmlFor="publisher" className={labelClass}>
-          出版社
+          出版社名
         </label>
         <input
           id="publisher"
@@ -504,6 +514,51 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
           value={data.publisher}
           onChange={(e) => onChange({ ...data, publisher: e.target.value })}
           className={inputClass}
+        />
+      </div>
+
+      <div className={css({ gridColumn: "span 2" })}>
+        <label htmlFor="publisher_id" className={labelClass}>
+          サークルID (委託販売用)
+        </label>
+        <input
+          id="publisher_id"
+          type="text"
+          value={(data as CreateProductForm).publisher_id || ""}
+          onChange={(e) => onChange({ ...data, publisher_id: e.target.value })}
+          className={inputClass}
+          placeholder="サークル管理ページで確認できるID"
+        />
+        <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+          委託販売の手数料計算に使用されます
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="isdn" className={labelClass}>
+          ISDN (国際標準同人誌番号)
+        </label>
+        <input
+          id="isdn"
+          type="text"
+          value={(data as CreateProductForm).isdn || ""}
+          onChange={(e) => onChange({ ...data, isdn: e.target.value })}
+          className={inputClass}
+          placeholder="278-4-xxx-xxxxx-x"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="download_url" className={labelClass}>
+          ダウンロードURL
+        </label>
+        <input
+          id="download_url"
+          type="url"
+          value={(data as CreateProductForm).download_url || ""}
+          onChange={(e) => onChange({ ...data, download_url: e.target.value })}
+          className={inputClass}
+          placeholder="https://..."
         />
       </div>
 
