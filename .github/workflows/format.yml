@@ -3,12 +3,14 @@ name: Format Check
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "terraform/**"
 env:
   TF_VERSION: 1.13.5
 jobs:
   terraform:
     name: fmt-all
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     defaults:
       run:
         shell: bash
