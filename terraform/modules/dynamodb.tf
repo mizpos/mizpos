@@ -2,9 +2,9 @@
 
 # Users table - ユーザー情報とロールの紐付け
 resource "aws_dynamodb_table" "users" {
-  name           = "${var.environment}-mizpos-users"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "user_id"
+  name         = "${var.environment}-mizpos-users"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
 
   attribute {
     name = "user_id"
@@ -38,10 +38,10 @@ resource "aws_dynamodb_table" "users" {
 
 # Roles table - ユーザーロール管理（管理者、販売担当など）
 resource "aws_dynamodb_table" "roles" {
-  name           = "${var.environment}-mizpos-roles"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "user_id"
-  range_key      = "role_id"
+  name         = "${var.environment}-mizpos-roles"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "role_id"
 
   attribute {
     name = "user_id"
@@ -76,9 +76,9 @@ resource "aws_dynamodb_table" "roles" {
 
 # Stock table - 在庫情報
 resource "aws_dynamodb_table" "stock" {
-  name           = "${var.environment}-mizpos-stock"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "product_id"
+  name         = "${var.environment}-mizpos-stock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "product_id"
 
   attribute {
     name = "product_id"
@@ -107,10 +107,10 @@ resource "aws_dynamodb_table" "stock" {
 
 # Stock history table - 在庫変動履歴
 resource "aws_dynamodb_table" "stock_history" {
-  name           = "${var.environment}-mizpos-stock-history"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "product_id"
-  range_key      = "timestamp"
+  name         = "${var.environment}-mizpos-stock-history"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "product_id"
+  range_key    = "timestamp"
 
   attribute {
     name = "product_id"
@@ -133,10 +133,10 @@ resource "aws_dynamodb_table" "stock_history" {
 
 # Sales table - 販売履歴
 resource "aws_dynamodb_table" "sales" {
-  name           = "${var.environment}-mizpos-sales"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "sale_id"
-  range_key      = "timestamp"
+  name         = "${var.environment}-mizpos-sales"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "sale_id"
+  range_key    = "timestamp"
 
   attribute {
     name = "sale_id"
@@ -183,9 +183,9 @@ resource "aws_dynamodb_table" "sales" {
 
 # Events table - イベント情報（対面販売時の在庫管理用）
 resource "aws_dynamodb_table" "events" {
-  name           = "${var.environment}-mizpos-events"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "event_id"
+  name         = "${var.environment}-mizpos-events"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "event_id"
 
   attribute {
     name = "event_id"

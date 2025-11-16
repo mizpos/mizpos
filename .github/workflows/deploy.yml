@@ -6,6 +6,11 @@ on:
     paths:
       - "terraform/**"
       - "lambda/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "lambda/**"
   workflow_dispatch:
 
 env:
@@ -63,7 +68,7 @@ jobs:
           curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ env.LAMBROLL_VERSION }}/lambroll_v${{ env.LAMBROLL_VERSION }}_linux_amd64.tar.gz | tar -xz
           sudo mv lambroll /usr/local/bin/
 
-      - name: Deploy "MAIN" Lambda Functions
+      - name: Deploy "Accounts" Lambda Functions
         uses: ./.github/actions/deploy-lambda
         with:
           WORKING_DIR: ${{ env.WORKING_DIR }}
