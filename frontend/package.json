@@ -5,6 +5,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "generate-api-types": "pnpm --filter @mizpos/api generate"
   },
   "devDependencies": {
