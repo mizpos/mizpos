@@ -2,10 +2,11 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, FastAPI, HTTPException, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
+from auth import get_current_user
 from models import AssignRoleRequest, CreateUserRequest, UpdateUserRequest
 from services import (
     DynamoDBClientError,
@@ -39,7 +40,7 @@ router = APIRouter()
 
 # ユーザー管理エンドポイント
 @router.get("/users", response_model=dict)
-async def list_users():
+async def list_users(current_user: dict = Depends(get_current_user)):
     """ユーザー一覧取得"""
     try:
         response = users_table.scan()
@@ -50,7 +51,7 @@ async def list_users():
 
 
 @router.post("/users", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_user(request: CreateUserRequest):
+async def create_user(request: CreateUserRequest, current_user: dict = Depends(get_current_user)):
     """ユーザー作成"""
     try:
         cognito_user_id = create_cognito_user(request.email, request.password)
@@ -78,7 +79,7 @@ async def create_user(request: CreateUserRequest):
 
 
 @router.get("/users/{user_id}", response_model=dict)
-async def get_user(user_id: str):
+async def get_user(user_id: str, current_user: dict = Depends(get_current_user)):
     """ユーザー詳細取得"""
     try:
         response = users_table.get_item(Key={"user_id": user_id})
@@ -93,7 +94,9 @@ async def get_user(user_id: str):
 
 
 @router.put("/users/{user_id}", response_model=dict)
-async def update_user(user_id: str, request: UpdateUserRequest):
+async def update_user(
+    user_id: str, request: UpdateUserRequest, current_user: dict = Depends(get_current_user)
+):
     """ユーザー更新"""
     try:
         now = datetime.now(timezone.utc).isoformat()
@@ -111,7 +114,7 @@ async def update_user(user_id: str, request: UpdateUserRequest):
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: str):
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
     """ユーザー削除"""
     try:
         # ユーザー情報を取得してCognitoユーザーも削除
@@ -132,7 +135,7 @@ async def delete_user(user_id: str):
 
 # ロール管理エンドポイント
 @router.get("/users/{user_id}/roles", response_model=dict)
-async def get_user_roles(user_id: str):
+async def get_user_roles(user_id: str, current_user: dict = Depends(get_current_user)):
     """ユーザーのロール一覧取得"""
     try:
         response = roles_table.query(
@@ -145,7 +148,9 @@ async def get_user_roles(user_id: str):
 
 
 @router.post("/users/{user_id}/roles", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def assign_role(user_id: str, request: AssignRoleRequest):
+async def assign_role(
+    user_id: str, request: AssignRoleRequest, current_user: dict = Depends(get_current_user)
+):
     """ロール割り当て"""
     try:
         role_id = str(uuid.uuid4())
@@ -167,7 +172,7 @@ async def assign_role(user_id: str, request: AssignRoleRequest):
 
 
 @router.delete("/users/{user_id}/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_role(user_id: str, role_id: str):
+async def remove_role(user_id: str, role_id: str, current_user: dict = Depends(get_current_user)):
     """ロール削除"""
     try:
         roles_table.delete_item(Key={"user_id": user_id, "role_id": role_id})
@@ -176,7 +181,7 @@ async def remove_role(user_id: str, role_id: str):
 
 
 @router.get("/events/{event_id}/roles", response_model=dict)
-async def get_event_roles(event_id: str):
+async def get_event_roles(event_id: str, current_user: dict = Depends(get_current_user)):
     """イベントのロール一覧取得"""
     try:
         response = roles_table.query(
@@ -195,6 +200,23 @@ app.include_router(router)
 
 # Mangum ハンドラー（API Gateway base path対応）
 def handler(event, context):
+    # OPTIONS リクエストは認証なしで即座にCORSレスポンスを返す
+    request_context = event.get("requestContext", {})
+    http_info = request_context.get("http", {})
+    method = http_info.get("method", event.get("httpMethod", ""))
+
+    if method == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Access-Control-Max-Age": "300",
+            },
+            "body": "",
+        }
+
     # HTTP API v2.0ではrawPathにステージ名が含まれるため、動的にbase pathを設定
     environment = os.environ.get("ENVIRONMENT", "dev")
     api_gateway_base_path = f"/{environment}/accounts"

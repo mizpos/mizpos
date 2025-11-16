@@ -99,58 +99,28 @@ resource "aws_apigatewayv2_integration" "sales" {
   payload_format_version = "2.0"
 }
 
-# Routes - accounts
+# Routes - accounts (JWT validation handled by Lambda)
 resource "aws_apigatewayv2_route" "accounts" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /accounts/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
 
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-}
-
-# OPTIONS route for accounts (CORS preflight - no auth)
-resource "aws_apigatewayv2_route" "options_accounts" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "OPTIONS /accounts/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
-
   authorization_type = "NONE"
 }
 
-# Routes - stock
+# Routes - stock (JWT validation handled by Lambda)
 resource "aws_apigatewayv2_route" "stock" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /stock/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.stock.id}"
 
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-}
-
-# OPTIONS route for stock (CORS preflight - no auth)
-resource "aws_apigatewayv2_route" "options_stock" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "OPTIONS /stock/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.stock.id}"
-
   authorization_type = "NONE"
 }
 
-# Routes - sales
+# Routes - sales (JWT validation handled by Lambda)
 resource "aws_apigatewayv2_route" "sales" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /sales/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
-
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
-}
-
-# OPTIONS route for sales (CORS preflight - no auth)
-resource "aws_apigatewayv2_route" "options_sales" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "OPTIONS /sales/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
 
   authorization_type = "NONE"

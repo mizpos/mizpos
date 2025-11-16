@@ -6,10 +6,11 @@ from decimal import Decimal
 
 import stripe
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, FastAPI, HTTPException, Query, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
+from auth import get_current_user
 from models import (
     ApplyCouponRequest,
     CreateCouponRequest,
@@ -18,8 +19,10 @@ from models import (
     CreateSaleRequest,
     SaleStatus,
     StripeTerminalConfigRequest,
+    UpdateConfigRequest,
 )
 from services import (
+    calculate_commission_fees,
     calculate_coupon_discount,
     config_table,
     deduct_stock,
@@ -33,6 +36,7 @@ from services import (
     init_stripe,
     restore_stock,
     sales_table,
+    set_config,
     set_stripe_terminal_config,
     validate_and_reserve_stock,
     validate_coupon,
@@ -63,6 +67,7 @@ async def list_sales(
     event_id: str | None = Query(default=None, description="イベントIDでフィルタ"),
     user_id: str | None = Query(default=None, description="ユーザーIDでフィルタ"),
     limit: int = Query(default=50, ge=1, le=1000, description="取得件数"),
+    current_user: dict = Depends(get_current_user),
 ):
     """販売履歴一覧取得"""
     try:
@@ -97,7 +102,7 @@ async def list_sales(
 
 
 @router.get("/sales/{sale_id}", response_model=dict)
-async def get_sale(sale_id: str):
+async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
     """販売詳細取得"""
     try:
         response = sales_table.query(
@@ -114,11 +119,14 @@ async def get_sale(sale_id: str):
 
 
 @router.post("/sales", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_sale(request: CreateSaleRequest):
+async def create_sale(request: CreateSaleRequest, current_user: dict = Depends(get_current_user)):
     """販売を作成"""
     try:
         # 在庫確認・確保
         reserved_items = validate_and_reserve_stock(request.cart_items)
+
+        # 商品情報を取得（クーポンと手数料計算のため）
+        products_info = get_products_info(request.cart_items)
 
         # 小計計算
         subtotal = sum(item["subtotal"] for item in reserved_items)
@@ -131,11 +139,15 @@ async def create_sale(request: CreateSaleRequest):
                 raise HTTPException(status_code=400, detail="Invalid coupon code")
 
             validate_coupon(coupon)
-            products_info = get_products_info(request.cart_items)
             discount = calculate_coupon_discount(coupon, request.cart_items, products_info)
             increment_coupon_usage(coupon)
 
         total = subtotal - discount
+
+        # 手数料情報を計算（委託販売レポート用）
+        commission_info = calculate_commission_fees(
+            reserved_items, products_info, request.payment_method.value
+        )
 
         sale_id = str(uuid.uuid4())
         timestamp = int(time.time() * 1000)
@@ -156,6 +168,11 @@ async def create_sale(request: CreateSaleRequest):
             "customer_email": request.customer_email or "",
             "stripe_payment_intent_id": "",
             "created_at": now,
+            # 委託販売手数料情報（販売時点のレートを記録）
+            "commission_details": commission_info["items"],
+            "total_commission": Decimal(str(commission_info["total_commission"])),
+            "total_payment_fee": Decimal(str(commission_info["total_payment_fee"])),
+            "total_net_amount": Decimal(str(commission_info["total_net_amount"])),
         }
 
         sales_table.put_item(Item=sale_item)
@@ -171,7 +188,11 @@ async def create_sale(request: CreateSaleRequest):
 
 
 @router.post("/sales/{sale_id}/complete", response_model=dict)
-async def complete_sale(sale_id: str, stripe_payment_intent_id: str | None = None):
+async def complete_sale(
+    sale_id: str,
+    stripe_payment_intent_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """販売を完了にする"""
     try:
         response = sales_table.query(
@@ -208,7 +229,7 @@ async def complete_sale(sale_id: str, stripe_payment_intent_id: str | None = Non
 
 
 @router.post("/sales/{sale_id}/cancel", response_model=dict)
-async def cancel_sale(sale_id: str):
+async def cancel_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
     """販売をキャンセル（在庫を戻す）"""
     try:
         response = sales_table.query(
@@ -245,7 +266,9 @@ async def cancel_sale(sale_id: str):
 
 # Stripe関連エンドポイント
 @router.post("/stripe/payment-intent", response_model=dict)
-async def create_payment_intent(request: CreatePaymentIntentRequest):
+async def create_payment_intent(
+    request: CreatePaymentIntentRequest, current_user: dict = Depends(get_current_user)
+):
     """Stripe Payment Intent を作成"""
     init_stripe()
     try:
@@ -269,7 +292,7 @@ async def create_payment_intent(request: CreatePaymentIntentRequest):
 
 
 @router.get("/stripe/payment-intent/{payment_intent_id}", response_model=dict)
-async def get_payment_intent(payment_intent_id: str):
+async def get_payment_intent(payment_intent_id: str, current_user: dict = Depends(get_current_user)):
     """Stripe Payment Intent の状態を取得"""
     init_stripe()
     try:
@@ -289,7 +312,7 @@ async def get_payment_intent(payment_intent_id: str):
 
 # クーポン管理
 @router.post("/coupons", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_coupon(request: CreateCouponRequest):
+async def create_coupon(request: CreateCouponRequest, current_user: dict = Depends(get_current_user)):
     """クーポンを作成"""
     try:
         existing = get_coupon_by_code(request.code)
@@ -325,7 +348,7 @@ async def create_coupon(request: CreateCouponRequest):
 
 
 @router.get("/coupons/{code}", response_model=dict)
-async def get_coupon(code: str):
+async def get_coupon(code: str, current_user: dict = Depends(get_current_user)):
     """クーポン情報を取得"""
     try:
         coupon = get_coupon_by_code(code)
@@ -339,7 +362,7 @@ async def get_coupon(code: str):
 
 
 @router.post("/coupons/apply", response_model=dict)
-async def apply_coupon(request: ApplyCouponRequest):
+async def apply_coupon(request: ApplyCouponRequest, current_user: dict = Depends(get_current_user)):
     """クーポンを適用して割引額を計算"""
     try:
         coupon = get_coupon_by_code(request.code)
@@ -359,7 +382,7 @@ async def apply_coupon(request: ApplyCouponRequest):
 
 
 @router.delete("/coupons/{code}", status_code=status.HTTP_204_NO_CONTENT)
-async def deactivate_coupon(code: str):
+async def deactivate_coupon(code: str, current_user: dict = Depends(get_current_user)):
     """クーポンを無効化"""
     try:
         coupon = get_coupon_by_code(code)
@@ -379,7 +402,7 @@ async def deactivate_coupon(code: str):
 
 # イベント管理
 @router.get("/events", response_model=dict)
-async def list_events():
+async def list_events(current_user: dict = Depends(get_current_user)):
     """イベント一覧取得"""
     try:
         response = events_table.scan()
@@ -390,7 +413,7 @@ async def list_events():
 
 
 @router.post("/events", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_event(request: CreateEventRequest):
+async def create_event(request: CreateEventRequest, current_user: dict = Depends(get_current_user)):
     """イベントを作成"""
     try:
         event_id = str(uuid.uuid4())
@@ -415,6 +438,7 @@ async def create_event(request: CreateEventRequest):
 @router.get("/config/stripe-terminal", response_model=dict)
 async def get_stripe_terminal_config_endpoint(
     config_key: str = Query(default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"),
+    current_user: dict = Depends(get_current_user),
 ):
     """Stripe Terminal設定を取得"""
     try:
@@ -443,6 +467,7 @@ async def get_stripe_terminal_config_endpoint(
 async def update_stripe_terminal_config_endpoint(
     request: StripeTerminalConfigRequest,
     config_key: str = Query(default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"),
+    current_user: dict = Depends(get_current_user),
 ):
     """Stripe Terminal設定を作成/更新"""
     try:
@@ -458,7 +483,7 @@ async def update_stripe_terminal_config_endpoint(
 
 
 @router.get("/config", response_model=dict)
-async def list_configs():
+async def list_configs(current_user: dict = Depends(get_current_user)):
     """全設定一覧を取得"""
     try:
         response = config_table.scan()
@@ -469,7 +494,7 @@ async def list_configs():
 
 
 @router.get("/config/{config_key}", response_model=dict)
-async def get_config_endpoint(config_key: str):
+async def get_config_endpoint(config_key: str, current_user: dict = Depends(get_current_user)):
     """任意の設定を取得"""
     try:
         config = get_config(config_key)
@@ -482,11 +507,40 @@ async def get_config_endpoint(config_key: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@router.put("/config/{config_key}", response_model=dict)
+async def update_config_endpoint(
+    config_key: str, request: UpdateConfigRequest, current_user: dict = Depends(get_current_user)
+):
+    """任意の設定を作成/更新"""
+    try:
+        result = set_config(config_key, request.value)
+        return {"config": result}
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 # ルーターを登録
 app.include_router(router)
 
 # Mangum ハンドラー（API Gateway base path対応）
 def handler(event, context):
+    # OPTIONS リクエストは認証なしで即座にCORSレスポンスを返す
+    request_context = event.get("requestContext", {})
+    http_info = request_context.get("http", {})
+    method = http_info.get("method", event.get("httpMethod", ""))
+
+    if method == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Access-Control-Max-Age": "300",
+            },
+            "body": "",
+        }
+
     # HTTP API v2.0ではrawPathにステージ名が含まれるため、動的にbase pathを設定
     environment = os.environ.get("ENVIRONMENT", "dev")
     api_gateway_base_path = f"/{environment}/sales"
