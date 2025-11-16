@@ -50,7 +50,7 @@ resource "aws_cloudfront_origin_access_control" "cdn_assets" {
 }
 
 # Route53 Hosted Zone (data source)
-data "aws_route53_zone" "main" {
+data "aws_route53_zone" "cdn" {
   count = var.enable_custom_domain ? 1 : 0
   name  = var.domain_name
 }
