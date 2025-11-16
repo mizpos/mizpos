@@ -8,3 +8,10 @@ count.txt
 .nitro
 .tanstack
 .wrangler
+
+## Panda
+styled-system
+styled-system-studio
+
+## TanStack Router
+src/routeTree.gen.ts
