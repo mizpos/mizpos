@@ -1,9 +1,11 @@
 import { IconDeviceFloppy } from "@tabler/icons-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
+import { getAuthHeaders } from "../lib/api";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -29,11 +31,47 @@ interface ConsignmentSettings {
   stripeTerminalFeeRate: number;
 }
 
+const API_GATEWAY_BASE =
+  import.meta.env.VITE_API_GATEWAY_BASE ||
+  "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
+
+async function fetchConfig(configKey: string) {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_GATEWAY_BASE}/sales/config/${configKey}`, {
+    headers,
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to fetch config: ${response.statusText}`);
+  }
+  const data = await response.json();
+  return data.config?.value || null;
+}
+
+async function saveConfig(
+  configKey: string,
+  value: BrandSettings | PaymentSettings | ConsignmentSettings
+) {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_GATEWAY_BASE}/sales/config/${configKey}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ value }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to save config: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 function SettingsPage() {
+  const queryClient = useQueryClient();
   const [brandSettings, setBrandSettings] = useState<BrandSettings>({
-    storeName: "MizPOS Store",
-    storeDescription: "同人誌・グッズ販売",
-    contactEmail: "contact@example.com",
+    storeName: "",
+    storeDescription: "",
+    contactEmail: "",
     logoUrl: "",
   });
 
@@ -51,11 +89,66 @@ function SettingsPage() {
   });
 
   const [activeTab, setActiveTab] = useState<"brand" | "payment" | "consignment">("brand");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Load settings from backend
+  const { data: loadedBrandSettings, isLoading: isLoadingBrand } = useQuery({
+    queryKey: ["config", "brand_settings"],
+    queryFn: () => fetchConfig("brand_settings"),
+  });
+
+  const { data: loadedPaymentSettings, isLoading: isLoadingPayment } = useQuery({
+    queryKey: ["config", "payment_settings"],
+    queryFn: () => fetchConfig("payment_settings"),
+  });
+
+  const { data: loadedConsignmentSettings, isLoading: isLoadingConsignment } = useQuery({
+    queryKey: ["config", "consignment_settings"],
+    queryFn: () => fetchConfig("consignment_settings"),
+  });
+
+  // Update local state when data is loaded
+  useEffect(() => {
+    if (loadedBrandSettings) {
+      setBrandSettings(loadedBrandSettings as BrandSettings);
+    }
+  }, [loadedBrandSettings]);
+
+  useEffect(() => {
+    if (loadedPaymentSettings) {
+      setPaymentSettings(loadedPaymentSettings as PaymentSettings);
+    }
+  }, [loadedPaymentSettings]);
+
+  useEffect(() => {
+    if (loadedConsignmentSettings) {
+      setConsignmentSettings(loadedConsignmentSettings as ConsignmentSettings);
+    }
+  }, [loadedConsignmentSettings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all([
+        saveConfig("brand_settings", brandSettings),
+        saveConfig("payment_settings", paymentSettings),
+        saveConfig("consignment_settings", consignmentSettings),
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["config"] });
+      setSaveError(null);
+      alert("設定を保存しました");
+    },
+    onError: (error: Error) => {
+      setSaveError(error.message);
+    },
+  });
 
   const handleSave = () => {
-    // TODO: Save to backend
-    alert("設定を保存しました");
+    saveMutation.mutate();
   };
+
+  const isLoading = isLoadingBrand || isLoadingPayment || isLoadingConsignment;
 
   const inputClass = css({
     width: "100%",
@@ -88,6 +181,35 @@ function SettingsPage() {
           overflowY: "auto",
         })}
       >
+        {isLoading && (
+          <div
+            className={css({
+              textAlign: "center",
+              padding: "8",
+              color: "gray.500",
+            })}
+          >
+            設定を読み込み中...
+          </div>
+        )}
+
+        {saveError && (
+          <div
+            className={css({
+              backgroundColor: "red.50",
+              border: "1px solid",
+              borderColor: "red.200",
+              borderRadius: "md",
+              padding: "4",
+              marginBottom: "4",
+              color: "red.700",
+              fontSize: "sm",
+            })}
+          >
+            保存エラー: {saveError}
+          </div>
+        )}
+
         {/* Tabs */}
         <div
           className={css({
@@ -427,9 +549,9 @@ function SettingsPage() {
 
         {/* Save Button */}
         <div className={css({ marginTop: "6", display: "flex", justifyContent: "flex-end" })}>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={saveMutation.isPending || isLoading}>
             <IconDeviceFloppy size={18} />
-            設定を保存
+            {saveMutation.isPending ? "保存中..." : "設定を保存"}
           </Button>
         </div>
       </div>

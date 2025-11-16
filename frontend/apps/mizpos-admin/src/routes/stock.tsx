@@ -8,6 +8,7 @@ import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
 import { getAuthenticatedClients } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 export const Route = createFileRoute("/stock")({
   component: StockPage,
@@ -33,6 +34,7 @@ interface AdjustmentForm {
 
 function StockPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [adjustmentModal, setAdjustmentModal] = useState<AdjustmentForm | null>(null);
 
@@ -56,7 +58,7 @@ function StockPage() {
         body: {
           quantity_change: form.quantityChange,
           reason: form.reason,
-          operator_id: "admin",
+          operator_id: user?.userId || "",
         },
       });
       if (error) throw error;

@@ -1,4 +1,6 @@
+import type { AccountsComponents } from "@mizpos/api";
 import { IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
@@ -6,102 +8,105 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/users")({
   component: UsersPage,
 });
 
-type UserRole = "admin" | "manager" | "sales" | "viewer";
-
 interface User {
   user_id: string;
+  cognito_user_id: string;
   email: string;
-  name: string;
-  role: UserRole;
-  is_active: boolean;
+  display_name: string;
   created_at: string;
-  last_login?: string;
+  updated_at: string;
 }
 
-const mockUsers: User[] = [
-  {
-    user_id: "usr_001",
-    email: "admin@example.com",
-    name: "管理者",
-    role: "admin",
-    is_active: true,
-    created_at: "2024-01-01T00:00:00Z",
-    last_login: "2024-11-16T10:00:00Z",
-  },
-  {
-    user_id: "usr_002",
-    email: "manager@example.com",
-    name: "マネージャー",
-    role: "manager",
-    is_active: true,
-    created_at: "2024-02-01T00:00:00Z",
-    last_login: "2024-11-15T14:30:00Z",
-  },
-  {
-    user_id: "usr_003",
-    email: "sales@example.com",
-    name: "販売担当",
-    role: "sales",
-    is_active: true,
-    created_at: "2024-03-01T00:00:00Z",
-    last_login: "2024-11-16T09:00:00Z",
-  },
-];
+type CreateUserRequest = AccountsComponents["schemas"]["CreateUserRequest"];
+type UpdateUserRequest = AccountsComponents["schemas"]["UpdateUserRequest"];
 
-interface UserForm {
+interface CreateUserForm {
   email: string;
-  name: string;
-  role: UserRole;
+  display_name: string;
+  password: string;
 }
+
+const initialCreateForm: CreateUserForm = {
+  email: "",
+  display_name: "",
+  password: "",
+};
 
 function UsersPage() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<UserForm>({
-    email: "",
-    name: "",
-    role: "viewer",
+  const [createFormData, setCreateFormData] = useState<CreateUserForm>(initialCreateForm);
+  const [editFormData, setEditFormData] = useState<UpdateUserRequest>({ display_name: "" });
+
+  const {
+    data: users = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const { accounts } = await getAuthenticatedClients();
+      const { data, error } = await accounts.GET("/users");
+      if (error) throw error;
+      const response = data as unknown as { users: User[] };
+      return response.users || [];
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: CreateUserRequest) => {
+      const { accounts } = await getAuthenticatedClients();
+      const { error } = await accounts.POST("/users", { body: data });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setIsCreateModalOpen(false);
+      setCreateFormData(initialCreateForm);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: UpdateUserRequest }) => {
+      const { accounts } = await getAuthenticatedClients();
+      const { error } = await accounts.PUT("/users/{user_id}", {
+        params: { path: { user_id: userId } },
+        body: data,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setEditUser(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { accounts } = await getAuthenticatedClients();
+      const { error } = await accounts.DELETE("/users/{user_id}", {
+        params: { path: { user_id: userId } },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
   });
 
   const filteredUsers = users.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const getRoleBadge = (role: UserRole) => {
-    const styles = {
-      admin: { backgroundColor: "red.100", color: "red.800", label: "管理者" },
-      manager: { backgroundColor: "blue.100", color: "blue.800", label: "マネージャー" },
-      sales: { backgroundColor: "green.100", color: "green.800", label: "販売担当" },
-      viewer: { backgroundColor: "gray.100", color: "gray.800", label: "閲覧者" },
-    };
-    const style = styles[role];
-
-    return (
-      <span
-        className={css({
-          display: "inline-flex",
-          paddingX: "2",
-          paddingY: "0.5",
-          borderRadius: "full",
-          fontSize: "xs",
-          fontWeight: "medium",
-          backgroundColor: style.backgroundColor,
-          color: style.color,
-        })}
-      >
-        {style.label}
-      </span>
-    );
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ja-JP", {
@@ -114,37 +119,17 @@ function UsersPage() {
   };
 
   const columns = [
-    { key: "name", header: "名前" },
+    { key: "display_name", header: "表示名" },
     { key: "email", header: "メールアドレス" },
     {
-      key: "role",
-      header: "ロール",
-      render: (item: User) => getRoleBadge(item.role),
+      key: "created_at",
+      header: "作成日時",
+      render: (item: User) => formatDate(item.created_at),
     },
     {
-      key: "is_active",
-      header: "状態",
-      render: (item: User) => (
-        <span
-          className={css({
-            display: "inline-flex",
-            paddingX: "2",
-            paddingY: "0.5",
-            borderRadius: "full",
-            fontSize: "xs",
-            fontWeight: "medium",
-            backgroundColor: item.is_active ? "green.100" : "gray.100",
-            color: item.is_active ? "green.800" : "gray.800",
-          })}
-        >
-          {item.is_active ? "有効" : "無効"}
-        </span>
-      ),
-    },
-    {
-      key: "last_login",
-      header: "最終ログイン",
-      render: (item: User) => (item.last_login ? formatDate(item.last_login) : "-"),
+      key: "updated_at",
+      header: "更新日時",
+      render: (item: User) => formatDate(item.updated_at),
     },
     {
       key: "actions",
@@ -156,11 +141,7 @@ function UsersPage() {
             size="sm"
             onClick={() => {
               setEditUser(item);
-              setFormData({
-                email: item.email,
-                name: item.name,
-                role: item.role,
-              });
+              setEditFormData({ display_name: item.display_name });
             }}
           >
             <IconEdit size={16} />
@@ -169,10 +150,11 @@ function UsersPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (window.confirm(`「${item.name}」を削除しますか？`)) {
-                setUsers(users.filter((u) => u.user_id !== item.user_id));
+              if (window.confirm(`「${item.display_name}」を削除しますか？\nCognitoからも削除されます。`)) {
+                deleteMutation.mutate(item.user_id);
               }
             }}
+            disabled={deleteMutation.isPending}
           >
             <IconTrash size={16} />
           </Button>
@@ -181,31 +163,23 @@ function UsersPage() {
     },
   ];
 
-  const handleCreate = () => {
-    const newUser: User = {
-      user_id: `usr_${Date.now()}`,
-      email: formData.email,
-      name: formData.name,
-      role: formData.role,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    };
-    setUsers([...users, newUser]);
-    setIsCreateModalOpen(false);
-    setFormData({ email: "", name: "", role: "viewer" });
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate({
+      email: createFormData.email,
+      display_name: createFormData.display_name,
+      password: createFormData.password,
+    });
   };
 
-  const handleUpdate = () => {
-    if (!editUser) return;
-    setUsers(
-      users.map((u) =>
-        u.user_id === editUser.user_id
-          ? { ...u, email: formData.email, name: formData.name, role: formData.role }
-          : u
-      )
-    );
-    setEditUser(null);
-    setFormData({ email: "", name: "", role: "viewer" });
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editUser) {
+      updateMutation.mutate({
+        userId: editUser.user_id,
+        data: editFormData,
+      });
+    }
   };
 
   const inputClass = css({
@@ -251,9 +225,26 @@ function UsersPage() {
           })}
         >
           <p className={css({ fontSize: "sm", color: "blue.800" })}>
-            ユーザー認証はAWS Cognitoで管理されています。ここではロールの割り当てと権限管理を行います。
+            ユーザー認証はAWS Cognitoで管理されています。ユーザーを作成すると、Cognitoにもアカウントが作成されます。
           </p>
         </div>
+
+        {error && (
+          <div
+            className={css({
+              backgroundColor: "red.50",
+              border: "1px solid",
+              borderColor: "red.200",
+              color: "red.700",
+              padding: "3",
+              borderRadius: "md",
+              marginBottom: "4",
+              fontSize: "sm",
+            })}
+          >
+            ユーザー情報の取得に失敗しました: {error instanceof Error ? error.message : "不明なエラー"}
+          </div>
+        )}
 
         <div
           className={css({
@@ -308,14 +299,18 @@ function UsersPage() {
           </Button>
         </div>
 
-        <Table
-          columns={columns}
-          data={filteredUsers}
-          keyExtractor={(item) => item.user_id}
-          emptyMessage="ユーザーが見つかりません"
-        />
+        {isLoading ? (
+          <div className={css({ textAlign: "center", padding: "8", color: "gray.500" })}>読み込み中...</div>
+        ) : (
+          <Table
+            columns={columns}
+            data={filteredUsers}
+            keyExtractor={(item) => item.user_id}
+            emptyMessage="ユーザーが見つかりません"
+          />
+        )}
 
-        {/* Role Description */}
+        {/* Password Policy Info */}
         <div
           className={css({
             marginTop: "6",
@@ -327,42 +322,25 @@ function UsersPage() {
           })}
         >
           <h3 className={css({ fontSize: "lg", fontWeight: "semibold", marginBottom: "4" })}>
-            ロール権限
+            パスワードポリシー
           </h3>
-          <div className={css({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4" })}>
-            <div>
-              <p className={css({ fontWeight: "semibold", fontSize: "sm", marginBottom: "1" })}>
-                管理者 (Admin)
-              </p>
-              <p className={css({ fontSize: "xs", color: "gray.600" })}>
-                全ての機能にアクセス可能。ユーザー管理、設定変更が可能。
-              </p>
-            </div>
-            <div>
-              <p className={css({ fontWeight: "semibold", fontSize: "sm", marginBottom: "1" })}>
-                マネージャー (Manager)
-              </p>
-              <p className={css({ fontSize: "xs", color: "gray.600" })}>
-                商品・在庫管理、レポート閲覧が可能。ユーザー管理は不可。
-              </p>
-            </div>
-            <div>
-              <p className={css({ fontWeight: "semibold", fontSize: "sm", marginBottom: "1" })}>
-                販売担当 (Sales)
-              </p>
-              <p className={css({ fontSize: "xs", color: "gray.600" })}>
-                販売処理、在庫確認が可能。商品登録や設定変更は不可。
-              </p>
-            </div>
-            <div>
-              <p className={css({ fontWeight: "semibold", fontSize: "sm", marginBottom: "1" })}>
-                閲覧者 (Viewer)
-              </p>
-              <p className={css({ fontSize: "xs", color: "gray.600" })}>
-                データの閲覧のみ可能。編集や操作は不可。
-              </p>
-            </div>
-          </div>
+          <ul
+            className={css({
+              listStyle: "disc",
+              paddingLeft: "6",
+              fontSize: "sm",
+              color: "gray.600",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1",
+            })}
+          >
+            <li>最小8文字</li>
+            <li>大文字を含む</li>
+            <li>小文字を含む</li>
+            <li>数字を含む</li>
+            <li>特殊文字を含む</li>
+          </ul>
         </div>
       </div>
 
@@ -371,16 +349,11 @@ function UsersPage() {
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          setFormData({ email: "", name: "", role: "viewer" });
+          setCreateFormData(initialCreateForm);
         }}
         title="ユーザー追加"
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleCreate();
-          }}
-        >
+        <form onSubmit={handleCreateSubmit}>
           <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
             <div>
               <label htmlFor="create-email" className={labelClass}>
@@ -390,53 +363,77 @@ function UsersPage() {
                 id="create-email"
                 type="email"
                 required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                value={createFormData.email}
+                onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
                 className={inputClass}
+                placeholder="user@example.com"
               />
             </div>
             <div>
               <label htmlFor="create-name" className={labelClass}>
-                名前 *
+                表示名 *
               </label>
               <input
                 id="create-name"
                 type="text"
                 required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={createFormData.display_name}
+                onChange={(e) => setCreateFormData({ ...createFormData, display_name: e.target.value })}
                 className={inputClass}
+                placeholder="田中 太郎"
               />
             </div>
             <div>
-              <label htmlFor="create-role" className={labelClass}>
-                ロール
+              <label htmlFor="create-password" className={labelClass}>
+                パスワード *
               </label>
-              <select
-                id="create-role"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+              <input
+                id="create-password"
+                type="password"
+                required
+                minLength={8}
+                value={createFormData.password}
+                onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
                 className={inputClass}
-              >
-                <option value="admin">管理者</option>
-                <option value="manager">マネージャー</option>
-                <option value="sales">販売担当</option>
-                <option value="viewer">閲覧者</option>
-              </select>
+                placeholder="8文字以上（大文字・小文字・数字・特殊文字を含む）"
+              />
+              <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+                Cognitoのパスワードポリシーに準拠する必要があります
+              </p>
             </div>
           </div>
+
+          {createMutation.error && (
+            <div
+              className={css({
+                backgroundColor: "red.50",
+                border: "1px solid",
+                borderColor: "red.200",
+                color: "red.700",
+                padding: "3",
+                borderRadius: "md",
+                marginTop: "4",
+                fontSize: "sm",
+              })}
+            >
+              {createMutation.error instanceof Error ? createMutation.error.message : "作成に失敗しました"}
+            </div>
+          )}
+
           <div className={css({ display: "flex", justifyContent: "flex-end", gap: "2", marginTop: "4" })}>
             <Button
               variant="secondary"
               onClick={() => {
                 setIsCreateModalOpen(false);
-                setFormData({ email: "", name: "", role: "viewer" });
+                setCreateFormData(initialCreateForm);
               }}
               type="button"
             >
               キャンセル
             </Button>
-            <Button type="submit">作成</Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "作成中..." : "作成"}
+            </Button>
           </div>
         </form>
       </Modal>
@@ -444,61 +441,62 @@ function UsersPage() {
       {/* Edit Modal */}
       <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} title="ユーザー編集">
         {editUser && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleUpdate();
-            }}
-          >
+          <form onSubmit={handleUpdateSubmit}>
             <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
               <div>
                 <label htmlFor="edit-email" className={labelClass}>
-                  メールアドレス *
+                  メールアドレス
                 </label>
                 <input
                   id="edit-email"
                   type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className={inputClass}
+                  value={editUser.email}
+                  disabled
+                  className={`${inputClass} ${css({ backgroundColor: "gray.100", cursor: "not-allowed" })}`}
                 />
+                <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+                  メールアドレスは変更できません
+                </p>
               </div>
               <div>
                 <label htmlFor="edit-name" className={labelClass}>
-                  名前 *
+                  表示名 *
                 </label>
                 <input
                   id="edit-name"
                   type="text"
                   required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={editFormData.display_name}
+                  onChange={(e) => setEditFormData({ display_name: e.target.value })}
                   className={inputClass}
                 />
               </div>
-              <div>
-                <label htmlFor="edit-role" className={labelClass}>
-                  ロール
-                </label>
-                <select
-                  id="edit-role"
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                  className={inputClass}
-                >
-                  <option value="admin">管理者</option>
-                  <option value="manager">マネージャー</option>
-                  <option value="sales">販売担当</option>
-                  <option value="viewer">閲覧者</option>
-                </select>
-              </div>
             </div>
+
+            {updateMutation.error && (
+              <div
+                className={css({
+                  backgroundColor: "red.50",
+                  border: "1px solid",
+                  borderColor: "red.200",
+                  color: "red.700",
+                  padding: "3",
+                  borderRadius: "md",
+                  marginTop: "4",
+                  fontSize: "sm",
+                })}
+              >
+                {updateMutation.error instanceof Error ? updateMutation.error.message : "更新に失敗しました"}
+              </div>
+            )}
+
             <div className={css({ display: "flex", justifyContent: "flex-end", gap: "2", marginTop: "4" })}>
               <Button variant="secondary" onClick={() => setEditUser(null)} type="button">
                 キャンセル
               </Button>
-              <Button type="submit">更新</Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "更新中..." : "更新"}
+              </Button>
             </div>
           </form>
         )}

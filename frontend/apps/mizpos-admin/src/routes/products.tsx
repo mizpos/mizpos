@@ -9,6 +9,7 @@ import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
 import { getAuthenticatedClients } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 export const Route = createFileRoute("/products")({
   component: ProductsPage,
@@ -30,24 +31,26 @@ interface Product {
 
 type CreateProductForm = StockComponents["schemas"]["CreateProductRequest"];
 
-const initialFormState: CreateProductForm = {
-  name: "",
-  description: "",
-  category: "",
-  price: 0,
-  image_url: "",
-  author: "",
-  publisher: "",
-  variant_type: "physical",
-  stock_quantity: 0,
-  operator_id: "admin",
-};
-
 function ProductsPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+
+  const initialFormState: CreateProductForm = {
+    name: "",
+    description: "",
+    category: "",
+    price: 0,
+    image_url: "",
+    author: "",
+    publisher: "",
+    variant_type: "physical",
+    stock_quantity: 0,
+    operator_id: user?.userId || "",
+  };
+
   const [formData, setFormData] = useState<CreateProductForm>(initialFormState);
 
   const { data: products = [], isLoading } = useQuery({
