@@ -45,7 +45,7 @@ const initialFormState: CreatePublisherForm = {
   contact_email: "",
   commission_rate: 0,
   stripe_online_fee_rate: 3.6,
-  stripe_terminal_fee_rate: 2.7,
+  stripe_terminal_fee_rate: 3.6,
 };
 
 function PublishersPage() {
@@ -53,13 +53,16 @@ function PublishersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editPublisher, setEditPublisher] = useState<Publisher | null>(null);
-  const [formData, setFormData] = useState<CreatePublisherForm>(initialFormState);
+  const [formData, setFormData] =
+    useState<CreatePublisherForm>(initialFormState);
 
   const { data: publishers = [], isLoading } = useQuery({
     queryKey: ["publishers"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_GATEWAY_BASE}/stock/publishers`, { headers });
+      const response = await fetch(`${API_GATEWAY_BASE}/stock/publishers`, {
+        headers,
+      });
       if (!response.ok) throw new Error("Failed to fetch publishers");
       const data = await response.json();
       return (data.publishers || []) as Publisher[];
@@ -85,13 +88,22 @@ function PublishersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Publisher> }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<Publisher>;
+    }) => {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_GATEWAY_BASE}/stock/publishers/${id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(data),
-      });
+      const response = await fetch(
+        `${API_GATEWAY_BASE}/stock/publishers/${id}`,
+        {
+          method: "PUT",
+          headers,
+          body: JSON.stringify(data),
+        }
+      );
       if (!response.ok) throw new Error("Failed to update publisher");
       return response.json();
     },
@@ -104,10 +116,13 @@ function PublishersPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_GATEWAY_BASE}/stock/publishers/${id}`, {
-        method: "DELETE",
-        headers,
-      });
+      const response = await fetch(
+        `${API_GATEWAY_BASE}/stock/publishers/${id}`,
+        {
+          method: "DELETE",
+          headers,
+        }
+      );
       if (!response.ok) throw new Error("Failed to delete publisher");
     },
     onSuccess: () => {
@@ -164,7 +179,11 @@ function PublishersPage() {
       header: "操作",
       render: (item: Publisher) => (
         <div className={css({ display: "flex", gap: "1" })}>
-          <Button variant="ghost" size="sm" onClick={() => setEditPublisher(item)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditPublisher(item)}
+          >
             <IconEdit size={16} />
           </Button>
           <Button
@@ -278,7 +297,13 @@ function PublishersPage() {
         </div>
 
         {isLoading ? (
-          <div className={css({ textAlign: "center", padding: "8", color: "gray.500" })}>
+          <div
+            className={css({
+              textAlign: "center",
+              padding: "8",
+              color: "gray.500",
+            })}
+          >
             読み込み中...
           </div>
         ) : (
@@ -301,7 +326,13 @@ function PublishersPage() {
         title="サークル/出版社追加"
       >
         <form onSubmit={handleCreateSubmit}>
-          <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+          <div
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "4",
+            })}
+          >
             <div>
               <label htmlFor="name" className={labelClass}>
                 サークル/出版社名 *
@@ -311,7 +342,9 @@ function PublishersPage() {
                 type="text"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 className={inputClass}
               />
             </div>
@@ -324,7 +357,9 @@ function PublishersPage() {
                 id="contact_email"
                 type="email"
                 value={formData.contact_email}
-                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, contact_email: e.target.value })
+                }
                 className={inputClass}
               />
             </div>
@@ -341,7 +376,10 @@ function PublishersPage() {
                 step="0.1"
                 value={formData.commission_rate}
                 onChange={(e) =>
-                  setFormData({ ...formData, commission_rate: parseFloat(e.target.value) || 0 })
+                  setFormData({
+                    ...formData,
+                    commission_rate: parseFloat(e.target.value) || 0,
+                  })
                 }
                 className={inputClass}
               />
@@ -396,7 +434,9 @@ function PublishersPage() {
               <textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 rows={3}
                 className={`${inputClass} ${css({ resize: "vertical" })}`}
               />
@@ -436,7 +476,13 @@ function PublishersPage() {
       >
         {editPublisher && (
           <form onSubmit={handleUpdateSubmit}>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "4",
+              })}
+            >
               <div>
                 <label htmlFor="edit_name" className={labelClass}>
                   サークル/出版社名 *
@@ -446,7 +492,9 @@ function PublishersPage() {
                   type="text"
                   required
                   value={editPublisher.name}
-                  onChange={(e) => setEditPublisher({ ...editPublisher, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditPublisher({ ...editPublisher, name: e.target.value })
+                  }
                   className={inputClass}
                 />
               </div>
@@ -460,7 +508,10 @@ function PublishersPage() {
                   type="email"
                   value={editPublisher.contact_email}
                   onChange={(e) =>
-                    setEditPublisher({ ...editPublisher, contact_email: e.target.value })
+                    setEditPublisher({
+                      ...editPublisher,
+                      contact_email: e.target.value,
+                    })
                   }
                   className={inputClass}
                 />
@@ -488,7 +539,10 @@ function PublishersPage() {
               </div>
 
               <div>
-                <label htmlFor="edit_stripe_online_fee_rate" className={labelClass}>
+                <label
+                  htmlFor="edit_stripe_online_fee_rate"
+                  className={labelClass}
+                >
                   Stripeオンライン決済手数料率 (%)
                 </label>
                 <input
@@ -509,7 +563,10 @@ function PublishersPage() {
               </div>
 
               <div>
-                <label htmlFor="edit_stripe_terminal_fee_rate" className={labelClass}>
+                <label
+                  htmlFor="edit_stripe_terminal_fee_rate"
+                  className={labelClass}
+                >
                   Stripe端末決済手数料率 (%)
                 </label>
                 <input
@@ -537,7 +594,10 @@ function PublishersPage() {
                   id="edit_description"
                   value={editPublisher.description}
                   onChange={(e) =>
-                    setEditPublisher({ ...editPublisher, description: e.target.value })
+                    setEditPublisher({
+                      ...editPublisher,
+                      description: e.target.value,
+                    })
                   }
                   rows={3}
                   className={`${inputClass} ${css({ resize: "vertical" })}`}
@@ -545,16 +605,27 @@ function PublishersPage() {
               </div>
 
               <div>
-                <label className={css({ display: "flex", alignItems: "center", gap: "2" })}>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                  })}
+                >
                   <input
                     type="checkbox"
                     checked={editPublisher.is_active}
                     onChange={(e) =>
-                      setEditPublisher({ ...editPublisher, is_active: e.target.checked })
+                      setEditPublisher({
+                        ...editPublisher,
+                        is_active: e.target.checked,
+                      })
                     }
                     className={css({ width: "4", height: "4" })}
                   />
-                  <span className={css({ fontSize: "sm", color: "gray.700" })}>有効</span>
+                  <span className={css({ fontSize: "sm", color: "gray.700" })}>
+                    有効
+                  </span>
                 </label>
               </div>
             </div>
@@ -567,7 +638,11 @@ function PublishersPage() {
                 marginTop: "4",
               })}
             >
-              <Button variant="secondary" onClick={() => setEditPublisher(null)} type="button">
+              <Button
+                variant="secondary"
+                onClick={() => setEditPublisher(null)}
+                type="button"
+              >
                 キャンセル
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>

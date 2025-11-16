@@ -36,7 +36,7 @@ runs:
         reporter: github-pr-review
         fail_on_error: "false"
         filter_mode: "nofilter"
-        flags: "--module"
+        flags: "--call-module-type=all"
 
     - name: Terraform Plan (PR)
       if: github.event_name == 'pull_request'
