@@ -55,10 +55,17 @@ def record_stock_history(
     stock_history_table.put_item(Item=history_item)
 
 
-def build_update_expression(request_dict: dict) -> tuple[list[str], dict]:
-    """更新式と値を構築"""
+def build_update_expression(request_dict: dict) -> tuple[list[str], dict, dict]:
+    """更新式と値を構築（予約語対応）"""
+    # DynamoDB予約語のリスト（よく使うものを含む）
+    reserved_keywords = {
+        "name", "description", "status", "type", "value", "data", "date",
+        "timestamp", "count", "size", "key", "user", "group", "comment"
+    }
+
     update_expressions = []
     expression_values = {}
+    expression_names = {}
 
     for field, value in request_dict.items():
         if value is not None:
@@ -66,10 +73,17 @@ def build_update_expression(request_dict: dict) -> tuple[list[str], dict]:
                 value = Decimal(str(value))
             elif field == "variant_type":
                 value = value.value if isinstance(value, VariantType) else value
-            update_expressions.append(f"{field} = :{field}")
+
+            # 予約語の場合はExpressionAttributeNamesを使用
+            if field.lower() in reserved_keywords:
+                expression_names[f"#{field}"] = field
+                update_expressions.append(f"#{field} = :{field}")
+            else:
+                update_expressions.append(f"{field} = :{field}")
+
             expression_values[f":{field}"] = value
 
-    return update_expressions, expression_values
+    return update_expressions, expression_values, expression_names
 
 
 def get_publisher(publisher_id: str) -> dict | None:

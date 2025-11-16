@@ -1,5 +1,5 @@
 import type { StockComponents } from "@mizpos/api";
-import { IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import { IconBarcode, IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -8,8 +8,12 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { getAuthenticatedClients } from "../lib/api";
+import { getAuthHeaders, getAuthenticatedClients } from "../lib/api";
 import { useAuth } from "../lib/auth";
+
+const API_GATEWAY_BASE =
+  import.meta.env.VITE_API_GATEWAY_BASE ||
+  "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
 
 export const Route = createFileRoute("/products")({
   component: ProductsPage,
@@ -38,12 +42,24 @@ type CreateProductForm = StockComponents["schemas"]["CreateProductRequest"] & {
   download_url?: string;
 };
 
+interface BarcodeInfo {
+  product_id: string;
+  product_name: string;
+  isdn: string | null;
+  isdn_formatted: string | null;
+  jan_barcode_1: string;
+  jan_barcode_2: string;
+  full_display: string;
+}
+
 function ProductsPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [barcodeInfo, setBarcodeInfo] = useState<BarcodeInfo | null>(null);
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
 
   const initialFormState: CreateProductForm = {
     name: "",
@@ -167,6 +183,32 @@ function ProductsPage() {
         >
           <Button variant="ghost" size="sm" onClick={() => setEditProduct(item)}>
             <IconEdit size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(
+                  `${API_GATEWAY_BASE}/stock/products/${item.product_id}/barcode`,
+                  { headers }
+                );
+                if (!response.ok) throw new Error("Failed to fetch barcode");
+                const data = await response.json();
+                setBarcodeInfo({
+                  product_id: item.product_id,
+                  product_name: item.name,
+                  ...data,
+                });
+                setIsBarcodeModalOpen(true);
+              } catch (error) {
+                console.error("Barcode fetch error:", error);
+                alert("バーコード情報の取得に失敗しました");
+              }
+            }}
+          >
+            <IconBarcode size={16} />
           </Button>
           <Button
             variant="ghost"
@@ -351,6 +393,201 @@ function ProductsPage() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Barcode Modal */}
+      <Modal
+        isOpen={isBarcodeModalOpen}
+        onClose={() => {
+          setIsBarcodeModalOpen(false);
+          setBarcodeInfo(null);
+        }}
+        title="バーコード情報"
+      >
+        {barcodeInfo && (
+          <div
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "4",
+            })}
+          >
+            <div>
+              <label
+                className={css({
+                  display: "block",
+                  fontSize: "sm",
+                  fontWeight: "medium",
+                  color: "gray.700",
+                  marginBottom: "1",
+                })}
+              >
+                商品名
+              </label>
+              <div
+                className={css({
+                  padding: "2",
+                  backgroundColor: "gray.50",
+                  borderRadius: "md",
+                  fontSize: "sm",
+                })}
+              >
+                {barcodeInfo.product_name}
+              </div>
+            </div>
+
+            {barcodeInfo.isdn && (
+              <div>
+                <label
+                  className={css({
+                    display: "block",
+                    fontSize: "sm",
+                    fontWeight: "medium",
+                    color: "gray.700",
+                    marginBottom: "1",
+                  })}
+                >
+                  ISDN
+                </label>
+                <div
+                  className={css({
+                    padding: "2",
+                    backgroundColor: "gray.50",
+                    borderRadius: "md",
+                    fontSize: "lg",
+                    fontFamily: "mono",
+                  })}
+                >
+                  {barcodeInfo.isdn}
+                </div>
+              </div>
+            )}
+
+            {barcodeInfo.isdn_formatted && (
+              <div>
+                <label
+                  className={css({
+                    display: "block",
+                    fontSize: "sm",
+                    fontWeight: "medium",
+                    color: "gray.700",
+                    marginBottom: "1",
+                  })}
+                >
+                  ISDN（Cコード・価格付き）
+                </label>
+                <div
+                  className={css({
+                    padding: "2",
+                    backgroundColor: "gray.50",
+                    borderRadius: "md",
+                    fontSize: "sm",
+                    fontFamily: "mono",
+                  })}
+                >
+                  {barcodeInfo.isdn_formatted}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label
+                className={css({
+                  display: "block",
+                  fontSize: "sm",
+                  fontWeight: "medium",
+                  color: "gray.700",
+                  marginBottom: "1",
+                })}
+              >
+                JANバーコード（1段目）
+              </label>
+              <div
+                className={css({
+                  padding: "2",
+                  backgroundColor: "gray.50",
+                  borderRadius: "md",
+                  fontSize: "lg",
+                  fontFamily: "mono",
+                  letterSpacing: "wider",
+                })}
+              >
+                {barcodeInfo.jan_barcode_1}
+              </div>
+            </div>
+
+            <div>
+              <label
+                className={css({
+                  display: "block",
+                  fontSize: "sm",
+                  fontWeight: "medium",
+                  color: "gray.700",
+                  marginBottom: "1",
+                })}
+              >
+                JANバーコード（2段目）
+              </label>
+              <div
+                className={css({
+                  padding: "2",
+                  backgroundColor: "gray.50",
+                  borderRadius: "md",
+                  fontSize: "lg",
+                  fontFamily: "mono",
+                  letterSpacing: "wider",
+                })}
+              >
+                {barcodeInfo.jan_barcode_2}
+              </div>
+            </div>
+
+            <div>
+              <label
+                className={css({
+                  display: "block",
+                  fontSize: "sm",
+                  fontWeight: "medium",
+                  color: "gray.700",
+                  marginBottom: "1",
+                })}
+              >
+                全体表示
+              </label>
+              <pre
+                className={css({
+                  padding: "3",
+                  backgroundColor: "gray.900",
+                  color: "gray.100",
+                  borderRadius: "md",
+                  fontSize: "sm",
+                  fontFamily: "mono",
+                  whiteSpace: "pre-wrap",
+                  overflowX: "auto",
+                })}
+              >
+                {barcodeInfo.full_display}
+              </pre>
+            </div>
+
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: "2",
+              })}
+            >
+              <Button
+                onClick={() => {
+                  setIsBarcodeModalOpen(false);
+                  setBarcodeInfo(null);
+                }}
+              >
+                閉じる
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
     </>

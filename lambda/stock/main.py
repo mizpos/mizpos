@@ -13,9 +13,12 @@ from models import (
     AdjustStockRequest,
     CreateProductRequest,
     CreatePublisherRequest,
+    GenerateBarcodeRequest,
+    GenerateISDNRequest,
     UpdateProductRequest,
     UpdatePublisherRequest,
 )
+from isdn import generate_full_barcode_info, generate_isdn, validate_isdn
 from services import (
     build_update_expression,
     dynamo_to_dict,
@@ -143,18 +146,24 @@ async def update_product(
         if not request_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        update_expressions, expression_values = build_update_expression(request_dict)
+        update_expressions, expression_values, expression_names = build_update_expression(request_dict)
 
         now = datetime.now(timezone.utc).isoformat()
         update_expressions.append("updated_at = :updated_at")
         expression_values[":updated_at"] = now
 
-        response = stock_table.update_item(
-            Key={"product_id": product_id},
-            UpdateExpression="SET " + ", ".join(update_expressions),
-            ExpressionAttributeValues=expression_values,
-            ReturnValues="ALL_NEW",
-        )
+        update_params = {
+            "Key": {"product_id": product_id},
+            "UpdateExpression": "SET " + ", ".join(update_expressions),
+            "ExpressionAttributeValues": expression_values,
+            "ReturnValues": "ALL_NEW",
+        }
+
+        # 予約語がある場合のみExpressionAttributeNamesを追加
+        if expression_names:
+            update_params["ExpressionAttributeNames"] = expression_names
+
+        response = stock_table.update_item(**update_params)
 
         return {"product": dynamo_to_dict(response["Attributes"])}
     except HTTPException:
@@ -312,18 +321,24 @@ async def update_publisher(
         if not request_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        update_expressions, expression_values = build_update_expression(request_dict)
+        update_expressions, expression_values, expression_names = build_update_expression(request_dict)
 
         now = datetime.now(timezone.utc).isoformat()
         update_expressions.append("updated_at = :updated_at")
         expression_values[":updated_at"] = now
 
-        response = publishers_table.update_item(
-            Key={"publisher_id": publisher_id},
-            UpdateExpression="SET " + ", ".join(update_expressions),
-            ExpressionAttributeValues=expression_values,
-            ReturnValues="ALL_NEW",
-        )
+        update_params = {
+            "Key": {"publisher_id": publisher_id},
+            "UpdateExpression": "SET " + ", ".join(update_expressions),
+            "ExpressionAttributeValues": expression_values,
+            "ReturnValues": "ALL_NEW",
+        }
+
+        # 予約語がある場合のみExpressionAttributeNamesを追加
+        if expression_names:
+            update_params["ExpressionAttributeNames"] = expression_names
+
+        response = publishers_table.update_item(**update_params)
 
         return {"publisher": dynamo_to_dict(response["Attributes"])}
     except HTTPException:
@@ -337,6 +352,86 @@ async def delete_publisher(publisher_id: str, current_user: dict = Depends(get_c
     """出版社/サークル削除"""
     try:
         publishers_table.delete_item(Key={"publisher_id": publisher_id})
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ISDN/JAN バーコード生成エンドポイント
+@router.post("/isdn/generate", response_model=dict)
+async def generate_new_isdn(
+    request: GenerateISDNRequest = GenerateISDNRequest(),
+    current_user: dict = Depends(get_current_user),
+):
+    """新しいISDNを生成"""
+    try:
+        isdn = generate_isdn(request.group)
+        return {"isdn": isdn}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/isdn/validate", response_model=dict)
+async def validate_isdn_endpoint(
+    isdn: str = Query(..., description="検証するISDN（ハイフン区切り）"),
+    current_user: dict = Depends(get_current_user),
+):
+    """ISDNの形式とチェックデジットを検証"""
+    is_valid = validate_isdn(isdn)
+    return {"isdn": isdn, "is_valid": is_valid}
+
+
+@router.post("/barcode/generate", response_model=dict)
+async def generate_barcode(
+    request: GenerateBarcodeRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """ISDN/JANバーコード情報を生成"""
+    try:
+        barcode_info = generate_full_barcode_info(
+            isdn=request.isdn,
+            product_id=request.product_id,
+            price=request.price,
+            c_code=request.c_code,
+        )
+        return barcode_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/products/{product_id}/barcode", response_model=dict)
+async def get_product_barcode(
+    product_id: str,
+    c_code: str = Query(default="3055", description="Cコード（4桁）"),
+    current_user: dict = Depends(get_current_user),
+):
+    """商品のバーコード情報を取得"""
+    try:
+        # 商品情報を取得
+        response = stock_table.get_item(Key={"product_id": product_id})
+        product = response.get("Item")
+
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        product_dict = dynamo_to_dict(product)
+        isdn = product_dict.get("isdn")
+        price = int(product_dict.get("price", 0))
+
+        # バーコード情報を生成
+        barcode_info = generate_full_barcode_info(
+            isdn=isdn,
+            product_id=product_id,
+            price=price,
+            c_code=c_code,
+        )
+
+        return {
+            "product_id": product_id,
+            "product_name": product_dict.get("name", ""),
+            **barcode_info,
+        }
+    except HTTPException:
+        raise
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

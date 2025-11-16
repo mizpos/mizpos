@@ -117,3 +117,23 @@ class StockHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ISDN/JAN バーコード生成用モデル
+class GenerateISDNRequest(BaseModel):
+    group: str = Field(default="4", description="グループ記号（日本は4）")
+
+
+class GenerateBarcodeRequest(BaseModel):
+    isdn: str | None = Field(default=None, description="既存のISDN（ハイフン区切り）")
+    product_id: str = Field(default="", description="商品ID（ISDN未付与時に使用）")
+    price: int = Field(default=0, ge=0, description="価格")
+    c_code: str = Field(default="3055", description="Cコード（4桁）")
+
+
+class BarcodeResponse(BaseModel):
+    isdn: str | None
+    isdn_formatted: str | None
+    jan_barcode_1: str
+    jan_barcode_2: str
+    full_display: str
