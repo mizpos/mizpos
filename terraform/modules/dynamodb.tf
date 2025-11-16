@@ -211,3 +211,23 @@ resource "aws_dynamodb_table" "events" {
     Name = "${var.environment}-mizpos-events"
   }
 }
+
+# Config table - アプリケーション設定（Stripe Terminal等）
+resource "aws_dynamodb_table" "config" {
+  name         = "${var.environment}-mizpos-config"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "config_key"
+
+  attribute {
+    name = "config_key"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-config"
+  }
+}

@@ -17,6 +17,7 @@ SALES_TABLE = os.environ.get("SALES_TABLE", f"{ENVIRONMENT}-mizpos-sales")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
 STOCK_HISTORY_TABLE = os.environ.get("STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history")
 EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
+CONFIG_TABLE = os.environ.get("CONFIG_TABLE", f"{ENVIRONMENT}-mizpos-config")
 STRIPE_SECRET_ARN = os.environ.get("STRIPE_SECRET_ARN", "")
 
 # AWS クライアント
@@ -26,6 +27,7 @@ sales_table = dynamodb.Table(SALES_TABLE)
 stock_table = dynamodb.Table(STOCK_TABLE)
 stock_history_table = dynamodb.Table(STOCK_HISTORY_TABLE)
 events_table = dynamodb.Table(EVENTS_TABLE)
+config_table = dynamodb.Table(CONFIG_TABLE)
 
 
 def init_stripe() -> None:
@@ -232,3 +234,72 @@ def get_products_info(cart_items: list[CartItem]) -> dict:
         if prod_resp.get("Item"):
             products_info[item.product_id] = dynamo_to_dict(prod_resp["Item"])
     return products_info
+
+
+# 設定管理関数
+def get_config(config_key: str) -> dict | None:
+    """設定を取得"""
+    response = config_table.get_item(Key={"config_key": config_key})
+    item = response.get("Item")
+    return dynamo_to_dict(item) if item else None
+
+
+def set_config(config_key: str, value: dict) -> dict:
+    """設定を保存/更新"""
+    now = datetime.now(timezone.utc).isoformat()
+
+    existing = get_config(config_key)
+    created_at = existing.get("created_at", now) if existing else now
+
+    config_item = {
+        "config_key": config_key,
+        "value": value,
+        "updated_at": now,
+        "created_at": created_at,
+    }
+
+    config_table.put_item(Item=config_item)
+    return dynamo_to_dict(config_item)
+
+
+def delete_config(config_key: str) -> bool:
+    """設定を削除"""
+    existing = get_config(config_key)
+    if not existing:
+        return False
+
+    config_table.delete_item(Key={"config_key": config_key})
+    return True
+
+
+def get_stripe_terminal_config(config_key: str = "stripe_terminal") -> dict | None:
+    """Stripe Terminal設定を取得"""
+    config = get_config(config_key)
+    if config:
+        return config.get("value", {})
+    return None
+
+
+def set_stripe_terminal_config(
+    location_id: str,
+    reader_id: str | None = None,
+    description: str | None = None,
+    config_key: str = "stripe_terminal",
+) -> dict:
+    """Stripe Terminal設定を保存"""
+    value = {
+        "location_id": location_id,
+        "reader_id": reader_id,
+        "description": description,
+    }
+    config = set_config(config_key, value)
+
+    # フラットな形式で返す
+    return {
+        "config_key": config["config_key"],
+        "location_id": value["location_id"],
+        "reader_id": value.get("reader_id"),
+        "description": value.get("description"),
+        "updated_at": config["updated_at"],
+        "created_at": config["created_at"],
+    }

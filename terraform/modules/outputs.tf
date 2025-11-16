@@ -62,6 +62,11 @@ output "dynamodb_events_table_name" {
   value       = aws_dynamodb_table.events.name
 }
 
+output "dynamodb_config_table_name" {
+  description = "DynamoDB Config Table Name"
+  value       = aws_dynamodb_table.config.name
+}
+
 # Lambda Outputs
 output "lambda_accounts_function_name" {
   description = "Lambda Accounts Function Name"
@@ -118,12 +123,6 @@ output "api_gateway_domain_name_target" {
 output "stripe_secret_arn" {
   description = "Stripe API Key Secret ARN"
   value       = aws_secretsmanager_secret.stripe_api_key.arn
-  sensitive   = true
-}
-
-output "stripe_terminal_secret_arn" {
-  description = "Stripe Terminal Config Secret ARN"
-  value       = aws_secretsmanager_secret.stripe_terminal_config.arn
   sensitive   = true
 }
 

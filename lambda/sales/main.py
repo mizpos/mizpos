@@ -17,18 +17,23 @@ from models import (
     CreatePaymentIntentRequest,
     CreateSaleRequest,
     SaleStatus,
+    StripeTerminalConfigRequest,
 )
 from services import (
     calculate_coupon_discount,
+    config_table,
     deduct_stock,
     dynamo_to_dict,
     events_table,
+    get_config,
     get_coupon_by_code,
     get_products_info,
+    get_stripe_terminal_config,
     increment_coupon_usage,
     init_stripe,
     restore_stock,
     sales_table,
+    set_stripe_terminal_config,
     validate_and_reserve_stock,
     validate_coupon,
 )
@@ -43,7 +48,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -402,6 +407,77 @@ async def create_event(request: CreateEventRequest):
         events_table.put_item(Item=event_item)
 
         return {"event": event_item}
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# 設定管理エンドポイント
+@router.get("/config/stripe-terminal", response_model=dict)
+async def get_stripe_terminal_config_endpoint(
+    config_key: str = Query(default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"),
+):
+    """Stripe Terminal設定を取得"""
+    try:
+        config = get_config(config_key)
+        if not config:
+            raise HTTPException(status_code=404, detail=f"Config '{config_key}' not found")
+
+        value = config.get("value", {})
+        return {
+            "config": {
+                "config_key": config["config_key"],
+                "location_id": value.get("location_id", ""),
+                "reader_id": value.get("reader_id"),
+                "description": value.get("description"),
+                "updated_at": config["updated_at"],
+                "created_at": config["created_at"],
+            }
+        }
+    except HTTPException:
+        raise
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/config/stripe-terminal", response_model=dict)
+async def update_stripe_terminal_config_endpoint(
+    request: StripeTerminalConfigRequest,
+    config_key: str = Query(default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"),
+):
+    """Stripe Terminal設定を作成/更新"""
+    try:
+        result = set_stripe_terminal_config(
+            location_id=request.location_id,
+            reader_id=request.reader_id,
+            description=request.description,
+            config_key=config_key,
+        )
+        return {"config": result}
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/config", response_model=dict)
+async def list_configs():
+    """全設定一覧を取得"""
+    try:
+        response = config_table.scan()
+        configs = [dynamo_to_dict(item) for item in response.get("Items", [])]
+        return {"configs": configs}
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/config/{config_key}", response_model=dict)
+async def get_config_endpoint(config_key: str):
+    """任意の設定を取得"""
+    try:
+        config = get_config(config_key)
+        if not config:
+            raise HTTPException(status_code=404, detail=f"Config '{config_key}' not found")
+        return {"config": config}
+    except HTTPException:
+        raise
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

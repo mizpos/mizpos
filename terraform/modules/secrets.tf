@@ -26,26 +26,5 @@ resource "aws_secretsmanager_secret_version" "stripe_api_key" {
   }
 }
 
-# Stripe Terminal Location ID
-resource "aws_secretsmanager_secret" "stripe_terminal_config" {
-  name        = "${var.environment}-${var.project_name}-stripe-terminal-config"
-  description = "Stripe Terminal configuration for in-person payments"
-
-  recovery_window_in_days = var.environment == "prod" ? 30 : 7
-
-  tags = {
-    Name = "${var.environment}-${var.project_name}-stripe-terminal-config"
-  }
-}
-
-# Stripe Terminal Config の初期値（プレースホルダー）
-resource "aws_secretsmanager_secret_version" "stripe_terminal_config" {
-  secret_id = aws_secretsmanager_secret.stripe_terminal_config.id
-  secret_string = jsonencode({
-    location_id = "PLACEHOLDER_LOCATION_ID"
-  })
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
+# Note: Stripe Terminal configuration is now stored in DynamoDB config table
+# instead of Secrets Manager to allow per-location/event configuration

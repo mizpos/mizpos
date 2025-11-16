@@ -235,7 +235,8 @@ resource "aws_iam_role_policy" "lambda_sales" {
           aws_dynamodb_table.stock_history.arn,
           "${aws_dynamodb_table.stock_history.arn}/index/*",
           aws_dynamodb_table.events.arn,
-          "${aws_dynamodb_table.events.arn}/index/*"
+          "${aws_dynamodb_table.events.arn}/index/*",
+          aws_dynamodb_table.config.arn
         ]
       },
       {
