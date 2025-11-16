@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime, timezone
 
@@ -194,5 +195,8 @@ app.include_router(router)
 
 # Mangum ハンドラー（API Gateway base path対応）
 def handler(event, context):
-    mangum_handler = Mangum(app, lifespan="off", api_gateway_base_path="/accounts")
+    # HTTP API v2.0ではrawPathにステージ名が含まれるため、動的にbase pathを設定
+    environment = os.environ.get("ENVIRONMENT", "dev")
+    api_gateway_base_path = f"/{environment}/accounts"
+    mangum_handler = Mangum(app, lifespan="off", api_gateway_base_path=api_gateway_base_path)
     return mangum_handler(event, context)
