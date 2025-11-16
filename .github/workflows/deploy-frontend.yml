@@ -68,6 +68,10 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Generate API Types
+        working-directory: frontend
+        run: pnpm generate-api-types
+
       - name: Type Check
         working-directory: frontend
         run: pnpm check-types
