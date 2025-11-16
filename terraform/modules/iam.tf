@@ -175,7 +175,9 @@ resource "aws_iam_role_policy" "lambda_stock" {
           aws_dynamodb_table.stock.arn,
           "${aws_dynamodb_table.stock.arn}/index/*",
           aws_dynamodb_table.stock_history.arn,
-          "${aws_dynamodb_table.stock_history.arn}/index/*"
+          "${aws_dynamodb_table.stock_history.arn}/index/*",
+          aws_dynamodb_table.publishers.arn,
+          "${aws_dynamodb_table.publishers.arn}/index/*"
         ]
       }
     ]
