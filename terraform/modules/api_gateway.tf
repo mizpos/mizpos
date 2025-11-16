@@ -109,6 +109,14 @@ resource "aws_apigatewayv2_route" "accounts" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
+# OPTIONS route for accounts (CORS preflight - no auth)
+resource "aws_apigatewayv2_route" "options_accounts" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "OPTIONS /accounts/{proxy+}"
+
+  authorization_type = "NONE"
+}
+
 # Routes - stock
 resource "aws_apigatewayv2_route" "stock" {
   api_id    = aws_apigatewayv2_api.main.id
@@ -119,6 +127,14 @@ resource "aws_apigatewayv2_route" "stock" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
+# OPTIONS route for stock (CORS preflight - no auth)
+resource "aws_apigatewayv2_route" "options_stock" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "OPTIONS /stock/{proxy+}"
+
+  authorization_type = "NONE"
+}
+
 # Routes - sales
 resource "aws_apigatewayv2_route" "sales" {
   api_id    = aws_apigatewayv2_api.main.id
@@ -127,6 +143,14 @@ resource "aws_apigatewayv2_route" "sales" {
 
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+}
+
+# OPTIONS route for sales (CORS preflight - no auth)
+resource "aws_apigatewayv2_route" "options_sales" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "OPTIONS /sales/{proxy+}"
+
+  authorization_type = "NONE"
 }
 
 # OpenAPI Documentation Routes (public access)
