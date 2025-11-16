@@ -3,6 +3,7 @@ import {
   IconBuildingStore,
   IconChartBar,
   IconHome,
+  IconKey,
   IconLogout,
   IconPackage,
   IconSettings,
@@ -162,6 +163,38 @@ export function Sidebar() {
             </p>
           </div>
         )}
+        <Link
+          to="/change-password"
+          className={css({
+            display: "flex",
+            alignItems: "center",
+            gap: "3",
+            padding: "3",
+            borderRadius: "md",
+            width: "100%",
+            textDecoration: "none",
+            backgroundColor:
+              currentPath === "/change-password" ? "primary.600" : "transparent",
+            color: currentPath === "/change-password" ? "white" : "gray.300",
+            transition: "all 0.2s",
+            marginBottom: "2",
+            _hover: {
+              backgroundColor:
+                currentPath === "/change-password" ? "primary.600" : "gray.800",
+              color: "white",
+            },
+          })}
+        >
+          <IconKey size={20} />
+          <span
+            className={css({
+              fontSize: "sm",
+              fontWeight: "medium",
+            })}
+          >
+            パスワード変更
+          </span>
+        </Link>
         <button
           onClick={handleSignOut}
           type="button"
