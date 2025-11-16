@@ -63,10 +63,21 @@ jobs:
         working-directory: terraform/tf-${{ inputs.environment }}
         run: terraform init
 
+      - name: Get Terraform Outputs
+        id: tf_outputs
+        working-directory: terraform/tf-${{ inputs.environment }}
+        run: |
+          USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
+          USERS_TABLE=$(terraform output -raw dynamodb_users_table_name)
+          echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
+          echo "users_table=$USERS_TABLE" >> $GITHUB_OUTPUT
+
       - name: Create Admin User
         run: |
           python scripts/setup_admin_user.py \
             --environment "${{ inputs.environment }}" \
             --email "${{ inputs.email }}" \
             --password "${{ inputs.password }}" \
-            --display-name "${{ inputs.display_name }}"
+            --display-name "${{ inputs.display_name }}" \
+            --user-pool-id "${{ steps.tf_outputs.outputs.user_pool_id }}" \
+            --users-table "${{ steps.tf_outputs.outputs.users_table }}"
