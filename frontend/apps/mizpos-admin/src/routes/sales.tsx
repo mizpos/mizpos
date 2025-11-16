@@ -74,7 +74,8 @@ function SalesPage() {
     (sale) =>
       sale.sale_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (sale.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+      (sale.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+        false),
   );
 
   const getStatusBadge = (status: Sale["status"]) => {
@@ -185,7 +186,9 @@ function SalesPage() {
     .filter((s) => s.status === "completed")
     .reduce((sum, s) => sum + s.final_amount, 0);
 
-  const totalOrders = filteredSales.filter((s) => s.status === "completed").length;
+  const totalOrders = filteredSales.filter(
+    (s) => s.status === "completed",
+  ).length;
 
   return (
     <>
@@ -216,7 +219,13 @@ function SalesPage() {
             })}
           >
             <p className={css({ fontSize: "sm", color: "gray.500" })}>総売上</p>
-            <p className={css({ fontSize: "2xl", fontWeight: "bold", color: "gray.900" })}>
+            <p
+              className={css({
+                fontSize: "2xl",
+                fontWeight: "bold",
+                color: "gray.900",
+              })}
+            >
               ¥{totalRevenue.toLocaleString()}
             </p>
           </div>
@@ -230,7 +239,13 @@ function SalesPage() {
             })}
           >
             <p className={css({ fontSize: "sm", color: "gray.500" })}>注文数</p>
-            <p className={css({ fontSize: "2xl", fontWeight: "bold", color: "gray.900" })}>
+            <p
+              className={css({
+                fontSize: "2xl",
+                fontWeight: "bold",
+                color: "gray.900",
+              })}
+            >
               {totalOrders}件
             </p>
           </div>
@@ -243,9 +258,20 @@ function SalesPage() {
               borderColor: "gray.200",
             })}
           >
-            <p className={css({ fontSize: "sm", color: "gray.500" })}>平均注文額</p>
-            <p className={css({ fontSize: "2xl", fontWeight: "bold", color: "gray.900" })}>
-              ¥{totalOrders > 0 ? Math.round(totalRevenue / totalOrders).toLocaleString() : 0}
+            <p className={css({ fontSize: "sm", color: "gray.500" })}>
+              平均注文額
+            </p>
+            <p
+              className={css({
+                fontSize: "2xl",
+                fontWeight: "bold",
+                color: "gray.900",
+              })}
+            >
+              ¥
+              {totalOrders > 0
+                ? Math.round(totalRevenue / totalOrders).toLocaleString()
+                : 0}
             </p>
           </div>
         </div>
@@ -298,7 +324,13 @@ function SalesPage() {
 
         {/* Table */}
         {isLoading ? (
-          <div className={css({ textAlign: "center", padding: "8", color: "gray.500" })}>
+          <div
+            className={css({
+              textAlign: "center",
+              padding: "8",
+              color: "gray.500",
+            })}
+          >
             読み込み中...
           </div>
         ) : (
@@ -318,10 +350,28 @@ function SalesPage() {
         title="売上詳細"
       >
         {selectedSale && (
-          <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
-            <div className={css({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4" })}>
+          <div
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "4",
+            })}
+          >
+            <div
+              className={css({
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "4",
+              })}
+            >
               <div>
-                <p className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginBottom: "1",
+                  })}
+                >
                   注文ID
                 </p>
                 <p className={css({ fontSize: "sm", fontFamily: "monospace" })}>
@@ -329,19 +379,39 @@ function SalesPage() {
                 </p>
               </div>
               <div>
-                <p className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginBottom: "1",
+                  })}
+                >
                   状態
                 </p>
                 {getStatusBadge(selectedSale.status)}
               </div>
               <div>
-                <p className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginBottom: "1",
+                  })}
+                >
                   作成日時
                 </p>
-                <p className={css({ fontSize: "sm" })}>{formatDate(selectedSale.created_at)}</p>
+                <p className={css({ fontSize: "sm" })}>
+                  {formatDate(selectedSale.created_at)}
+                </p>
               </div>
               <div>
-                <p className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginBottom: "1",
+                  })}
+                >
                   決済方法
                 </p>
                 <p className={css({ fontSize: "sm" })}>
@@ -350,10 +420,18 @@ function SalesPage() {
               </div>
               {selectedSale.customer_email && (
                 <div className={css({ gridColumn: "span 2" })}>
-                  <p className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginBottom: "1",
+                    })}
+                  >
                     顧客メール
                   </p>
-                  <p className={css({ fontSize: "sm" })}>{selectedSale.customer_email}</p>
+                  <p className={css({ fontSize: "sm" })}>
+                    {selectedSale.customer_email}
+                  </p>
                 </div>
               )}
             </div>
@@ -389,14 +467,21 @@ function SalesPage() {
                     })}
                   >
                     <div>
-                      <p className={css({ fontSize: "sm", fontWeight: "medium" })}>
+                      <p
+                        className={css({
+                          fontSize: "sm",
+                          fontWeight: "medium",
+                        })}
+                      >
                         {item.product_name}
                       </p>
                       <p className={css({ fontSize: "xs", color: "gray.500" })}>
                         ¥{item.unit_price.toLocaleString()} × {item.quantity}
                       </p>
                     </div>
-                    <p className={css({ fontSize: "sm", fontWeight: "medium" })}>
+                    <p
+                      className={css({ fontSize: "sm", fontWeight: "medium" })}
+                    >
                       ¥{item.subtotal.toLocaleString()}
                     </p>
                   </div>
@@ -418,7 +503,9 @@ function SalesPage() {
                   marginBottom: "1",
                 })}
               >
-                <span className={css({ fontSize: "sm", color: "gray.600" })}>小計</span>
+                <span className={css({ fontSize: "sm", color: "gray.600" })}>
+                  小計
+                </span>
                 <span className={css({ fontSize: "sm" })}>
                   ¥{selectedSale.total_amount.toLocaleString()}
                 </span>
@@ -432,7 +519,9 @@ function SalesPage() {
                   })}
                 >
                   <span className={css({ fontSize: "sm", color: "gray.600" })}>
-                    割引 {selectedSale.coupon_code && `(${selectedSale.coupon_code})`}
+                    割引{" "}
+                    {selectedSale.coupon_code &&
+                      `(${selectedSale.coupon_code})`}
                   </span>
                   <span className={css({ fontSize: "sm", color: "error" })}>
                     -¥{selectedSale.discount_amount.toLocaleString()}
@@ -454,11 +543,21 @@ function SalesPage() {
             </div>
 
             {selectedSale.status === "pending" && (
-              <div className={css({ display: "flex", justifyContent: "flex-end", gap: "2" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "2",
+                })}
+              >
                 <Button
                   variant="danger"
                   onClick={() => {
-                    if (window.confirm("この注文をキャンセルしますか？在庫が戻ります。")) {
+                    if (
+                      window.confirm(
+                        "この注文をキャンセルしますか？在庫が戻ります。",
+                      )
+                    ) {
                       cancelMutation.mutate(selectedSale.sale_id);
                     }
                   }}

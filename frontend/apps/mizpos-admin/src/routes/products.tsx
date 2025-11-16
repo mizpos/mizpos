@@ -1,5 +1,11 @@
 import type { StockComponents } from "@mizpos/api";
-import { IconBarcode, IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import {
+  IconBarcode,
+  IconEdit,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -8,7 +14,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { getAuthHeaders, getAuthenticatedClients } from "../lib/api";
+import { getAuthenticatedClients, getAuthHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
 const API_GATEWAY_BASE =
@@ -105,7 +111,13 @@ function ProductsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Product> }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<Product>;
+    }) => {
       const { stock } = await getAuthenticatedClients();
       const { error } = await stock.PUT("/products/{product_id}", {
         params: { path: { product_id: id } },
@@ -135,7 +147,7 @@ function ProductsPage() {
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const columns = [
@@ -181,7 +193,11 @@ function ProductsPage() {
             gap: "1",
           })}
         >
-          <Button variant="ghost" size="sm" onClick={() => setEditProduct(item)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditProduct(item)}
+          >
             <IconEdit size={16} />
           </Button>
           <Button
@@ -192,7 +208,7 @@ function ProductsPage() {
                 const headers = await getAuthHeaders();
                 const response = await fetch(
                   `${API_GATEWAY_BASE}/stock/products/${item.product_id}/barcode`,
-                  { headers }
+                  { headers },
                 );
                 if (!response.ok) throw new Error("Failed to fetch barcode");
                 const data = await response.json();
@@ -334,11 +350,7 @@ function ProductsPage() {
         title="商品追加"
       >
         <form onSubmit={handleCreateSubmit}>
-          <ProductForm
-            data={formData}
-            onChange={setFormData}
-            isNew
-          />
+          <ProductForm data={formData} onChange={setFormData} isNew />
           <div
             className={css({
               display: "flex",
@@ -374,7 +386,9 @@ function ProductsPage() {
           <form onSubmit={handleUpdateSubmit}>
             <ProductForm
               data={editProduct}
-              onChange={(updated) => setEditProduct({ ...editProduct, ...updated })}
+              onChange={(updated) =>
+                setEditProduct({ ...editProduct, ...updated })
+              }
               isNew={false}
             />
             <div
@@ -385,7 +399,11 @@ function ProductsPage() {
                 marginTop: "4",
               })}
             >
-              <Button variant="secondary" onClick={() => setEditProduct(null)} type="button">
+              <Button
+                variant="secondary"
+                onClick={() => setEditProduct(null)}
+                type="button"
+              >
                 キャンセル
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
@@ -415,6 +433,7 @@ function ProductsPage() {
           >
             <div>
               <label
+                htmlFor="product_name"
                 className={css({
                   display: "block",
                   fontSize: "sm",
@@ -426,6 +445,7 @@ function ProductsPage() {
                 商品名
               </label>
               <div
+                id="product_name"
                 className={css({
                   padding: "2",
                   backgroundColor: "gray.50",
@@ -447,10 +467,12 @@ function ProductsPage() {
                     color: "gray.700",
                     marginBottom: "1",
                   })}
+                  htmlFor="isdn"
                 >
                   ISDN
                 </label>
                 <div
+                  id="isdn"
                   className={css({
                     padding: "2",
                     backgroundColor: "gray.50",
@@ -467,6 +489,7 @@ function ProductsPage() {
             {barcodeInfo.isdn_formatted && (
               <div>
                 <label
+                  htmlFor="isdn_formatted"
                   className={css({
                     display: "block",
                     fontSize: "sm",
@@ -478,6 +501,7 @@ function ProductsPage() {
                   ISDN（Cコード・価格付き）
                 </label>
                 <div
+                  id="isdn_formatted"
                   className={css({
                     padding: "2",
                     backgroundColor: "gray.50",
@@ -493,6 +517,7 @@ function ProductsPage() {
 
             <div>
               <label
+                htmlFor="jan_barcode_1"
                 className={css({
                   display: "block",
                   fontSize: "sm",
@@ -504,6 +529,7 @@ function ProductsPage() {
                 JANバーコード（1段目）
               </label>
               <div
+                id="jan_barcode_1"
                 className={css({
                   padding: "2",
                   backgroundColor: "gray.50",
@@ -519,6 +545,7 @@ function ProductsPage() {
 
             <div>
               <label
+                htmlFor="jan_barcode_2"
                 className={css({
                   display: "block",
                   fontSize: "sm",
@@ -530,6 +557,7 @@ function ProductsPage() {
                 JANバーコード（2段目）
               </label>
               <div
+                id="jan_barcode_2"
                 className={css({
                   padding: "2",
                   backgroundColor: "gray.50",
@@ -545,6 +573,7 @@ function ProductsPage() {
 
             <div>
               <label
+                htmlFor="fullDisplay"
                 className={css({
                   display: "block",
                   fontSize: "sm",
@@ -556,6 +585,7 @@ function ProductsPage() {
                 全体表示
               </label>
               <pre
+                id="fullDisplay"
                 className={css({
                   padding: "3",
                   backgroundColor: "gray.900",
@@ -612,12 +642,14 @@ interface ProductFormProps {
 function ProductForm({ data, onChange, isNew }: ProductFormProps) {
   const { data: publishers = [] } = useQuery({
     queryKey: ["publishers"],
-    queryFn: async () => {
-      const { stock } = await getAuthenticatedClients();
-      const { data, error } = await stock.GET("/publishers");
-      if (error) throw error;
-      const response = data as unknown as { publishers: Publisher[] };
-      return response.publishers || [];
+    queryFn: async (): Promise<Publisher[]> => {
+      // TODO: /publishers エンドポイントが実装されたら有効化
+      // const { stock } = await getAuthenticatedClients();
+      // const { data, error } = await stock.GET("/publishers", {});
+      // if (error) throw error;
+      // const response = data as unknown as { publishers: Publisher[] };
+      // return response.publishers || [];
+      return [];
     },
   });
 
@@ -688,7 +720,9 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
           required
           min="0"
           value={data.price}
-          onChange={(e) => onChange({ ...data, price: parseInt(e.target.value, 10) || 0 })}
+          onChange={(e) =>
+            onChange({ ...data, price: parseInt(e.target.value, 10) || 0 })
+          }
           className={inputClass}
         />
       </div>
@@ -791,7 +825,9 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
             </option>
           ))}
         </select>
-        <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+        <p
+          className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
+        >
           委託販売の手数料計算に使用されます
         </p>
       </div>

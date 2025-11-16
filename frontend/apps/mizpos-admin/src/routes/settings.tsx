@@ -43,7 +43,7 @@ async function fetchConfig(configKey: string) {
     `${API_GATEWAY_BASE}/sales/config/${configKey}`,
     {
       headers,
-    }
+    },
   );
   if (response.status === 404) {
     return null;
@@ -57,7 +57,7 @@ async function fetchConfig(configKey: string) {
 
 async function saveConfig(
   configKey: string,
-  value: BrandSettings | PaymentSettings | ConsignmentSettings
+  value: BrandSettings | PaymentSettings | ConsignmentSettings,
 ) {
   const headers = await getAuthHeaders();
   const response = await fetch(
@@ -66,7 +66,7 @@ async function saveConfig(
       method: "PUT",
       headers,
       body: JSON.stringify({ value }),
-    }
+    },
   );
   if (!response.ok) {
     throw new Error(`Failed to save config: ${response.statusText}`);
@@ -120,7 +120,7 @@ function SettingsPage() {
     {
       queryKey: ["config", "payment_settings"],
       queryFn: () => fetchConfig("payment_settings"),
-    }
+    },
   );
 
   const { data: loadedConsignmentSettings, isLoading: isLoadingConsignment } =
@@ -190,7 +190,7 @@ function SettingsPage() {
         setPasswordError("現在のパスワードが正しくありません");
       } else if (error.message.includes("policy")) {
         setPasswordError(
-          "新しいパスワードは大文字・小文字・数字・特殊文字を含む必要があります"
+          "新しいパスワードは大文字・小文字・数字・特殊文字を含む必要があります",
         );
       } else {
         setPasswordError(error.message);

@@ -43,7 +43,9 @@ function ChangePasswordPage() {
       if (err.message.includes("Incorrect")) {
         setError("現在のパスワードが正しくありません");
       } else if (err.message.includes("policy")) {
-        setError("新しいパスワードは大文字・小文字・数字・特殊文字を含む必要があります");
+        setError(
+          "新しいパスワードは大文字・小文字・数字・特殊文字を含む必要があります",
+        );
       } else {
         setError(err.message);
       }
@@ -106,7 +108,8 @@ function ChangePasswordPage() {
             })}
           >
             <p className={css({ fontSize: "sm", color: "gray.600" })}>
-              ログイン中: <strong>{user?.email || user?.username || "不明"}</strong>
+              ログイン中:{" "}
+              <strong>{user?.email || user?.username || "不明"}</strong>
             </p>
           </div>
 
@@ -165,7 +168,13 @@ function ChangePasswordPage() {
             )}
 
             <form onSubmit={handleSubmit}>
-              <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4",
+                })}
+              >
                 <div>
                   <label htmlFor="oldPassword" className={labelClass}>
                     現在のパスワード
@@ -195,7 +204,13 @@ function ChangePasswordPage() {
                     required
                     minLength={8}
                   />
-                  <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginTop: "1",
+                    })}
+                  >
                     8文字以上、大文字・小文字・数字・特殊文字を含む必要があります
                   </p>
                 </div>
@@ -220,11 +235,16 @@ function ChangePasswordPage() {
                   <Button
                     type="submit"
                     disabled={
-                      passwordMutation.isPending || !oldPassword || !newPassword || !confirmPassword
+                      passwordMutation.isPending ||
+                      !oldPassword ||
+                      !newPassword ||
+                      !confirmPassword
                     }
                   >
                     <IconLock size={18} />
-                    {passwordMutation.isPending ? "変更中..." : "パスワードを変更"}
+                    {passwordMutation.isPending
+                      ? "変更中..."
+                      : "パスワードを変更"}
                   </Button>
                 </div>
               </div>

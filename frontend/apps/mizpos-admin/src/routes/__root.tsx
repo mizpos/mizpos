@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import {
-  Outlet,
   createRootRouteWithContext,
+  Outlet,
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";

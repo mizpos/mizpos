@@ -36,7 +36,9 @@ function StockPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [adjustmentModal, setAdjustmentModal] = useState<AdjustmentForm | null>(null);
+  const [adjustmentModal, setAdjustmentModal] = useState<AdjustmentForm | null>(
+    null,
+  );
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -72,7 +74,7 @@ function StockPage() {
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const columns = [
@@ -248,6 +250,7 @@ function StockPage() {
             >
               <div>
                 <label
+                  htmlFor="productName"
                   className={css({
                     display: "block",
                     fontSize: "sm",
@@ -259,6 +262,7 @@ function StockPage() {
                   商品名
                 </label>
                 <p
+                  id="productName"
                   className={css({
                     fontSize: "sm",
                     color: "gray.900",
@@ -270,6 +274,7 @@ function StockPage() {
 
               <div>
                 <label
+                  htmlFor="currentStock"
                   className={css({
                     display: "block",
                     fontSize: "sm",
@@ -281,6 +286,7 @@ function StockPage() {
                   現在の在庫数
                 </label>
                 <p
+                  id="currentStock"
                   className={css({
                     fontSize: "sm",
                     color: "gray.900",
