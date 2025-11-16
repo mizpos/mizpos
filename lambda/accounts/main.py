@@ -5,8 +5,8 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
-from .models import AssignRoleRequest, CreateUserRequest, UpdateUserRequest
-from .services import (
+from models import AssignRoleRequest, CreateUserRequest, UpdateUserRequest
+from services import (
     DynamoDBClientError,
     UsernameExistsException,
     create_cognito_user,

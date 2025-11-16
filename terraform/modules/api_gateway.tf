@@ -133,10 +133,18 @@ resource "aws_apigatewayv2_route" "sales" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
-# OpenAPI Documentation Route (public access)
+# OpenAPI Documentation Routes (public access)
 resource "aws_apigatewayv2_route" "openapi_accounts" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "GET /accounts/openapi.json"
+  target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "docs_accounts" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /accounts/docs"
   target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
 
   authorization_type = "NONE"
@@ -150,9 +158,25 @@ resource "aws_apigatewayv2_route" "openapi_stock" {
   authorization_type = "NONE"
 }
 
+resource "aws_apigatewayv2_route" "docs_stock" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /stock/docs"
+  target    = "integrations/${aws_apigatewayv2_integration.stock.id}"
+
+  authorization_type = "NONE"
+}
+
 resource "aws_apigatewayv2_route" "openapi_sales" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "GET /sales/openapi.json"
+  target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "docs_sales" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /sales/docs"
   target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
 
   authorization_type = "NONE"

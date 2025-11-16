@@ -7,8 +7,8 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
-from .models import AdjustStockRequest, CreateProductRequest, UpdateProductRequest
-from .services import (
+from models import AdjustStockRequest, CreateProductRequest, UpdateProductRequest
+from services import (
     build_update_expression,
     dynamo_to_dict,
     record_stock_history,

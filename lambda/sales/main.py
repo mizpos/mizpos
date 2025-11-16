@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
-from .models import (
+from models import (
     ApplyCouponRequest,
     CreateCouponRequest,
     CreateEventRequest,
@@ -17,7 +17,7 @@ from .models import (
     CreateSaleRequest,
     SaleStatus,
 )
-from .services import (
+from services import (
     calculate_coupon_discount,
     deduct_stock,
     dynamo_to_dict,

@@ -9,7 +9,7 @@ import stripe
 from botocore.exceptions import ClientError
 from fastapi import HTTPException
 
-from .models import CartItem
+from models import CartItem
 
 # 環境変数
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")

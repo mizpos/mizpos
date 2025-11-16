@@ -6,7 +6,7 @@ from decimal import Decimal
 import boto3
 from botocore.exceptions import ClientError
 
-from .models import VariantType
+from models import VariantType
 
 # 環境変数
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
