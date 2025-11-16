@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import APIRouter, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
@@ -22,7 +22,6 @@ app = FastAPI(
     title="Accounts API",
     description="ユーザーアカウントとロール管理API",
     version="1.0.0",
-    root_path="/accounts",
 )
 
 app.add_middleware(
@@ -33,9 +32,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ルーター
+router = APIRouter()
+
 
 # ユーザー管理エンドポイント
-@app.get("/users", response_model=dict)
+@router.get("/users", response_model=dict)
 async def list_users():
     """ユーザー一覧取得"""
     try:
@@ -46,7 +48,7 @@ async def list_users():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/users", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/users", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_user(request: CreateUserRequest):
     """ユーザー作成"""
     try:
@@ -74,7 +76,7 @@ async def create_user(request: CreateUserRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/users/{user_id}", response_model=dict)
+@router.get("/users/{user_id}", response_model=dict)
 async def get_user(user_id: str):
     """ユーザー詳細取得"""
     try:
@@ -89,7 +91,7 @@ async def get_user(user_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.put("/users/{user_id}", response_model=dict)
+@router.put("/users/{user_id}", response_model=dict)
 async def update_user(user_id: str, request: UpdateUserRequest):
     """ユーザー更新"""
     try:
@@ -107,7 +109,7 @@ async def update_user(user_id: str, request: UpdateUserRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: str):
     """ユーザー削除"""
     try:
@@ -128,7 +130,7 @@ async def delete_user(user_id: str):
 
 
 # ロール管理エンドポイント
-@app.get("/users/{user_id}/roles", response_model=dict)
+@router.get("/users/{user_id}/roles", response_model=dict)
 async def get_user_roles(user_id: str):
     """ユーザーのロール一覧取得"""
     try:
@@ -141,7 +143,7 @@ async def get_user_roles(user_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/users/{user_id}/roles", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/users/{user_id}/roles", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def assign_role(user_id: str, request: AssignRoleRequest):
     """ロール割り当て"""
     try:
@@ -163,7 +165,7 @@ async def assign_role(user_id: str, request: AssignRoleRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.delete("/users/{user_id}/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/users/{user_id}/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_role(user_id: str, role_id: str):
     """ロール削除"""
     try:
@@ -172,7 +174,7 @@ async def remove_role(user_id: str, role_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/events/{event_id}/roles", response_model=dict)
+@router.get("/events/{event_id}/roles", response_model=dict)
 async def get_event_roles(event_id: str):
     """イベントのロール一覧取得"""
     try:
@@ -187,5 +189,10 @@ async def get_event_roles(event_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-# Mangum ハンドラー
-handler = Mangum(app, lifespan="off")
+# ルーターを登録
+app.include_router(router)
+
+# Mangum ハンドラー（API Gateway base path対応）
+def handler(event, context):
+    mangum_handler = Mangum(app, lifespan="off", api_gateway_base_path="/accounts")
+    return mangum_handler(event, context)

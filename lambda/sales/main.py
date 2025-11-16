@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import stripe
 from botocore.exceptions import ClientError
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import APIRouter, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
@@ -37,7 +37,6 @@ app = FastAPI(
     title="Sales API",
     description="販売・決済処理API（Stripe統合）",
     version="1.0.0",
-    root_path="/sales",
 )
 
 app.add_middleware(
@@ -48,9 +47,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ルーター
+router = APIRouter()
+
 
 # 販売エンドポイント
-@app.get("/sales", response_model=dict)
+@router.get("/sales", response_model=dict)
 async def list_sales(
     event_id: str | None = Query(default=None, description="イベントIDでフィルタ"),
     user_id: str | None = Query(default=None, description="ユーザーIDでフィルタ"),
@@ -88,7 +90,7 @@ async def list_sales(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/sales/{sale_id}", response_model=dict)
+@router.get("/sales/{sale_id}", response_model=dict)
 async def get_sale(sale_id: str):
     """販売詳細取得"""
     try:
@@ -105,7 +107,7 @@ async def get_sale(sale_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/sales", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/sales", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_sale(request: CreateSaleRequest):
     """販売を作成"""
     try:
@@ -162,7 +164,7 @@ async def create_sale(request: CreateSaleRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/sales/{sale_id}/complete", response_model=dict)
+@router.post("/sales/{sale_id}/complete", response_model=dict)
 async def complete_sale(sale_id: str, stripe_payment_intent_id: str | None = None):
     """販売を完了にする"""
     try:
@@ -199,7 +201,7 @@ async def complete_sale(sale_id: str, stripe_payment_intent_id: str | None = Non
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/sales/{sale_id}/cancel", response_model=dict)
+@router.post("/sales/{sale_id}/cancel", response_model=dict)
 async def cancel_sale(sale_id: str):
     """販売をキャンセル（在庫を戻す）"""
     try:
@@ -236,7 +238,7 @@ async def cancel_sale(sale_id: str):
 
 
 # Stripe関連エンドポイント
-@app.post("/stripe/payment-intent", response_model=dict)
+@router.post("/stripe/payment-intent", response_model=dict)
 async def create_payment_intent(request: CreatePaymentIntentRequest):
     """Stripe Payment Intent を作成"""
     init_stripe()
@@ -260,7 +262,7 @@ async def create_payment_intent(request: CreatePaymentIntentRequest):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@app.get("/stripe/payment-intent/{payment_intent_id}", response_model=dict)
+@router.get("/stripe/payment-intent/{payment_intent_id}", response_model=dict)
 async def get_payment_intent(payment_intent_id: str):
     """Stripe Payment Intent の状態を取得"""
     init_stripe()
@@ -280,7 +282,7 @@ async def get_payment_intent(payment_intent_id: str):
 
 
 # クーポン管理
-@app.post("/coupons", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/coupons", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_coupon(request: CreateCouponRequest):
     """クーポンを作成"""
     try:
@@ -316,7 +318,7 @@ async def create_coupon(request: CreateCouponRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/coupons/{code}", response_model=dict)
+@router.get("/coupons/{code}", response_model=dict)
 async def get_coupon(code: str):
     """クーポン情報を取得"""
     try:
@@ -330,7 +332,7 @@ async def get_coupon(code: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/coupons/apply", response_model=dict)
+@router.post("/coupons/apply", response_model=dict)
 async def apply_coupon(request: ApplyCouponRequest):
     """クーポンを適用して割引額を計算"""
     try:
@@ -350,7 +352,7 @@ async def apply_coupon(request: ApplyCouponRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.delete("/coupons/{code}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/coupons/{code}", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_coupon(code: str):
     """クーポンを無効化"""
     try:
@@ -370,7 +372,7 @@ async def deactivate_coupon(code: str):
 
 
 # イベント管理
-@app.get("/events", response_model=dict)
+@router.get("/events", response_model=dict)
 async def list_events():
     """イベント一覧取得"""
     try:
@@ -381,7 +383,7 @@ async def list_events():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/events", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/events", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_event(request: CreateEventRequest):
     """イベントを作成"""
     try:
@@ -403,5 +405,10 @@ async def create_event(request: CreateEventRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-# Mangum ハンドラー
-handler = Mangum(app, lifespan="off")
+# ルーターを登録
+app.include_router(router)
+
+# Mangum ハンドラー（API Gateway base path対応）
+def handler(event, context):
+    mangum_handler = Mangum(app, lifespan="off", api_gateway_base_path="/sales")
+    return mangum_handler(event, context)
