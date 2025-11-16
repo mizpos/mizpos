@@ -357,6 +357,15 @@ function ProductsPage() {
   );
 }
 
+interface Publisher {
+  publisher_id: string;
+  name: string;
+  description: string;
+  contact_name: string;
+  contact_email: string;
+  commission_rate: number;
+}
+
 interface ProductFormProps {
   data: CreateProductForm | Product;
   onChange: (data: CreateProductForm | Product) => void;
@@ -364,6 +373,17 @@ interface ProductFormProps {
 }
 
 function ProductForm({ data, onChange, isNew }: ProductFormProps) {
+  const { data: publishers = [] } = useQuery({
+    queryKey: ["publishers"],
+    queryFn: async () => {
+      const { stock } = await getAuthenticatedClients();
+      const { data, error } = await stock.GET("/publishers");
+      if (error) throw error;
+      const response = data as unknown as { publishers: Publisher[] };
+      return response.publishers || [];
+    },
+  });
+
   const inputClass = css({
     width: "100%",
     padding: "2",
@@ -519,16 +539,21 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
 
       <div className={css({ gridColumn: "span 2" })}>
         <label htmlFor="publisher_id" className={labelClass}>
-          サークルID (委託販売用)
+          サークル (委託販売用)
         </label>
-        <input
+        <select
           id="publisher_id"
-          type="text"
           value={(data as CreateProductForm).publisher_id || ""}
           onChange={(e) => onChange({ ...data, publisher_id: e.target.value })}
           className={inputClass}
-          placeholder="サークル管理ページで確認できるID"
-        />
+        >
+          <option value="">-- 選択してください --</option>
+          {publishers.map((publisher) => (
+            <option key={publisher.publisher_id} value={publisher.publisher_id}>
+              {publisher.name} (手数料: {publisher.commission_rate}%)
+            </option>
+          ))}
+        </select>
         <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
           委託販売の手数料計算に使用されます
         </p>
