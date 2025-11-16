@@ -54,30 +54,34 @@ jobs:
       - name: Install Dependencies
         run: pip install boto3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
-
-      - name: Terraform Init
-        working-directory: terraform/tf-${{ inputs.environment }}
-        run: terraform init
-
-      - name: Get Terraform Outputs
-        id: tf_outputs
-        working-directory: terraform/tf-${{ inputs.environment }}
+      - name: Mask Sensitive Inputs
         run: |
-          USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
-          USERS_TABLE=$(terraform output -raw dynamodb_users_table_name)
+          echo "::add-mask::${{ inputs.password }}"
+          echo "::add-mask::${{ inputs.email }}"
+
+      - name: Get AWS Resources
+        id: aws_resources
+        run: |
+          # Get Cognito User Pool ID
+          USER_POOL_ID=$(aws cognito-idp list-user-pools --max-results 60 --query "UserPools[?Name=='${{ inputs.environment }}-mizpos-user-pool'].Id" --output text)
           echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
+
+          # DynamoDB table name follows naming convention
+          USERS_TABLE="${{ inputs.environment }}-mizpos-users"
           echo "users_table=$USERS_TABLE" >> $GITHUB_OUTPUT
 
+          echo "User Pool ID: $USER_POOL_ID"
+          echo "Users Table: $USERS_TABLE"
+
       - name: Create Admin User
+        env:
+          ADMIN_EMAIL: ${{ inputs.email }}
+          ADMIN_PASSWORD: ${{ inputs.password }}
         run: |
           python scripts/setup_admin_user.py \
             --environment "${{ inputs.environment }}" \
-            --email "${{ inputs.email }}" \
-            --password "${{ inputs.password }}" \
+            --email "$ADMIN_EMAIL" \
+            --password "$ADMIN_PASSWORD" \
             --display-name "${{ inputs.display_name }}" \
-            --user-pool-id "${{ steps.tf_outputs.outputs.user_pool_id }}" \
-            --users-table "${{ steps.tf_outputs.outputs.users_table }}"
+            --user-pool-id "${{ steps.aws_resources.outputs.user_pool_id }}" \
+            --users-table "${{ steps.aws_resources.outputs.users_table }}"
