@@ -113,6 +113,7 @@ resource "aws_apigatewayv2_route" "accounts" {
 resource "aws_apigatewayv2_route" "options_accounts" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "OPTIONS /accounts/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.accounts.id}"
 
   authorization_type = "NONE"
 }
@@ -131,6 +132,7 @@ resource "aws_apigatewayv2_route" "stock" {
 resource "aws_apigatewayv2_route" "options_stock" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "OPTIONS /stock/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.stock.id}"
 
   authorization_type = "NONE"
 }
@@ -149,6 +151,7 @@ resource "aws_apigatewayv2_route" "sales" {
 resource "aws_apigatewayv2_route" "options_sales" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "OPTIONS /sales/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
 
   authorization_type = "NONE"
 }
