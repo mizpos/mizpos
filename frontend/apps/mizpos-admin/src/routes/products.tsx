@@ -147,7 +147,7 @@ function ProductsPage() {
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
+      product.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [
@@ -208,7 +208,7 @@ function ProductsPage() {
                 const headers = await getAuthHeaders();
                 const response = await fetch(
                   `${API_GATEWAY_BASE}/stock/products/${item.product_id}/barcode`,
-                  { headers },
+                  { headers }
                 );
                 if (!response.ok) throw new Error("Failed to fetch barcode");
                 const data = await response.json();

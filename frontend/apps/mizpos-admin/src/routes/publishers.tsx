@@ -102,7 +102,7 @@ function PublishersPage() {
           method: "PUT",
           headers,
           body: JSON.stringify(data),
-        },
+        }
       );
       if (!response.ok) throw new Error("Failed to update publisher");
       return response.json();
@@ -121,7 +121,7 @@ function PublishersPage() {
         {
           method: "DELETE",
           headers,
-        },
+        }
       );
       if (!response.ok) throw new Error("Failed to delete publisher");
     },
@@ -133,7 +133,7 @@ function PublishersPage() {
   const filteredPublishers = publishers.filter(
     (publisher) =>
       publisher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      publisher.contact_email.toLowerCase().includes(searchTerm.toLowerCase()),
+      publisher.contact_email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [
