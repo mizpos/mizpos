@@ -5,7 +5,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
-import { sales, stock } from "../lib/api";
+import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/reports")({
   component: ReportsPage,
@@ -51,20 +51,24 @@ function ReportsPage() {
   const { data: salesData = [] } = useQuery({
     queryKey: ["sales"],
     queryFn: async () => {
+      const { sales } = await getAuthenticatedClients();
       const { data, error } = await sales.GET("/sales", {
         params: { query: { limit: 1000 } },
       });
       if (error) throw error;
-      return (data as unknown as Sale[]) || [];
+      const response = data as unknown as { sales: Sale[] };
+      return response.sales || [];
     },
   });
 
   const { data: productsData = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
+      const { stock } = await getAuthenticatedClients();
       const { data, error } = await stock.GET("/products");
       if (error) throw error;
-      return (data as unknown as Product[]) || [];
+      const response = data as unknown as { products: Product[] };
+      return response.products || [];
     },
   });
 

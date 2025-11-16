@@ -7,7 +7,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { sales } from "../lib/api";
+import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/sales")({
   component: SalesPage,
@@ -45,16 +45,20 @@ function SalesPage() {
   const { data: salesData = [], isLoading } = useQuery({
     queryKey: ["sales"],
     queryFn: async () => {
+      const { sales } = await getAuthenticatedClients();
       const { data, error } = await sales.GET("/sales", {
         params: { query: { limit: 100 } },
       });
       if (error) throw error;
-      return (data as unknown as Sale[]) || [];
+      // APIは { sales: [...] } 形式で返す
+      const response = data as unknown as { sales: Sale[] };
+      return response.sales || [];
     },
   });
 
   const cancelMutation = useMutation({
     mutationFn: async (saleId: string) => {
+      const { sales } = await getAuthenticatedClients();
       const { error } = await sales.POST("/sales/{sale_id}/cancel", {
         params: { path: { sale_id: saleId } },
       });

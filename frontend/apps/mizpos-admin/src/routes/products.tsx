@@ -1,3 +1,4 @@
+import type { StockComponents } from "@mizpos/api";
 import { IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -7,8 +8,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { stock } from "../lib/api";
-import type { StockComponents } from "@mizpos/api";
+import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/products")({
   component: ProductsPage,
@@ -53,14 +53,18 @@ function ProductsPage() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
+      const { stock } = await getAuthenticatedClients();
       const { data, error } = await stock.GET("/products");
       if (error) throw error;
-      return (data as unknown as Product[]) || [];
+      // APIは { products: [...] } 形式で返す
+      const response = data as unknown as { products: Product[] };
+      return response.products || [];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateProductForm) => {
+      const { stock } = await getAuthenticatedClients();
       const { error } = await stock.POST("/products", { body: data });
       if (error) throw error;
     },
@@ -73,6 +77,7 @@ function ProductsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Product> }) => {
+      const { stock } = await getAuthenticatedClients();
       const { error } = await stock.PUT("/products/{product_id}", {
         params: { path: { product_id: id } },
         body: data,
@@ -87,6 +92,7 @@ function ProductsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      const { stock } = await getAuthenticatedClients();
       const { error } = await stock.DELETE("/products/{product_id}", {
         params: { path: { product_id: id } },
       });

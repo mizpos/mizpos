@@ -7,11 +7,7 @@ resource "aws_apigatewayv2_api" "main" {
   description   = "mizpos API Gateway for ${var.environment} environment"
 
   cors_configuration {
-    allow_origins = [
-      var.frontend_url,
-      "http://localhost:3000",
-      "http://localhost:5173"
-    ]
+    allow_origins = ["*"]
     allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["content-type", "authorization"]
     max_age       = 300

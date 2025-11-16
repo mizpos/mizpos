@@ -2,6 +2,7 @@ import {
   IconBox,
   IconChartBar,
   IconHome,
+  IconLogout,
   IconPackage,
   IconSettings,
   IconShoppingCart,
@@ -9,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { css } from "styled-system/css";
+import { useAuth } from "../lib/auth";
 
 interface NavItem {
   label: string;
@@ -29,6 +31,13 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    if (window.confirm("ログアウトしますか？")) {
+      await signOut();
+    }
+  };
 
   return (
     <aside
@@ -113,6 +122,76 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+
+      <div
+        className={css({
+          padding: "4",
+          borderTop: "1px solid",
+          borderColor: "gray.700",
+        })}
+      >
+        {user && (
+          <div
+            className={css({
+              marginBottom: "3",
+              padding: "2",
+            })}
+          >
+            <p
+              className={css({
+                fontSize: "xs",
+                color: "gray.400",
+                marginBottom: "1",
+              })}
+            >
+              ログイン中
+            </p>
+            <p
+              className={css({
+                fontSize: "sm",
+                fontWeight: "medium",
+                color: "white",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              })}
+            >
+              {user.email}
+            </p>
+          </div>
+        )}
+        <button
+          onClick={handleSignOut}
+          type="button"
+          className={css({
+            display: "flex",
+            alignItems: "center",
+            gap: "3",
+            padding: "3",
+            borderRadius: "md",
+            width: "100%",
+            border: "none",
+            backgroundColor: "transparent",
+            color: "gray.300",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            _hover: {
+              backgroundColor: "red.600",
+              color: "white",
+            },
+          })}
+        >
+          <IconLogout size={20} />
+          <span
+            className={css({
+              fontSize: "sm",
+              fontWeight: "medium",
+            })}
+          >
+            ログアウト
+          </span>
+        </button>
+      </div>
     </aside>
   );
 }

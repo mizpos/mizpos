@@ -7,7 +7,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { stock } from "../lib/api";
+import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/stock")({
   component: StockPage,
@@ -39,14 +39,18 @@ function StockPage() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
+      const { stock } = await getAuthenticatedClients();
       const { data, error } = await stock.GET("/products");
       if (error) throw error;
-      return (data as unknown as Product[]) || [];
+      // APIは { products: [...] } 形式で返す
+      const response = data as unknown as { products: Product[] };
+      return response.products || [];
     },
   });
 
   const adjustStockMutation = useMutation({
     mutationFn: async (form: AdjustmentForm) => {
+      const { stock } = await getAuthenticatedClients();
       const { error } = await stock.POST("/products/{product_id}/adjust", {
         params: { path: { product_id: form.productId } },
         body: {
