@@ -25,8 +25,26 @@ provider "aws" {
   }
 }
 
+# CloudFront用ACM証明書にはus-east-1が必須
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = {
+      CostTag     = "mizpos-dev"
+      Environment = "dev"
+    }
+  }
+}
+
 module "mizpos_infrastructure" {
   source = "../modules"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 
   environment  = "dev"
   project_name = "mizpos"
