@@ -1,11 +1,13 @@
-import { IconDeviceFloppy } from "@tabler/icons-react";
+import { IconDeviceFloppy, IconLock } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { updatePassword } from "aws-amplify/auth";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { getAuthHeaders } from "../lib/api";
+import { useAuth } from "../lib/auth";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -68,6 +70,7 @@ async function saveConfig(
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [brandSettings, setBrandSettings] = useState<BrandSettings>({
     storeName: "",
     storeDescription: "",
@@ -88,7 +91,16 @@ function SettingsPage() {
     stripeTerminalFeeRate: 2.7,
   });
 
-  const [activeTab, setActiveTab] = useState<"brand" | "payment" | "consignment">("brand");
+  // パスワード変更用の状態
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"brand" | "payment" | "consignment" | "account">(
+    "brand"
+  );
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Load settings from backend
@@ -144,8 +156,45 @@ function SettingsPage() {
     },
   });
 
+  const passwordMutation = useMutation({
+    mutationFn: async () => {
+      if (newPassword !== confirmPassword) {
+        throw new Error("新しいパスワードが一致しません");
+      }
+      if (newPassword.length < 8) {
+        throw new Error("パスワードは8文字以上である必要があります");
+      }
+      await updatePassword({ oldPassword, newPassword });
+    },
+    onSuccess: () => {
+      setPasswordSuccess(true);
+      setPasswordError(null);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    },
+    onError: (error: Error) => {
+      setPasswordSuccess(false);
+      if (error.message.includes("Incorrect")) {
+        setPasswordError("現在のパスワードが正しくありません");
+      } else if (error.message.includes("policy")) {
+        setPasswordError(
+          "新しいパスワードは大文字・小文字・数字・特殊文字を含む必要があります"
+        );
+      } else {
+        setPasswordError(error.message);
+      }
+    },
+  });
+
   const handleSave = () => {
     saveMutation.mutate();
+  };
+
+  const handlePasswordChange = () => {
+    setPasswordError(null);
+    passwordMutation.mutate();
   };
 
   const isLoading = isLoadingBrand || isLoadingPayment || isLoadingConsignment;
@@ -224,6 +273,7 @@ function SettingsPage() {
             { key: "brand", label: "ブランド設定" },
             { key: "payment", label: "決済設定" },
             { key: "consignment", label: "委託販売設定" },
+            { key: "account", label: "アカウント設定" },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -547,13 +597,156 @@ function SettingsPage() {
           </div>
         )}
 
+        {/* Account Settings */}
+        {activeTab === "account" && (
+          <div
+            className={css({
+              backgroundColor: "white",
+              padding: "6",
+              borderRadius: "lg",
+              border: "1px solid",
+              borderColor: "gray.200",
+            })}
+          >
+            <h3
+              className={css({
+                fontSize: "lg",
+                fontWeight: "semibold",
+                marginBottom: "4",
+              })}
+            >
+              アカウント設定
+            </h3>
+
+            {/* Current User Info */}
+            <div
+              className={css({
+                backgroundColor: "gray.50",
+                padding: "4",
+                borderRadius: "md",
+                marginBottom: "6",
+              })}
+            >
+              <h4 className={css({ fontSize: "sm", fontWeight: "semibold", marginBottom: "2" })}>
+                現在のユーザー
+              </h4>
+              <p className={css({ fontSize: "sm", color: "gray.600" })}>
+                メールアドレス: {user?.email || user?.username || "不明"}
+              </p>
+            </div>
+
+            {/* Password Change Form */}
+            <div>
+              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "4" })}>
+                パスワード変更
+              </h4>
+
+              {passwordError && (
+                <div
+                  className={css({
+                    backgroundColor: "red.50",
+                    border: "1px solid",
+                    borderColor: "red.200",
+                    borderRadius: "md",
+                    padding: "3",
+                    marginBottom: "4",
+                    color: "red.700",
+                    fontSize: "sm",
+                  })}
+                >
+                  {passwordError}
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div
+                  className={css({
+                    backgroundColor: "green.50",
+                    border: "1px solid",
+                    borderColor: "green.200",
+                    borderRadius: "md",
+                    padding: "3",
+                    marginBottom: "4",
+                    color: "green.700",
+                    fontSize: "sm",
+                  })}
+                >
+                  パスワードを変更しました
+                </div>
+              )}
+
+              <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+                <div>
+                  <label htmlFor="oldPassword" className={labelClass}>
+                    現在のパスワード
+                  </label>
+                  <input
+                    id="oldPassword"
+                    type="password"
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    className={inputClass}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newPassword" className={labelClass}>
+                    新しいパスワード
+                  </label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className={inputClass}
+                    autoComplete="new-password"
+                  />
+                  <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+                    8文字以上、大文字・小文字・数字・特殊文字を含む必要があります
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className={labelClass}>
+                    新しいパスワード（確認）
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={inputClass}
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <div className={css({ marginTop: "2" })}>
+                  <Button
+                    onClick={handlePasswordChange}
+                    disabled={
+                      passwordMutation.isPending ||
+                      !oldPassword ||
+                      !newPassword ||
+                      !confirmPassword
+                    }
+                  >
+                    <IconLock size={18} />
+                    {passwordMutation.isPending ? "変更中..." : "パスワードを変更"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Save Button */}
-        <div className={css({ marginTop: "6", display: "flex", justifyContent: "flex-end" })}>
-          <Button onClick={handleSave} disabled={saveMutation.isPending || isLoading}>
-            <IconDeviceFloppy size={18} />
-            {saveMutation.isPending ? "保存中..." : "設定を保存"}
-          </Button>
-        </div>
+        {activeTab !== "account" && (
+          <div className={css({ marginTop: "6", display: "flex", justifyContent: "flex-end" })}>
+            <Button onClick={handleSave} disabled={saveMutation.isPending || isLoading}>
+              <IconDeviceFloppy size={18} />
+              {saveMutation.isPending ? "保存中..." : "設定を保存"}
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );
