@@ -59,9 +59,9 @@ resource "aws_cognito_user_pool" "main" {
 
   # カスタム属性：ロール情報
   schema {
-    name                = "role"
-    attribute_data_type = "String"
-    mutable             = true
+    name                     = "role"
+    attribute_data_type      = "String"
+    mutable                  = true
     developer_only_attribute = false
 
     string_attribute_constraints {

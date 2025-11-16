@@ -75,9 +75,9 @@ resource "aws_apigatewayv2_integration" "accounts" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "AWS_PROXY"
 
-  connection_type      = "INTERNET"
-  integration_method   = "POST"
-  integration_uri      = aws_lambda_function.accounts.invoke_arn
+  connection_type        = "INTERNET"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.accounts.invoke_arn
   payload_format_version = "2.0"
 }
 
@@ -86,9 +86,9 @@ resource "aws_apigatewayv2_integration" "stock" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "AWS_PROXY"
 
-  connection_type      = "INTERNET"
-  integration_method   = "POST"
-  integration_uri      = aws_lambda_function.stock.invoke_arn
+  connection_type        = "INTERNET"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.stock.invoke_arn
   payload_format_version = "2.0"
 }
 
@@ -97,9 +97,9 @@ resource "aws_apigatewayv2_integration" "sales" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "AWS_PROXY"
 
-  connection_type      = "INTERNET"
-  integration_method   = "POST"
-  integration_uri      = aws_lambda_function.sales.invoke_arn
+  connection_type        = "INTERNET"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.sales.invoke_arn
   payload_format_version = "2.0"
 }
 

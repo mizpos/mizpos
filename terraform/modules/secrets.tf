@@ -17,7 +17,7 @@ resource "aws_secretsmanager_secret" "stripe_api_key" {
 resource "aws_secretsmanager_secret_version" "stripe_api_key" {
   secret_id = aws_secretsmanager_secret.stripe_api_key.id
   secret_string = jsonencode({
-    api_key        = "PLACEHOLDER_STRIPE_API_KEY"
+    api_key         = "PLACEHOLDER_STRIPE_API_KEY"
     publishable_key = "PLACEHOLDER_STRIPE_PUBLISHABLE_KEY"
   })
 
