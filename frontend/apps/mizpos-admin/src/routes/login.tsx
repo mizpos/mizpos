@@ -42,7 +42,7 @@ function LoginPage() {
         setRequiresNewPassword(true);
       } else {
         setError(
-          `追加のステップが必要です: ${result.nextStep?.signInStep || "不明"}`
+          `追加のステップが必要です: ${result.nextStep?.signInStep || "不明"}`,
         );
       }
     } catch (err) {

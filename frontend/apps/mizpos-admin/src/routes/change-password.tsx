@@ -44,7 +44,7 @@ function ChangePasswordPage() {
         setError("現在のパスワードが正しくありません");
       } else if (err.message.includes("policy")) {
         setError(
-          "新しいパスワードは大文字・小文字・数字・特殊文字を含む必要があります"
+          "新しいパスワードは大文字・小文字・数字・特殊文字を含む必要があります",
         );
       } else {
         setError(err.message);

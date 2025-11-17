@@ -1,38 +1,38 @@
 {
-  "name": "@mizpos/api",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./accounts": {
-      "types": "./generated/accounts.ts"
-    },
-    "./stock": {
-      "types": "./generated/stock.ts"
-    },
-    "./sales": {
-      "types": "./generated/sales.ts"
-    }
-  },
-  "scripts": {
-    "build": "tsc",
-    "check-types": "tsc --noEmit",
-    "lint": "biome check .",
-    "fix": "biome check --write .",
-    "generate": "openapi-typescript --redocly ./redocly.yaml"
-  },
-  "dependencies": {
-    "openapi-fetch": "^0.15.0"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.3.5",
-    "openapi-typescript": "^7.10.1",
-    "typescript": "5.9.2"
-  }
+	"name": "@mizpos/api",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./accounts": {
+			"types": "./generated/accounts.ts"
+		},
+		"./stock": {
+			"types": "./generated/stock.ts"
+		},
+		"./sales": {
+			"types": "./generated/sales.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"check-types": "tsc --noEmit",
+		"lint": "biome check .",
+		"fix": "biome check --write .",
+		"generate": "openapi-typescript --redocly ./redocly.yaml"
+	},
+	"dependencies": {
+		"openapi-fetch": "^0.15.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.5",
+		"openapi-typescript": "^7.10.1",
+		"typescript": "5.9.2"
+	}
 }
