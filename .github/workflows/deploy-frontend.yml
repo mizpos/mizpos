@@ -23,8 +23,8 @@ on:
 env:
   AWS_REGION: ap-northeast-1
   AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_DEV }}
-  S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET_DEV }}
-  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_DEV }}
+  TF_STATE_BUCKET: mizphses-opensource-mizpos-dev
+  TF_STATE_KEY: mizpos/dev/terraform.tfstate
   NODE_VERSION: "24"
   PNPM_VERSION: "10"
 
@@ -110,22 +110,36 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get Infrastructure Values from Terraform State
+        id: tf-outputs
+        run: |
+          # Terraform stateからoutputを取得
+          aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r '.outputs.frontend_s3_bucket_name.value' | \
+            xargs -I {} echo "s3_bucket={}" >> $GITHUB_OUTPUT
+
+          aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r '.outputs.frontend_cloudfront_distribution_id.value' | \
+            xargs -I {} echo "cloudfront_distribution_id={}" >> $GITHUB_OUTPUT
+
       - name: Deploy to S3
         run: |
-          aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ \
+          S3_BUCKET="${{ steps.tf-outputs.outputs.s3_bucket }}"
+
+          aws s3 sync dist/ s3://${S3_BUCKET}/ \
             --delete \
             --cache-control "public, max-age=31536000, immutable" \
             --exclude "index.html" \
             --exclude "*.json"
 
           # index.html と manifest は短いキャッシュ
-          aws s3 cp dist/index.html s3://${{ env.S3_BUCKET }}/index.html \
+          aws s3 cp dist/index.html s3://${S3_BUCKET}/index.html \
             --cache-control "public, max-age=0, must-revalidate"
 
           # JSON ファイル（manifest等）
           for file in dist/*.json; do
             if [ -f "$file" ]; then
-              aws s3 cp "$file" s3://${{ env.S3_BUCKET }}/$(basename "$file") \
+              aws s3 cp "$file" s3://${S3_BUCKET}/$(basename "$file") \
                 --cache-control "public, max-age=0, must-revalidate"
             fi
           done
@@ -133,7 +147,7 @@ jobs:
       - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }} \
             --paths "/*"
 
       - name: Deployment Summary
@@ -141,8 +155,8 @@ jobs:
           echo "## Frontend Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **App**: ${{ needs.build.outputs.app-name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **S3 Bucket**: ${{ env.S3_BUCKET }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **CloudFront Distribution**: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **S3 Bucket**: ${{ steps.tf-outputs.outputs.s3_bucket }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
 
   preview:
