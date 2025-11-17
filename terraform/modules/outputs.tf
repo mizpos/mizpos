@@ -147,12 +147,12 @@ output "frontend_apps" {
   description = "Frontend apps configuration map"
   value = {
     for app_key, app in local.frontend_apps_map : app_key => {
-      s3_bucket_name            = aws_s3_bucket.frontend[app_key].id
-      s3_bucket_arn             = aws_s3_bucket.frontend[app_key].arn
+      s3_bucket_name             = aws_s3_bucket.frontend[app_key].id
+      s3_bucket_arn              = aws_s3_bucket.frontend[app_key].arn
       cloudfront_distribution_id = aws_cloudfront_distribution.frontend[app_key].id
-      cloudfront_domain_name    = aws_cloudfront_distribution.frontend[app_key].domain_name
-      url = var.enable_custom_domain ? "https://${app.subdomain}.${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend[app_key].domain_name}"
-      acm_certificate_arn = aws_acm_certificate.frontend[app_key].arn
+      cloudfront_domain_name     = aws_cloudfront_distribution.frontend[app_key].domain_name
+      url                        = var.enable_custom_domain ? "https://${app.subdomain}.${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend[app_key].domain_name}"
+      acm_certificate_arn        = aws_acm_certificate.frontend[app_key].arn
     }
   }
 }
