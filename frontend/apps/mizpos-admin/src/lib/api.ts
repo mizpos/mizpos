@@ -15,11 +15,6 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
     const session = await fetchAuthSession();
     const token = session.tokens?.accessToken?.toString();
-    console.log("Auth session:", {
-      hasTokens: !!session.tokens,
-      hasAccessToken: !!token,
-      tokenPreview: token ? `${token.substring(0, 20)}...` : "なし",
-    });
     if (token) {
       return {
         "Content-Type": "application/json",
