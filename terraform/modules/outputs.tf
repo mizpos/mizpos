@@ -134,10 +134,51 @@ output "stripe_secret_arn" {
 # ACM Certificate Outputs
 output "acm_certificate_arn" {
   description = "ACM Certificate ARN"
-  value       = aws_acm_certificate.api.arn
+  value       = var.enable_custom_domain ? aws_acm_certificate.api[0].arn : ""
 }
 
 output "acm_certificate_domain_validation_options" {
   description = "ACM Certificate Domain Validation Options"
-  value       = aws_acm_certificate.api.domain_validation_options
+  value       = var.enable_custom_domain ? aws_acm_certificate.api[0].domain_validation_options : []
+}
+
+# Frontend Outputs
+output "frontend_s3_bucket_name" {
+  description = "Frontend S3 Bucket Name"
+  value       = aws_s3_bucket.frontend.id
+}
+
+output "frontend_s3_bucket_arn" {
+  description = "Frontend S3 Bucket ARN"
+  value       = aws_s3_bucket.frontend.arn
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "Frontend CloudFront Distribution ID"
+  value       = aws_cloudfront_distribution.frontend.id
+}
+
+output "frontend_cloudfront_domain_name" {
+  description = "Frontend CloudFront Domain Name"
+  value       = aws_cloudfront_distribution.frontend.domain_name
+}
+
+output "frontend_url" {
+  description = "Frontend URL"
+  value       = var.enable_custom_domain ? "https://app.${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend.domain_name}"
+}
+
+output "frontend_acm_certificate_arn" {
+  description = "Frontend ACM Certificate ARN (us-east-1)"
+  value       = aws_acm_certificate.frontend.arn
+}
+
+output "frontend_acm_certificate_domain_validation_options" {
+  description = "Frontend ACM Certificate Domain Validation Options"
+  value       = aws_acm_certificate.frontend.domain_validation_options
+}
+
+output "frontend_deploy_policy_arn" {
+  description = "IAM Policy ARN for frontend deployment"
+  value       = aws_iam_policy.frontend_deploy.arn
 }

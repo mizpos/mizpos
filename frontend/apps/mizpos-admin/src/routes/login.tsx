@@ -35,10 +35,15 @@ function LoginPage() {
       const result = await signIn(email, password);
       if (result.isSignedIn) {
         navigate({ to: "/" });
-      } else if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
+      } else if (
+        result.nextStep?.signInStep ===
+        "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED"
+      ) {
         setRequiresNewPassword(true);
       } else {
-        setError(`追加のステップが必要です: ${result.nextStep?.signInStep || "不明"}`);
+        setError(
+          `追加のステップが必要です: ${result.nextStep?.signInStep || "不明"}`
+        );
       }
     } catch (err) {
       if (err instanceof Error) {
@@ -118,7 +123,9 @@ function LoginPage() {
             MizPOS Admin
           </h1>
           <p className={css({ color: "gray.600", fontSize: "sm" })}>
-            {requiresNewPassword ? "新しいパスワードを設定してください" : "管理システムにログイン"}
+            {requiresNewPassword
+              ? "新しいパスワードを設定してください"
+              : "管理システムにログイン"}
           </p>
         </div>
 
@@ -141,7 +148,13 @@ function LoginPage() {
 
         {requiresNewPassword ? (
           <form onSubmit={handleNewPasswordSubmit}>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "4",
+              })}
+            >
               <div>
                 <label
                   htmlFor="newPassword"
@@ -221,7 +234,13 @@ function LoginPage() {
           </form>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "4",
+              })}
+            >
               <div>
                 <label
                   htmlFor="email"

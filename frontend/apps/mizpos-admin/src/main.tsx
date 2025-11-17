@@ -1,5 +1,9 @@
-import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
+import {
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { signOut } from "aws-amplify/auth";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

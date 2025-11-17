@@ -1,5 +1,5 @@
-import { css, cva } from "styled-system/css";
 import type { ReactNode } from "react";
+import { css, cva } from "styled-system/css";
 
 const buttonStyles = cva({
   base: {
@@ -86,7 +86,9 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseClassName = css(buttonStyles.raw({ variant, size }));
-  const combinedClassName = className ? `${baseClassName} ${className}` : baseClassName;
+  const combinedClassName = className
+    ? `${baseClassName} ${className}`
+    : baseClassName;
 
   return (
     <button type="button" className={combinedClassName} {...props}>

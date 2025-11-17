@@ -1,5 +1,5 @@
-import { css } from "styled-system/css";
 import type { ReactNode } from "react";
+import { css } from "styled-system/css";
 
 interface Column<T> {
   key: string;
@@ -105,7 +105,9 @@ export function Table<T>({
                     >
                       {column.render
                         ? column.render(item)
-                        : String((item as Record<string, unknown>)[column.key] ?? "")}
+                        : String(
+                            (item as Record<string, unknown>)[column.key] ?? "",
+                          )}
                     </td>
                   ))}
                 </tr>

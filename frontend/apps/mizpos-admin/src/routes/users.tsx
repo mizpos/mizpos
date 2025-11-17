@@ -43,8 +43,11 @@ function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [createFormData, setCreateFormData] = useState<CreateUserForm>(initialCreateForm);
-  const [editFormData, setEditFormData] = useState<UpdateUserRequest>({ display_name: "" });
+  const [createFormData, setCreateFormData] =
+    useState<CreateUserForm>(initialCreateForm);
+  const [editFormData, setEditFormData] = useState<UpdateUserRequest>({
+    display_name: "",
+  });
 
   const {
     data: users = [],
@@ -75,7 +78,13 @@ function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ userId, data }: { userId: string; data: UpdateUserRequest }) => {
+    mutationFn: async ({
+      userId,
+      data,
+    }: {
+      userId: string;
+      data: UpdateUserRequest;
+    }) => {
       const { accounts } = await getAuthenticatedClients();
       const { error } = await accounts.PUT("/users/{user_id}", {
         params: { path: { user_id: userId } },
@@ -150,7 +159,11 @@ function UsersPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (window.confirm(`「${item.display_name}」を削除しますか？\nCognitoからも削除されます。`)) {
+              if (
+                window.confirm(
+                  `「${item.display_name}」を削除しますか？\nCognitoからも削除されます。`
+                )
+              ) {
                 deleteMutation.mutate(item.user_id);
               }
             }}
@@ -225,7 +238,8 @@ function UsersPage() {
           })}
         >
           <p className={css({ fontSize: "sm", color: "blue.800" })}>
-            ユーザー認証はAWS Cognitoで管理されています。ユーザーを作成すると、Cognitoにもアカウントが作成されます。
+            ユーザー認証はAWS
+            Cognitoで管理されています。ユーザーを作成すると、Cognitoにもアカウントが作成されます。
           </p>
         </div>
 
@@ -242,7 +256,8 @@ function UsersPage() {
               fontSize: "sm",
             })}
           >
-            ユーザー情報の取得に失敗しました: {error instanceof Error ? error.message : "不明なエラー"}
+            ユーザー情報の取得に失敗しました:{" "}
+            {error instanceof Error ? error.message : "不明なエラー"}
           </div>
         )}
 
@@ -300,7 +315,15 @@ function UsersPage() {
         </div>
 
         {isLoading ? (
-          <div className={css({ textAlign: "center", padding: "8", color: "gray.500" })}>読み込み中...</div>
+          <div
+            className={css({
+              textAlign: "center",
+              padding: "8",
+              color: "gray.500",
+            })}
+          >
+            読み込み中...
+          </div>
         ) : (
           <Table
             columns={columns}
@@ -321,7 +344,13 @@ function UsersPage() {
             borderColor: "gray.200",
           })}
         >
-          <h3 className={css({ fontSize: "lg", fontWeight: "semibold", marginBottom: "4" })}>
+          <h3
+            className={css({
+              fontSize: "lg",
+              fontWeight: "semibold",
+              marginBottom: "4",
+            })}
+          >
             パスワードポリシー
           </h3>
           <ul
@@ -354,7 +383,13 @@ function UsersPage() {
         title="ユーザー追加"
       >
         <form onSubmit={handleCreateSubmit}>
-          <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+          <div
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "4",
+            })}
+          >
             <div>
               <label htmlFor="create-email" className={labelClass}>
                 メールアドレス *
@@ -364,7 +399,12 @@ function UsersPage() {
                 type="email"
                 required
                 value={createFormData.email}
-                onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    email: e.target.value,
+                  })
+                }
                 className={inputClass}
                 placeholder="user@example.com"
               />
@@ -378,7 +418,12 @@ function UsersPage() {
                 type="text"
                 required
                 value={createFormData.display_name}
-                onChange={(e) => setCreateFormData({ ...createFormData, display_name: e.target.value })}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    display_name: e.target.value,
+                  })
+                }
                 className={inputClass}
                 placeholder="田中 太郎"
               />
@@ -393,11 +438,22 @@ function UsersPage() {
                 required
                 minLength={8}
                 value={createFormData.password}
-                onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    password: e.target.value,
+                  })
+                }
                 className={inputClass}
                 placeholder="8文字以上（大文字・小文字・数字・特殊文字を含む）"
               />
-              <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+              <p
+                className={css({
+                  fontSize: "xs",
+                  color: "gray.500",
+                  marginTop: "1",
+                })}
+              >
                 Cognitoのパスワードポリシーに準拠する必要があります
               </p>
             </div>
@@ -416,11 +472,20 @@ function UsersPage() {
                 fontSize: "sm",
               })}
             >
-              {createMutation.error instanceof Error ? createMutation.error.message : "作成に失敗しました"}
+              {createMutation.error instanceof Error
+                ? createMutation.error.message
+                : "作成に失敗しました"}
             </div>
           )}
 
-          <div className={css({ display: "flex", justifyContent: "flex-end", gap: "2", marginTop: "4" })}>
+          <div
+            className={css({
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "2",
+              marginTop: "4",
+            })}
+          >
             <Button
               variant="secondary"
               onClick={() => {
@@ -439,10 +504,20 @@ function UsersPage() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} title="ユーザー編集">
+      <Modal
+        isOpen={!!editUser}
+        onClose={() => setEditUser(null)}
+        title="ユーザー編集"
+      >
         {editUser && (
           <form onSubmit={handleUpdateSubmit}>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "4" })}>
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "4",
+              })}
+            >
               <div>
                 <label htmlFor="edit-email" className={labelClass}>
                   メールアドレス
@@ -452,9 +527,18 @@ function UsersPage() {
                   type="email"
                   value={editUser.email}
                   disabled
-                  className={`${inputClass} ${css({ backgroundColor: "gray.100", cursor: "not-allowed" })}`}
+                  className={`${inputClass} ${css({
+                    backgroundColor: "gray.100",
+                    cursor: "not-allowed",
+                  })}`}
                 />
-                <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginTop: "1",
+                  })}
+                >
                   メールアドレスは変更できません
                 </p>
               </div>
@@ -467,7 +551,9 @@ function UsersPage() {
                   type="text"
                   required
                   value={editFormData.display_name}
-                  onChange={(e) => setEditFormData({ display_name: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({ display_name: e.target.value })
+                  }
                   className={inputClass}
                 />
               </div>
@@ -486,12 +572,25 @@ function UsersPage() {
                   fontSize: "sm",
                 })}
               >
-                {updateMutation.error instanceof Error ? updateMutation.error.message : "更新に失敗しました"}
+                {updateMutation.error instanceof Error
+                  ? updateMutation.error.message
+                  : "更新に失敗しました"}
               </div>
             )}
 
-            <div className={css({ display: "flex", justifyContent: "flex-end", gap: "2", marginTop: "4" })}>
-              <Button variant="secondary" onClick={() => setEditUser(null)} type="button">
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "2",
+                marginTop: "4",
+              })}
+            >
+              <Button
+                variant="secondary"
+                onClick={() => setEditUser(null)}
+                type="button"
+              >
                 キャンセル
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>

@@ -106,6 +106,9 @@ importers:
         specifier: ^19.1.0
         version: 19.2.0(react@19.2.0)
     devDependencies:
+      '@biomejs/biome':
+        specifier: ^2.3.5
+        version: 2.3.5
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.9.4

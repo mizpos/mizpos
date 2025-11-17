@@ -25,7 +25,7 @@ provider "aws" {
   }
 }
 
-# CloudFront用のACM証明書はus-east-1が必要
+# CloudFront用ACM証明書にはus-east-1が必須
 provider "aws" {
   alias  = "us_east_1"
   region = "us-east-1"

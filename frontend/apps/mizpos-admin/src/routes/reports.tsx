@@ -78,7 +78,11 @@ function ReportsPage() {
 
     switch (dateRange) {
       case "today": {
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
         return date >= today;
       }
       case "week": {
@@ -99,20 +103,27 @@ function ReportsPage() {
   );
 
   const renderSalesReport = () => {
-    const totalRevenue = completedSales.reduce((sum, s) => sum + s.final_amount, 0);
-    const totalDiscount = completedSales.reduce((sum, s) => sum + s.discount_amount, 0);
-    const averageOrder = completedSales.length > 0 ? totalRevenue / completedSales.length : 0;
-
-    const paymentMethodBreakdown = completedSales.reduce(
-      (acc, sale) => {
-        acc[sale.payment_method] = (acc[sale.payment_method] || 0) + sale.final_amount;
-        return acc;
-      },
-      {} as Record<string, number>
+    const totalRevenue = completedSales.reduce(
+      (sum, s) => sum + s.final_amount,
+      0
     );
+    const totalDiscount = completedSales.reduce(
+      (sum, s) => sum + s.discount_amount,
+      0
+    );
+    const averageOrder =
+      completedSales.length > 0 ? totalRevenue / completedSales.length : 0;
+
+    const paymentMethodBreakdown = completedSales.reduce((acc, sale) => {
+      acc[sale.payment_method] =
+        (acc[sale.payment_method] || 0) + sale.final_amount;
+      return acc;
+    }, {} as Record<string, number>);
 
     return (
-      <div className={css({ display: "flex", flexDirection: "column", gap: "6" })}>
+      <div
+        className={css({ display: "flex", flexDirection: "column", gap: "6" })}
+      >
         <div
           className={css({
             display: "grid",
@@ -120,10 +131,19 @@ function ReportsPage() {
             gap: "4",
           })}
         >
-          <StatCard title="総売上" value={`¥${totalRevenue.toLocaleString()}`} />
+          <StatCard
+            title="総売上"
+            value={`¥${totalRevenue.toLocaleString()}`}
+          />
           <StatCard title="注文数" value={`${completedSales.length}件`} />
-          <StatCard title="平均注文額" value={`¥${Math.round(averageOrder).toLocaleString()}`} />
-          <StatCard title="総割引額" value={`¥${totalDiscount.toLocaleString()}`} />
+          <StatCard
+            title="平均注文額"
+            value={`¥${Math.round(averageOrder).toLocaleString()}`}
+          />
+          <StatCard
+            title="総割引額"
+            value={`¥${totalDiscount.toLocaleString()}`}
+          />
         </div>
 
         <div
@@ -144,15 +164,27 @@ function ReportsPage() {
           >
             決済方法別売上
           </h3>
-          <div className={css({ display: "flex", flexDirection: "column", gap: "3" })}>
+          <div
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "3",
+            })}
+          >
             {Object.entries(paymentMethodBreakdown).map(([method, amount]) => (
-              <div key={method} className={css({ display: "flex", justifyContent: "space-between" })}>
+              <div
+                key={method}
+                className={css({
+                  display: "flex",
+                  justifyContent: "space-between",
+                })}
+              >
                 <span className={css({ color: "gray.700" })}>
                   {method === "stripe_online"
                     ? "オンライン決済"
                     : method === "stripe_terminal"
-                      ? "端末決済"
-                      : "現金"}
+                    ? "端末決済"
+                    : "現金"}
                 </span>
                 <span className={css({ fontWeight: "semibold" })}>
                   ¥{amount.toLocaleString()}
@@ -166,7 +198,10 @@ function ReportsPage() {
   };
 
   const renderProductsReport = () => {
-    const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
+    const productSales: Record<
+      string,
+      { name: string; quantity: number; revenue: number }
+    > = {};
 
     completedSales.forEach((sale) => {
       sale.items.forEach((item) => {
@@ -205,7 +240,13 @@ function ReportsPage() {
         >
           売上トップ10商品
         </h3>
-        <div className={css({ display: "flex", flexDirection: "column", gap: "3" })}>
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "3",
+          })}
+        >
           {sortedProducts.map(([productId, data], index) => (
             <div
               key={productId}
@@ -229,7 +270,13 @@ function ReportsPage() {
                   #{index + 1}
                 </span>
                 <span className={css({ color: "gray.900" })}>{data.name}</span>
-                <span className={css({ color: "gray.500", marginLeft: "2", fontSize: "sm" })}>
+                <span
+                  className={css({
+                    color: "gray.500",
+                    marginLeft: "2",
+                    fontSize: "sm",
+                  })}
+                >
                   ({data.quantity}個)
                 </span>
               </div>
@@ -239,7 +286,13 @@ function ReportsPage() {
             </div>
           ))}
           {sortedProducts.length === 0 && (
-            <p className={css({ color: "gray.500", textAlign: "center", padding: "4" })}>
+            <p
+              className={css({
+                color: "gray.500",
+                textAlign: "center",
+                padding: "4",
+              })}
+            >
               データがありません
             </p>
           )}
@@ -249,7 +302,8 @@ function ReportsPage() {
   };
 
   const renderCategoriesReport = () => {
-    const categorySales: Record<string, { quantity: number; revenue: number }> = {};
+    const categorySales: Record<string, { quantity: number; revenue: number }> =
+      {};
 
     const productCategoryMap: Record<string, string> = {};
     productsData.forEach((product) => {
@@ -290,7 +344,13 @@ function ReportsPage() {
         >
           カテゴリ別売上
         </h3>
-        <div className={css({ display: "flex", flexDirection: "column", gap: "3" })}>
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "3",
+          })}
+        >
           {sortedCategories.map(([category, data]) => (
             <div
               key={category}
@@ -301,8 +361,18 @@ function ReportsPage() {
               })}
             >
               <div>
-                <span className={css({ fontWeight: "medium", color: "gray.900" })}>{category}</span>
-                <span className={css({ color: "gray.500", marginLeft: "2", fontSize: "sm" })}>
+                <span
+                  className={css({ fontWeight: "medium", color: "gray.900" })}
+                >
+                  {category}
+                </span>
+                <span
+                  className={css({
+                    color: "gray.500",
+                    marginLeft: "2",
+                    fontSize: "sm",
+                  })}
+                >
                   ({data.quantity}個)
                 </span>
               </div>
@@ -312,7 +382,13 @@ function ReportsPage() {
             </div>
           ))}
           {sortedCategories.length === 0 && (
-            <p className={css({ color: "gray.500", textAlign: "center", padding: "4" })}>
+            <p
+              className={css({
+                color: "gray.500",
+                textAlign: "center",
+                padding: "4",
+              })}
+            >
               データがありません
             </p>
           )}
@@ -322,7 +398,10 @@ function ReportsPage() {
   };
 
   const renderConsignmentReport = () => {
-    const publisherSales: Record<string, { quantity: number; revenue: number }> = {};
+    const publisherSales: Record<
+      string,
+      { quantity: number; revenue: number }
+    > = {};
 
     const productPublisherMap: Record<string, string> = {};
     productsData.forEach((product) => {
@@ -363,10 +442,22 @@ function ReportsPage() {
         >
           出版社/委託元別売上
         </h3>
-        <p className={css({ fontSize: "sm", color: "gray.500", marginBottom: "4" })}>
+        <p
+          className={css({
+            fontSize: "sm",
+            color: "gray.500",
+            marginBottom: "4",
+          })}
+        >
           委託販売レポート - 出版社ごとの売上集計
         </p>
-        <div className={css({ display: "flex", flexDirection: "column", gap: "3" })}>
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "3",
+          })}
+        >
           {sortedPublishers.map(([publisher, data]) => (
             <div
               key={publisher}
@@ -380,10 +471,18 @@ function ReportsPage() {
               })}
             >
               <div>
-                <span className={css({ fontWeight: "medium", color: "gray.900" })}>
+                <span
+                  className={css({ fontWeight: "medium", color: "gray.900" })}
+                >
                   {publisher}
                 </span>
-                <span className={css({ color: "gray.500", marginLeft: "2", fontSize: "sm" })}>
+                <span
+                  className={css({
+                    color: "gray.500",
+                    marginLeft: "2",
+                    fontSize: "sm",
+                  })}
+                >
                   ({data.quantity}個)
                 </span>
               </div>
@@ -393,7 +492,13 @@ function ReportsPage() {
             </div>
           ))}
           {sortedPublishers.length === 0 && (
-            <p className={css({ color: "gray.500", textAlign: "center", padding: "4" })}>
+            <p
+              className={css({
+                color: "gray.500",
+                textAlign: "center",
+                padding: "4",
+              })}
+            >
               データがありません
             </p>
           )}
@@ -421,8 +526,16 @@ function ReportsPage() {
             marginBottom: "6",
           })}
         >
-          <div className={css({ display: "flex", gap: "4", alignItems: "center" })}>
-            <div className={css({ display: "flex", alignItems: "center", gap: "2" })}>
+          <div
+            className={css({ display: "flex", gap: "4", alignItems: "center" })}
+          >
+            <div
+              className={css({
+                display: "flex",
+                alignItems: "center",
+                gap: "2",
+              })}
+            >
               <IconFilter size={18} className={css({ color: "gray.500" })} />
               <select
                 value={reportType}
@@ -501,7 +614,15 @@ function StatCard({ title, value }: StatCardProps) {
       })}
     >
       <p className={css({ fontSize: "sm", color: "gray.500" })}>{title}</p>
-      <p className={css({ fontSize: "2xl", fontWeight: "bold", color: "gray.900" })}>{value}</p>
+      <p
+        className={css({
+          fontSize: "2xl",
+          fontWeight: "bold",
+          color: "gray.900",
+        })}
+      >
+        {value}
+      </p>
     </div>
   );
 }

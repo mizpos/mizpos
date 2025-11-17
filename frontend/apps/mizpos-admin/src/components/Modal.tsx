@@ -1,6 +1,6 @@
 import { IconX } from "@tabler/icons-react";
-import { css } from "styled-system/css";
 import type { ReactNode } from "react";
+import { css } from "styled-system/css";
 
 interface ModalProps {
   isOpen: boolean;
@@ -24,6 +24,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         padding: "4",
       })}
     >
+      {/* biome-ignore lint/a11y/useSemanticElements: ちょっと実装上厳しいので */}
       <div
         className={css({
           position: "absolute",
