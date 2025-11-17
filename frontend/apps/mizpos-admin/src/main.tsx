@@ -18,12 +18,10 @@ const handleAuthError = async (error: unknown) => {
   if (error && typeof error === "object" && "status" in error) {
     const status = (error as { status: number }).status;
     if (status === 401 || status === 403) {
-      console.warn("認証エラーが発生しました。ログアウトします。");
       try {
         await signOut();
         window.location.href = "/login";
       } catch (signOutError) {
-        console.error("ログアウト処理に失敗しました:", signOutError);
         window.location.href = "/login";
       }
     }
