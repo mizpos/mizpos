@@ -78,5 +78,5 @@ createRoot(rootElement).render(
         <RouterProvider router={router} />
       </QueryClientProvider>
     </AuthProvider>
-  </StrictMode>
+  </StrictMode>,
 );

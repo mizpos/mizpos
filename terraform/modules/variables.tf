@@ -36,3 +36,21 @@ variable "enable_custom_domain" {
   type        = bool
   default     = false
 }
+
+variable "frontend_apps" {
+  description = "List of frontend applications to deploy"
+  type = list(object({
+    name      = string
+    subdomain = string
+  }))
+  default = [
+    {
+      name      = "mizpos-admin"
+      subdomain = "admin"
+    },
+    {
+      name      = "mizpos-online-sales"
+      subdomain = "sales"
+    }
+  ]
+}

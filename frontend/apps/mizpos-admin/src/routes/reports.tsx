@@ -81,7 +81,7 @@ function ReportsPage() {
         const today = new Date(
           now.getFullYear(),
           now.getMonth(),
-          now.getDate()
+          now.getDate(),
         );
         return date >= today;
       }
@@ -99,26 +99,29 @@ function ReportsPage() {
   };
 
   const completedSales = salesData.filter(
-    (s) => s.status === "completed" && filterByDateRange(s.created_at)
+    (s) => s.status === "completed" && filterByDateRange(s.created_at),
   );
 
   const renderSalesReport = () => {
     const totalRevenue = completedSales.reduce(
       (sum, s) => sum + s.final_amount,
-      0
+      0,
     );
     const totalDiscount = completedSales.reduce(
       (sum, s) => sum + s.discount_amount,
-      0
+      0,
     );
     const averageOrder =
       completedSales.length > 0 ? totalRevenue / completedSales.length : 0;
 
-    const paymentMethodBreakdown = completedSales.reduce((acc, sale) => {
-      acc[sale.payment_method] =
-        (acc[sale.payment_method] || 0) + sale.final_amount;
-      return acc;
-    }, {} as Record<string, number>);
+    const paymentMethodBreakdown = completedSales.reduce(
+      (acc, sale) => {
+        acc[sale.payment_method] =
+          (acc[sale.payment_method] || 0) + sale.final_amount;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return (
       <div
@@ -183,8 +186,8 @@ function ReportsPage() {
                   {method === "stripe_online"
                     ? "オンライン決済"
                     : method === "stripe_terminal"
-                    ? "端末決済"
-                    : "現金"}
+                      ? "端末決済"
+                      : "現金"}
                 </span>
                 <span className={css({ fontWeight: "semibold" })}>
                   ¥{amount.toLocaleString()}
@@ -322,7 +325,7 @@ function ReportsPage() {
     });
 
     const sortedCategories = Object.entries(categorySales).sort(
-      ([, a], [, b]) => b.revenue - a.revenue
+      ([, a], [, b]) => b.revenue - a.revenue,
     );
 
     return (
@@ -420,7 +423,7 @@ function ReportsPage() {
     });
 
     const sortedPublishers = Object.entries(publisherSales).sort(
-      ([, a], [, b]) => b.revenue - a.revenue
+      ([, a], [, b]) => b.revenue - a.revenue,
     );
 
     return (

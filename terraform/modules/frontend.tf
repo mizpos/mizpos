@@ -1,12 +1,16 @@
 # Frontend Static Hosting Infrastructure
-# S3 + CloudFront for React SPA
+# S3 + CloudFront for React SPA (Multiple Apps)
+
+locals {
+  frontend_apps_map = { for app in var.frontend_apps : app.name => app }
+}
 
 # CloudFront用のACM証明書（us-east-1リージョンが必須）
-# プロバイダーはモジュール呼び出し側で渡される
 resource "aws_acm_certificate" "frontend" {
+  for_each = local.frontend_apps_map
   provider = aws.us_east_1
 
-  domain_name       = "app.${var.domain_name}"
+  domain_name       = "${each.value.subdomain}.${var.domain_name}"
   validation_method = "DNS"
 
   lifecycle {
@@ -14,21 +18,23 @@ resource "aws_acm_certificate" "frontend" {
   }
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-frontend-cert"
+    Name = "${var.environment}-${var.project_name}-${each.key}-cert"
   }
 }
 
 # S3バケット（フロントエンド静的ファイル用）
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${var.project_name}-${var.environment}-frontend"
+  for_each = local.frontend_apps_map
+  bucket   = "${var.project_name}-${var.environment}-${each.key}"
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-frontend"
+    Name = "${var.environment}-${var.project_name}-${each.key}"
   }
 }
 
 resource "aws_s3_bucket_versioning" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  for_each = local.frontend_apps_map
+  bucket   = aws_s3_bucket.frontend[each.key].id
 
   versioning_configuration {
     status = "Enabled"
@@ -36,7 +42,8 @@ resource "aws_s3_bucket_versioning" "frontend" {
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  for_each = local.frontend_apps_map
+  bucket   = aws_s3_bucket.frontend[each.key].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -46,8 +53,10 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 
 # CloudFront Origin Access Control
 resource "aws_cloudfront_origin_access_control" "frontend" {
-  name                              = "${var.project_name}-${var.environment}-frontend-oac"
-  description                       = "OAC for ${var.project_name} frontend"
+  for_each = local.frontend_apps_map
+
+  name                              = "${var.project_name}-${var.environment}-${each.key}-oac"
+  description                       = "OAC for ${var.project_name} ${each.key}"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -55,7 +64,8 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
 
 # S3バケットポリシー（CloudFrontからのアクセスのみ許可）
 resource "aws_s3_bucket_policy" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  for_each = local.frontend_apps_map
+  bucket   = aws_s3_bucket.frontend[each.key].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -67,10 +77,10 @@ resource "aws_s3_bucket_policy" "frontend" {
           Service = "cloudfront.amazonaws.com"
         }
         Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
+        Resource = "${aws_s3_bucket.frontend[each.key].arn}/*"
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.frontend.arn
+            "AWS:SourceArn" = aws_cloudfront_distribution.frontend[each.key].arn
           }
         }
       }
@@ -80,24 +90,26 @@ resource "aws_s3_bucket_policy" "frontend" {
 
 # CloudFrontディストリビューション
 resource "aws_cloudfront_distribution" "frontend" {
+  for_each = local.frontend_apps_map
+
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  comment             = "${var.project_name} ${var.environment} frontend"
+  comment             = "${var.project_name} ${var.environment} ${each.key}"
   price_class         = "PriceClass_200" # アジア・北米・ヨーロッパ
 
-  aliases = var.enable_custom_domain ? ["app.${var.domain_name}"] : []
+  aliases = var.enable_custom_domain ? ["${each.value.subdomain}.${var.domain_name}"] : []
 
   origin {
-    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id                = "S3-${aws_s3_bucket.frontend.id}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
+    domain_name              = aws_s3_bucket.frontend[each.key].bucket_regional_domain_name
+    origin_id                = "S3-${aws_s3_bucket.frontend[each.key].id}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.frontend[each.key].id
   }
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.frontend.id}"
+    target_origin_id = "S3-${aws_s3_bucket.frontend[each.key].id}"
 
     forwarded_values {
       query_string = false
@@ -134,13 +146,13 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   viewer_certificate {
     cloudfront_default_certificate = var.enable_custom_domain ? false : true
-    acm_certificate_arn            = var.enable_custom_domain ? aws_acm_certificate_validation.frontend[0].certificate_arn : null
+    acm_certificate_arn            = var.enable_custom_domain ? aws_acm_certificate_validation.frontend[each.key].certificate_arn : null
     ssl_support_method             = var.enable_custom_domain ? "sni-only" : null
     minimum_protocol_version       = var.enable_custom_domain ? "TLSv1.2_2021" : null
   }
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-frontend-cdn"
+    Name = "${var.environment}-${var.project_name}-${each.key}-cdn"
   }
 }
 
@@ -161,10 +173,12 @@ resource "aws_iam_policy" "frontend_deploy" {
           "s3:DeleteObject",
           "s3:ListBucket"
         ]
-        Resource = [
-          aws_s3_bucket.frontend.arn,
-          "${aws_s3_bucket.frontend.arn}/*"
-        ]
+        Resource = flatten([
+          for app in local.frontend_apps_map : [
+            aws_s3_bucket.frontend[app.name].arn,
+            "${aws_s3_bucket.frontend[app.name].arn}/*"
+          ]
+        ])
       },
       {
         Sid    = "CloudFrontInvalidation"
@@ -174,7 +188,7 @@ resource "aws_iam_policy" "frontend_deploy" {
           "cloudfront:GetInvalidation",
           "cloudfront:ListInvalidations"
         ]
-        Resource = aws_cloudfront_distribution.frontend.arn
+        Resource = [for app in local.frontend_apps_map : aws_cloudfront_distribution.frontend[app.name].arn]
       }
     ]
   })
@@ -182,13 +196,16 @@ resource "aws_iam_policy" "frontend_deploy" {
 
 # DNS validation records for Frontend certificate
 resource "aws_route53_record" "frontend_cert_validation" {
-  for_each = var.enable_custom_domain ? {
-    for dvo in aws_acm_certificate.frontend.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
+  for_each = var.enable_custom_domain ? merge([
+    for app_key, app in local.frontend_apps_map : {
+      for dvo in aws_acm_certificate.frontend[app_key].domain_validation_options : "${app_key}-${dvo.domain_name}" => {
+        app_key = app_key
+        name    = dvo.resource_record_name
+        record  = dvo.resource_record_value
+        type    = dvo.resource_record_type
+      }
     }
-  } : {}
+  ]...) : {}
 
   provider = aws.us_east_1
 
@@ -202,24 +219,27 @@ resource "aws_route53_record" "frontend_cert_validation" {
 
 # Certificate validation for Frontend
 resource "aws_acm_certificate_validation" "frontend" {
-  count    = var.enable_custom_domain ? 1 : 0
+  for_each = var.enable_custom_domain ? local.frontend_apps_map : {}
   provider = aws.us_east_1
 
-  certificate_arn         = aws_acm_certificate.frontend.arn
-  validation_record_fqdns = [for record in aws_route53_record.frontend_cert_validation : record.fqdn]
+  certificate_arn = aws_acm_certificate.frontend[each.key].arn
+  validation_record_fqdns = [
+    for k, v in aws_route53_record.frontend_cert_validation : v.fqdn
+    if startswith(k, "${each.key}-")
+  ]
 }
 
 # Route53 A record for CloudFront
 resource "aws_route53_record" "frontend" {
-  count = var.enable_custom_domain ? 1 : 0
+  for_each = var.enable_custom_domain ? local.frontend_apps_map : {}
 
   zone_id = data.aws_route53_zone.main[0].zone_id
-  name    = "app.${var.domain_name}"
+  name    = "${each.value.subdomain}.${var.domain_name}"
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.frontend.domain_name
-    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+    name                   = aws_cloudfront_distribution.frontend[each.key].domain_name
+    zone_id                = aws_cloudfront_distribution.frontend[each.key].hosted_zone_id
     evaluate_target_health = false
   }
 }

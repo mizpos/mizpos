@@ -37,20 +37,14 @@ jobs:
   build:
     name: Build Frontend
     runs-on: ubuntu-slim
-    outputs:
-      app-name: ${{ steps.set-app.outputs.app-name }}
+    strategy:
+      matrix:
+        app:
+          - mizpos-admin
+          - mizpos-online-sales
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set App Name
-        id: set-app
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "app-name=${{ github.event.inputs.app }}" >> $GITHUB_OUTPUT
-          else
-            echo "app-name=mizpos-admin" >> $GITHUB_OUTPUT
-          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -77,31 +71,31 @@ jobs:
         run: pnpm check-types
 
       - name: Build Application
-        working-directory: frontend
-        run: pnpm --filter ${{ steps.set-app.outputs.app-name }} build
-        env:
-          VITE_API_GATEWAY_BASE: ${{ secrets.API_GATEWAY_BASE_DEV }}
-          VITE_COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID_DEV }}
-          VITE_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID_DEV }}
-          VITE_AWS_REGION: ${{ secrets.AWS_REGION_DEV }}
+        working-directory: frontend/apps/${{ matrix.app }}
+        run: NODE_ENV=development pnpm build
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-build
-          path: frontend/apps/${{ steps.set-app.outputs.app-name }}/dist
+          name: frontend-build-${{ matrix.app }}
+          path: frontend/apps/${{ matrix.app }}/dist
           retention-days: 1
 
   deploy:
     name: Deploy to S3 & CloudFront
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        app:
+          - mizpos-admin
+          - mizpos-online-sales
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     steps:
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
-          name: frontend-build
+          name: frontend-build-${{ matrix.app }}
           path: dist
 
       - name: Configure AWS Credentials
@@ -113,14 +107,20 @@ jobs:
       - name: Get Infrastructure Values from Terraform State
         id: tf-outputs
         run: |
-          # Terraform stateからoutputを取得
-          aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
-            jq -r '.outputs.frontend_s3_bucket_name.value' | \
-            xargs -I {} echo "s3_bucket={}" >> $GITHUB_OUTPUT
+          # Terraform stateからアプリ別のoutputを取得
+          APP_NAME="${{ matrix.app }}"
 
-          aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
-            jq -r '.outputs.frontend_cloudfront_distribution_id.value' | \
-            xargs -I {} echo "cloudfront_distribution_id={}" >> $GITHUB_OUTPUT
+          S3_BUCKET=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r ".outputs.frontend_apps.value[\"${APP_NAME}\"].s3_bucket_name")
+          echo "s3_bucket=${S3_BUCKET}" >> $GITHUB_OUTPUT
+
+          CF_DIST_ID=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r ".outputs.frontend_apps.value[\"${APP_NAME}\"].cloudfront_distribution_id")
+          echo "cloudfront_distribution_id=${CF_DIST_ID}" >> $GITHUB_OUTPUT
+
+          CF_DOMAIN=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r ".outputs.frontend_apps.value[\"${APP_NAME}\"].url")
+          echo "frontend_url=${CF_DOMAIN}" >> $GITHUB_OUTPUT
 
       - name: Deploy to S3
         run: |
@@ -154,15 +154,16 @@ jobs:
         run: |
           echo "## Frontend Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **App**: ${{ needs.build.outputs.app-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **App**: ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
           echo "- **S3 Bucket**: ${{ steps.tf-outputs.outputs.s3_bucket }}" >> $GITHUB_STEP_SUMMARY
           echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend URL**: ${{ steps.tf-outputs.outputs.frontend_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
 
   preview:
     name: PR Preview Info
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: github.event_name == 'pull_request'
     steps:
       - name: PR Comment
@@ -175,9 +176,9 @@ jobs:
               repo: context.repo.repo,
               body: `## Frontend Build Successful ✅
 
-              **App**: ${{ needs.build.outputs.app-name }}
+              **Apps**: mizpos-admin, mizpos-online-sales
 
-              The frontend has been built successfully. Once merged to main, it will be automatically deployed.
+              All frontend applications have been built successfully. Once merged to main, they will be automatically deployed to their respective CloudFront distributions.
 
               ### Build Details
               - Node.js: ${{ env.NODE_VERSION }}

@@ -114,7 +114,7 @@ function UsersPage() {
   const filteredUsers = users.filter(
     (user) =>
       user.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const formatDate = (dateString: string) => {
@@ -161,7 +161,7 @@ function UsersPage() {
             onClick={() => {
               if (
                 window.confirm(
-                  `「${item.display_name}」を削除しますか？\nCognitoからも削除されます。`
+                  `「${item.display_name}」を削除しますか？\nCognitoからも削除されます。`,
                 )
               ) {
                 deleteMutation.mutate(item.user_id);
