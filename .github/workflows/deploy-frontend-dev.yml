@@ -72,7 +72,7 @@ jobs:
 
       - name: Build Application
         working-directory: frontend/apps/${{ matrix.app }}
-        run: NODE_ENV=development pnpm build
+        run: pnpm panda codegen && pnpm vite build --mode development && pnpm tsc
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
