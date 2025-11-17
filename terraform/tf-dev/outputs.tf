@@ -24,3 +24,13 @@ output "api_gateway_domain_name_target" {
   description = "API Gateway Custom Domain Target for DNS"
   value       = module.mizpos_infrastructure.api_gateway_domain_name_target
 }
+
+output "frontend_s3_bucket_name" {
+  description = "Frontend S3 Bucket Name"
+  value       = module.mizpos_infrastructure.frontend_s3_bucket_name
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "Frontend CloudFront Distribution ID"
+  value       = module.mizpos_infrastructure.frontend_cloudfront_distribution_id
+}
