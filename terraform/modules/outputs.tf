@@ -142,40 +142,19 @@ output "acm_certificate_domain_validation_options" {
   value       = var.enable_custom_domain ? aws_acm_certificate.api[0].domain_validation_options : []
 }
 
-# Frontend Outputs
-output "frontend_s3_bucket_name" {
-  description = "Frontend S3 Bucket Name"
-  value       = aws_s3_bucket.frontend.id
-}
-
-output "frontend_s3_bucket_arn" {
-  description = "Frontend S3 Bucket ARN"
-  value       = aws_s3_bucket.frontend.arn
-}
-
-output "frontend_cloudfront_distribution_id" {
-  description = "Frontend CloudFront Distribution ID"
-  value       = aws_cloudfront_distribution.frontend.id
-}
-
-output "frontend_cloudfront_domain_name" {
-  description = "Frontend CloudFront Domain Name"
-  value       = aws_cloudfront_distribution.frontend.domain_name
-}
-
-output "frontend_url" {
-  description = "Frontend URL"
-  value       = var.enable_custom_domain ? "https://app.${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend.domain_name}"
-}
-
-output "frontend_acm_certificate_arn" {
-  description = "Frontend ACM Certificate ARN (us-east-1)"
-  value       = aws_acm_certificate.frontend.arn
-}
-
-output "frontend_acm_certificate_domain_validation_options" {
-  description = "Frontend ACM Certificate Domain Validation Options"
-  value       = aws_acm_certificate.frontend.domain_validation_options
+# Frontend Outputs (Multiple Apps)
+output "frontend_apps" {
+  description = "Frontend apps configuration map"
+  value = {
+    for app_key, app in local.frontend_apps_map : app_key => {
+      s3_bucket_name            = aws_s3_bucket.frontend[app_key].id
+      s3_bucket_arn             = aws_s3_bucket.frontend[app_key].arn
+      cloudfront_distribution_id = aws_cloudfront_distribution.frontend[app_key].id
+      cloudfront_domain_name    = aws_cloudfront_distribution.frontend[app_key].domain_name
+      url = var.enable_custom_domain ? "https://${app.subdomain}.${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend[app_key].domain_name}"
+      acm_certificate_arn = aws_acm_certificate.frontend[app_key].arn
+    }
+  }
 }
 
 output "frontend_deploy_policy_arn" {
