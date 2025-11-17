@@ -36,7 +36,7 @@ permissions:
 jobs:
   build:
     name: Build Frontend
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         app:
