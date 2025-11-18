@@ -28,7 +28,13 @@ function MyOrdersPage() {
     error,
   } = useQuery({
     queryKey: ["orders", searchEmail],
-    queryFn: () => getOrdersByEmail(searchEmail),
+    queryFn: async () => {
+      const ordersList = await getOrdersByEmail(searchEmail);
+      // 日時順（新しい順）でソート
+      return ordersList.sort((a, b) => {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    },
     enabled: !!searchEmail,
   });
 
