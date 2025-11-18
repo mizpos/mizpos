@@ -638,7 +638,9 @@ def update_order_status_with_stripe(
     return dynamo_to_dict(response["Attributes"])
 
 
-def update_stripe_payment_status(order_id: str, stripe_payment_status: str) -> dict | None:
+def update_stripe_payment_status(
+    order_id: str, stripe_payment_status: str
+) -> dict | None:
     """注文のStripe支払いステータスのみ更新"""
     # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
     response = sales_table.query(
