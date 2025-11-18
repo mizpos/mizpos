@@ -90,7 +90,7 @@ jobs:
         app:
           - mizpos-admin
           - mizpos-online-sales
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
