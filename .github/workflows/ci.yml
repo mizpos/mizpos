@@ -33,6 +33,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate API Types
+        run: pnpm generate-api-types
+
       - name: Run fix (format & lint)
         run: pnpm run fix
 
