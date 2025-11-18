@@ -762,9 +762,12 @@ async def create_order_payment_intent(order_id: str):
             },
         )
 
-        # 注文にPaymentIntentを紐付け
+        # 注文にPaymentIntentとステータスを紐付け
         intent_id = intent.get("id") if isinstance(intent, dict) else intent.id
-        update_order_payment_intent(order_id, intent_id)
+        intent_status = (
+            intent.get("status") if isinstance(intent, dict) else intent.status
+        )
+        update_order_payment_intent(order_id, intent_id, intent_status)
 
         # 辞書とオブジェクトの両方に対応
         if isinstance(intent, dict):

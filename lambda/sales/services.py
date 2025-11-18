@@ -553,8 +553,10 @@ def get_orders_by_email(customer_email: str, limit: int = 50) -> list[dict]:
     return orders
 
 
-def update_order_payment_intent(order_id: str, payment_intent_id: str) -> dict | None:
-    """注文のPaymentIntentを更新"""
+def update_order_payment_intent(
+    order_id: str, payment_intent_id: str, payment_status: str | None = None
+) -> dict | None:
+    """注文のPaymentIntentとステータスを更新"""
     # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
     response = sales_table.query(
         KeyConditionExpression="sale_id = :sid",
@@ -567,10 +569,17 @@ def update_order_payment_intent(order_id: str, payment_intent_id: str) -> dict |
     order = items[0]
     timestamp = order["timestamp"]  # Decimal型のまま
 
+    update_parts = ["stripe_payment_intent_id = :pi"]
+    expression_values = {":pi": payment_intent_id}
+
+    if payment_status:
+        update_parts.append("stripe_payment_status = :ps")
+        expression_values[":ps"] = payment_status
+
     response = sales_table.update_item(
         Key={"sale_id": order_id, "timestamp": timestamp},
-        UpdateExpression="SET stripe_payment_intent_id = :pi",
-        ExpressionAttributeValues={":pi": payment_intent_id},
+        UpdateExpression=f"SET {', '.join(update_parts)}",
+        ExpressionAttributeValues=expression_values,
         ReturnValues="ALL_NEW",
     )
     return dynamo_to_dict(response["Attributes"])
