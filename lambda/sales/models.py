@@ -129,3 +129,49 @@ class CouponResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# オンライン販売用モデル
+class ShippingAddress(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    postal_code: str = Field(..., min_length=1, max_length=20)
+    prefecture: str = Field(..., min_length=1, max_length=100)
+    city: str = Field(..., min_length=1, max_length=200)
+    address_line1: str = Field(..., min_length=1, max_length=300)
+    address_line2: str | None = None
+    phone_number: str = Field(..., min_length=1, max_length=50)
+
+
+class CreateOnlineOrderRequest(BaseModel):
+    cart_items: list[CartItem]
+    customer_email: str = Field(..., min_length=1)
+    customer_name: str = Field(..., min_length=1, max_length=200)
+    shipping_address: ShippingAddress
+    coupon_code: str | None = None
+    notes: str | None = None
+
+
+class CreateCheckoutSessionRequest(BaseModel):
+    cart_items: list[CartItem]
+    customer_email: str | None = None
+    success_url: str = Field(..., min_length=1)
+    cancel_url: str = Field(..., min_length=1)
+    coupon_code: str | None = None
+
+
+class OnlineOrderResponse(BaseModel):
+    order_id: str
+    customer_email: str
+    customer_name: str
+    items: list[dict]
+    subtotal: float
+    discount: float
+    total: float
+    status: str
+    shipping_address: dict
+    stripe_payment_intent_id: str | None = None
+    stripe_checkout_session_id: str | None = None
+    created_at: str
+
+    class Config:
+        from_attributes = True

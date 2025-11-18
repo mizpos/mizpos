@@ -6,15 +6,17 @@ from decimal import Decimal
 
 import stripe
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
 from auth import get_current_user
 from models import (
     ApplyCouponRequest,
+    CreateCheckoutSessionRequest,
     CreateCouponRequest,
     CreateEventRequest,
+    CreateOnlineOrderRequest,
     CreatePaymentIntentRequest,
     CreateSaleRequest,
     SaleStatus,
@@ -25,11 +27,14 @@ from services import (
     calculate_commission_fees,
     calculate_coupon_discount,
     config_table,
+    create_online_order,
     deduct_stock,
     dynamo_to_dict,
     events_table,
     get_config,
     get_coupon_by_code,
+    get_order_by_id,
+    get_orders_by_email,
     get_products_info,
     get_stripe_terminal_config,
     increment_coupon_usage,
@@ -38,6 +43,8 @@ from services import (
     sales_table,
     set_config,
     set_stripe_terminal_config,
+    update_order_payment_intent,
+    update_order_status,
     validate_and_reserve_stock,
     validate_coupon,
 )
@@ -432,6 +439,216 @@ async def create_event(request: CreateEventRequest, current_user: dict = Depends
         return {"event": event_item}
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# オンライン販売エンドポイント（認証不要）
+@router.post("/orders", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_order(request: CreateOnlineOrderRequest):
+    """オンライン注文を作成（顧客向け、認証不要）"""
+    try:
+        order = create_online_order(
+            cart_items=[item.model_dump() for item in request.cart_items],
+            customer_email=request.customer_email,
+            customer_name=request.customer_name,
+            shipping_address=request.shipping_address.model_dump(),
+            coupon_code=request.coupon_code,
+            notes=request.notes,
+        )
+        return {"order": order}
+    except HTTPException:
+        raise
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/orders/{order_id}", response_model=dict)
+async def get_order(order_id: str):
+    """注文詳細を取得（認証不要、メール確認推奨）"""
+    try:
+        order = get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        return {"order": order}
+    except HTTPException:
+        raise
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/orders", response_model=dict)
+async def list_orders_by_email(
+    customer_email: str = Query(..., description="顧客メールアドレス"),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    """顧客メールアドレスで注文一覧を取得（認証不要）"""
+    try:
+        orders = get_orders_by_email(customer_email, limit)
+        return {"orders": orders}
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/orders/{order_id}/payment-intent", response_model=dict)
+async def create_order_payment_intent(order_id: str):
+    """注文用のStripe PaymentIntentを作成"""
+    init_stripe()
+    try:
+        order = get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        if order.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Order is not pending")
+
+        # 既にPaymentIntentがある場合は取得
+        existing_pi_id = order.get("stripe_payment_intent_id")
+        if existing_pi_id:
+            try:
+                intent = stripe.PaymentIntent.retrieve(existing_pi_id)
+                if intent.status in ["requires_payment_method", "requires_confirmation"]:
+                    return {
+                        "payment_intent": {
+                            "id": intent.id,
+                            "client_secret": intent.client_secret,
+                            "amount": intent.amount,
+                            "currency": intent.currency,
+                            "status": intent.status,
+                        }
+                    }
+            except stripe.error.StripeError:
+                pass  # 既存のPaymentIntentが見つからない場合は新規作成
+
+        # 新規PaymentIntent作成
+        amount_jpy = int(float(order["total"]))
+        intent = stripe.PaymentIntent.create(
+            amount=amount_jpy,
+            currency="jpy",
+            receipt_email=order.get("customer_email"),
+            metadata={
+                "order_id": order_id,
+                "customer_name": order.get("customer_name", ""),
+            },
+        )
+
+        # 注文にPaymentIntentを紐付け
+        update_order_payment_intent(order_id, intent.id)
+
+        return {
+            "payment_intent": {
+                "id": intent.id,
+                "client_secret": intent.client_secret,
+                "amount": intent.amount,
+                "currency": intent.currency,
+                "status": intent.status,
+            }
+        }
+    except HTTPException:
+        raise
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/checkout/session", response_model=dict)
+async def create_checkout_session(request: CreateCheckoutSessionRequest):
+    """Stripe Checkoutセッションを作成（オプション機能）"""
+    init_stripe()
+    try:
+        # 在庫確認
+        from models import CartItem
+
+        cart_items = [CartItem(**item.model_dump()) for item in request.cart_items]
+        reserved_items = validate_and_reserve_stock(cart_items)
+
+        # Stripe Checkoutの商品ラインアイテム作成
+        line_items = []
+        for item in reserved_items:
+            line_items.append({
+                "price_data": {
+                    "currency": "jpy",
+                    "product_data": {
+                        "name": item["product_name"],
+                    },
+                    "unit_amount": int(item["unit_price"]),
+                },
+                "quantity": item["quantity"],
+            })
+
+        # Checkoutセッション作成
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=line_items,
+            mode="payment",
+            success_url=request.success_url,
+            cancel_url=request.cancel_url,
+            customer_email=request.customer_email,
+            metadata={
+                "cart_items": str([item.model_dump() for item in request.cart_items]),
+                "coupon_code": request.coupon_code or "",
+            },
+        )
+
+        return {"checkout_session": {"id": session.id, "url": session.url}}
+    except HTTPException:
+        raise
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# Stripe Webhookエンドポイント
+@router.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Stripe Webhookイベントを処理"""
+    init_stripe()
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    # Webhook署名検証用のシークレットを取得
+    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+    try:
+        if webhook_secret:
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        else:
+            # 開発環境では署名検証をスキップ（本番環境では必須）
+            import json
+
+            event = json.loads(payload)
+
+        # イベントタイプに応じて処理
+        if event["type"] == "payment_intent.succeeded":
+            payment_intent = event["data"]["object"]
+            order_id = payment_intent.get("metadata", {}).get("order_id")
+
+            if order_id:
+                # 注文ステータスを「完了」に更新
+                update_order_status(order_id, SaleStatus.COMPLETED.value)
+
+        elif event["type"] == "payment_intent.payment_failed":
+            payment_intent = event["data"]["object"]
+            order_id = payment_intent.get("metadata", {}).get("order_id")
+
+            if order_id:
+                # 注文ステータスを「キャンセル」に更新し、在庫を戻す
+                order = get_order_by_id(order_id)
+                if order and order.get("status") == "pending":
+                    restore_stock(order)
+                    update_order_status(order_id, SaleStatus.CANCELLED.value)
+
+        elif event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            # Checkoutセッションから注文を作成
+            # （必要に応じて実装）
+            pass
+
+        return {"status": "success"}
+    except stripe.error.SignatureVerificationError as e:
+        raise HTTPException(status_code=400, detail="Invalid signature") from e
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # 設定管理エンドポイント

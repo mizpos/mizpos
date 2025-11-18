@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
@@ -5,8 +6,23 @@ import ReactDOM from "react-dom/client";
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
 
-import "./styles.css";
+// Import providers
+import { AuthProvider } from "./contexts/AuthContext";
+import { CartProvider } from "./contexts/CartContext";
+
 import reportWebVitals from "./reportWebVitals.ts";
+import "./panda.css";
+import "./styles.scss";
+
+// Create a QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5分
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Create a new router instance
 const router = createRouter({
@@ -31,7 +47,13 @@ if (rootElement && !rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <RouterProvider router={router} />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <CartProvider>
+            <RouterProvider router={router} />
+          </CartProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </StrictMode>
   );
 }

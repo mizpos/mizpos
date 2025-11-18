@@ -409,3 +409,138 @@ def set_stripe_terminal_config(
         "updated_at": config["updated_at"],
         "created_at": config["created_at"],
     }
+
+
+# オンライン販売用のサービス関数
+def create_online_order(
+    cart_items: list,
+    customer_email: str,
+    customer_name: str,
+    shipping_address: dict,
+    coupon_code: str | None = None,
+    notes: str | None = None,
+) -> dict:
+    """オンライン注文を作成（顧客向け、認証不要）"""
+    import uuid
+
+    # 在庫確認・確保
+    from models import CartItem
+
+    cart_items_models = [CartItem(**item) for item in cart_items]
+    reserved_items = validate_and_reserve_stock(cart_items_models)
+
+    # 商品情報を取得
+    products_info = get_products_info(cart_items_models)
+
+    # 小計計算
+    subtotal = sum(item["subtotal"] for item in reserved_items)
+
+    # クーポン適用
+    discount = 0.0
+    if coupon_code:
+        coupon = get_coupon_by_code(coupon_code)
+        if coupon:
+            validate_coupon(coupon)
+            discount = calculate_coupon_discount(coupon, cart_items_models, products_info)
+            increment_coupon_usage(coupon)
+
+    total = subtotal - discount
+
+    # 手数料情報を計算（オンライン販売はstripe_online）
+    commission_info = calculate_commission_fees(reserved_items, products_info, "stripe_online")
+
+    order_id = str(uuid.uuid4())
+    timestamp = int(time.time() * 1000)
+    now = datetime.now(timezone.utc).isoformat()
+
+    # オンライン注文として保存（event_idは"online"固定、user_idは"customer"固定）
+    order_item = {
+        "sale_id": order_id,
+        "timestamp": timestamp,
+        "event_id": "online",
+        "user_id": "customer",
+        "items": reserved_items,
+        "subtotal": Decimal(str(subtotal)),
+        "discount": Decimal(str(discount)),
+        "total": Decimal(str(total)),
+        "payment_method": "stripe_online",
+        "status": "pending",
+        "coupon_code": coupon_code or "",
+        "customer_email": customer_email,
+        "customer_name": customer_name,
+        "shipping_address": shipping_address,
+        "notes": notes or "",
+        "stripe_payment_intent_id": "",
+        "stripe_checkout_session_id": "",
+        "created_at": now,
+        # 委託販売手数料情報
+        "commission_details": commission_info["items"],
+        "total_commission": Decimal(str(commission_info["total_commission"])),
+        "total_payment_fee": Decimal(str(commission_info["total_payment_fee"])),
+        "total_net_amount": Decimal(str(commission_info["total_net_amount"])),
+    }
+
+    sales_table.put_item(Item=order_item)
+
+    # 在庫を減らす（注文時点で確保）
+    deduct_stock(reserved_items, order_id, "customer")
+
+    return dynamo_to_dict(order_item)
+
+
+def get_order_by_id(order_id: str) -> dict | None:
+    """注文IDから注文を取得"""
+    response = sales_table.query(
+        KeyConditionExpression="sale_id = :sid", ExpressionAttributeValues={":sid": order_id}
+    )
+    items = response.get("Items", [])
+    return dynamo_to_dict(items[0]) if items else None
+
+
+def get_orders_by_email(customer_email: str, limit: int = 50) -> list[dict]:
+    """顧客メールアドレスから注文一覧を取得"""
+    # DynamoDBのscanでcustomer_emailをフィルタ（本番環境ではGSI推奨）
+    response = sales_table.scan(
+        FilterExpression="customer_email = :email AND event_id = :eid",
+        ExpressionAttributeValues={":email": customer_email, ":eid": "online"},
+        Limit=limit,
+    )
+    orders = [
+        dynamo_to_dict(item)
+        for item in response.get("Items", [])
+        if not item.get("sale_id", "").startswith("coupon_")
+    ]
+    return orders
+
+
+def update_order_payment_intent(order_id: str, payment_intent_id: str) -> dict | None:
+    """注文のPaymentIntentを更新"""
+    order = get_order_by_id(order_id)
+    if not order:
+        return None
+
+    timestamp = order["timestamp"]
+    response = sales_table.update_item(
+        Key={"sale_id": order_id, "timestamp": timestamp},
+        UpdateExpression="SET stripe_payment_intent_id = :pi",
+        ExpressionAttributeValues={":pi": payment_intent_id},
+        ReturnValues="ALL_NEW",
+    )
+    return dynamo_to_dict(response["Attributes"])
+
+
+def update_order_status(order_id: str, status: str) -> dict | None:
+    """注文のステータスを更新"""
+    order = get_order_by_id(order_id)
+    if not order:
+        return None
+
+    timestamp = order["timestamp"]
+    response = sales_table.update_item(
+        Key={"sale_id": order_id, "timestamp": timestamp},
+        UpdateExpression="SET #st = :status",
+        ExpressionAttributeNames={"#st": "status"},
+        ExpressionAttributeValues={":status": status},
+        ReturnValues="ALL_NEW",
+    )
+    return dynamo_to_dict(response["Attributes"])

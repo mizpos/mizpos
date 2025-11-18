@@ -56,9 +56,8 @@ router = APIRouter()
 @router.get("/products", response_model=dict)
 async def list_products(
     category: str | None = Query(default=None, description="カテゴリでフィルタ"),
-    current_user: dict = Depends(get_current_user),
 ):
-    """商品一覧取得"""
+    """商品一覧取得（認証不要）"""
     try:
         if category:
             response = stock_table.query(
@@ -125,8 +124,8 @@ async def create_product(request: CreateProductRequest, current_user: dict = Dep
 
 
 @router.get("/products/{product_id}", response_model=dict)
-async def get_product(product_id: str, current_user: dict = Depends(get_current_user)):
-    """商品詳細取得"""
+async def get_product(product_id: str):
+    """商品詳細取得（認証不要）"""
     try:
         response = stock_table.get_item(Key={"product_id": product_id})
         product = response.get("Item")
