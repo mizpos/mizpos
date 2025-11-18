@@ -1,5 +1,8 @@
+import json
+import logging
 import os
 import time
+import traceback
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -8,6 +11,7 @@ import stripe
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from mangum import Mangum
 
 from auth import get_current_user
@@ -48,6 +52,10 @@ from services import (
     validate_coupon,
 )
 
+# ロガーの設定
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 # FastAPI アプリ
 app = FastAPI(
     title="Sales API",
@@ -62,6 +70,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# グローバル例外ハンドラー
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    すべての予期しない例外をキャッチして適切に処理する
+    これにより1つのエンドポイントの500エラーが他のエンドポイントに影響しない
+    """
+    logger.error(f"Unhandled exception: {exc}")
+    logger.error(f"Request path: {request.url.path}")
+    logger.error(f"Request method: {request.method}")
+    logger.error(f"Traceback: {traceback.format_exc()}")
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "error_type": type(exc).__name__,
+            "path": str(request.url.path),
+        },
+    )
+
 
 # ルーター
 router = APIRouter()
@@ -477,12 +508,16 @@ async def create_order(request: CreateOnlineOrderRequest):
         raise
     except ClientError as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"DynamoDB error: {str(e)}") from e
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.get("/orders/{order_id}", response_model=dict)
@@ -783,27 +818,62 @@ app.include_router(router)
 
 # Mangum ハンドラー（API Gateway base path対応）
 def handler(event, context):
-    # OPTIONS リクエストは認証なしで即座にCORSレスポンスを返す
-    request_context = event.get("requestContext", {})
-    http_info = request_context.get("http", {})
-    method = http_info.get("method", event.get("httpMethod", ""))
+    """
+    Lambda関数のエントリーポイント
+    全体をtry-exceptでラップしてLambda関数のクラッシュを防止
+    """
+    try:
+        # リクエスト情報をログ出力
+        request_context = event.get("requestContext", {})
+        http_info = request_context.get("http", {})
+        method = http_info.get("method", event.get("httpMethod", ""))
+        path = http_info.get("path", event.get("path", ""))
 
-    if method == "OPTIONS":
+        logger.info(f"Request received - Method: {method}, Path: {path}")
+
+        # OPTIONS リクエストは認証なしで即座にCORSレスポンスを返す
+        if method == "OPTIONS":
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                    "Access-Control-Max-Age": "300",
+                },
+                "body": "",
+            }
+
+        # HTTP API v2.0ではrawPathにステージ名が含まれるため、動的にbase pathを設定
+        environment = os.environ.get("ENVIRONMENT", "dev")
+        api_gateway_base_path = f"/{environment}/sales"
+        mangum_handler = Mangum(
+            app, lifespan="off", api_gateway_base_path=api_gateway_base_path
+        )
+        response = mangum_handler(event, context)
+        logger.info(
+            f"Request completed - Status: {response.get('statusCode', 'unknown')}"
+        )
+        return response
+
+    except Exception as e:
+        # Lambda関数レベルでの致命的なエラーをキャッチ
+        logger.error(f"Fatal error in Lambda handler: {e}")
+        logger.error(f"Event: {json.dumps(event, default=str)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+
+        # エラーレスポンスを返す（Lambda関数自体はクラッシュしない）
         return {
-            "statusCode": 200,
+            "statusCode": 500,
             "headers": {
+                "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization",
-                "Access-Control-Max-Age": "300",
             },
-            "body": "",
+            "body": json.dumps(
+                {
+                    "detail": "Lambda handler error",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                }
+            ),
         }
-
-    # HTTP API v2.0ではrawPathにステージ名が含まれるため、動的にbase pathを設定
-    environment = os.environ.get("ENVIRONMENT", "dev")
-    api_gateway_base_path = f"/{environment}/sales"
-    mangum_handler = Mangum(
-        app, lifespan="off", api_gateway_base_path=api_gateway_base_path
-    )
-    return mangum_handler(event, context)
