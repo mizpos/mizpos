@@ -117,7 +117,7 @@ function SalesPage() {
       sale.sale_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (sale.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-        false)
+        false),
   );
 
   const getStatusBadge = (status: Sale["status"]) => {
@@ -234,7 +234,7 @@ function SalesPage() {
     .reduce((sum, s) => sum + s.final_amount, 0);
 
   const totalOrders = filteredSales.filter(
-    (s) => s.status === "completed"
+    (s) => s.status === "completed",
   ).length;
 
   return (
@@ -837,7 +837,7 @@ function SalesPage() {
                   onClick={() => {
                     if (
                       window.confirm(
-                        "この注文をキャンセルしますか？在庫が戻ります。"
+                        "この注文をキャンセルしますか？在庫が戻ります。",
                       )
                     ) {
                       cancelMutation.mutate(selectedSale.sale_id);
