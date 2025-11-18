@@ -74,7 +74,11 @@ function SalesPage() {
       if (error) throw error;
       // APIは { sales: [...] } 形式で返す
       const response = data as unknown as { sales: Sale[] };
-      return response.sales || [];
+      const salesList = response.sales || [];
+      // 日時順（新しい順）でソート
+      return salesList.sort((a, b) => {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
     },
   });
 
