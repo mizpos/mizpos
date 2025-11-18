@@ -31,6 +31,8 @@ interface Sale {
   total: number;
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
   status: "pending" | "completed" | "shipped" | "cancelled";
+  stripe_payment_status?: string;
+  stripe_payment_intent_id?: string;
   coupon_code?: string;
   customer_email?: string;
   customer_name?: string;
@@ -170,6 +172,74 @@ function SalesPage() {
       cash: "現金",
     };
     return labels[method];
+  };
+
+  const getStripeStatusBadge = (stripeStatus?: string) => {
+    if (!stripeStatus) return null;
+
+    const styles: Record<
+      string,
+      { backgroundColor: string; color: string; label: string }
+    > = {
+      succeeded: {
+        backgroundColor: "green.100",
+        color: "green.800",
+        label: "決済成功",
+      },
+      processing: {
+        backgroundColor: "blue.100",
+        color: "blue.800",
+        label: "処理中",
+      },
+      requires_payment_method: {
+        backgroundColor: "yellow.100",
+        color: "yellow.800",
+        label: "支払い方法待ち",
+      },
+      requires_confirmation: {
+        backgroundColor: "yellow.100",
+        color: "yellow.800",
+        label: "確認待ち",
+      },
+      requires_action: {
+        backgroundColor: "orange.100",
+        color: "orange.800",
+        label: "アクション必要",
+      },
+      canceled: {
+        backgroundColor: "gray.100",
+        color: "gray.800",
+        label: "キャンセル",
+      },
+      failed: {
+        backgroundColor: "red.100",
+        color: "red.800",
+        label: "決済失敗",
+      },
+    };
+
+    const style = styles[stripeStatus] || {
+      backgroundColor: "gray.100",
+      color: "gray.800",
+      label: stripeStatus,
+    };
+
+    return (
+      <span
+        className={css({
+          display: "inline-flex",
+          paddingX: "2",
+          paddingY: "0.5",
+          borderRadius: "full",
+          fontSize: "xs",
+          fontWeight: "medium",
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+        })}
+      >
+        {style.label}
+      </span>
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -465,6 +535,20 @@ function SalesPage() {
                   {getPaymentMethodLabel(selectedSale.payment_method)}
                 </p>
               </div>
+              {selectedSale.stripe_payment_status && (
+                <div>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginBottom: "1",
+                    })}
+                  >
+                    Stripe決済ステータス
+                  </p>
+                  {getStripeStatusBadge(selectedSale.stripe_payment_status)}
+                </div>
+              )}
               {selectedSale.customer_email && (
                 <div className={css({ gridColumn: "span 2" })}>
                   <p
