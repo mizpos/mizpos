@@ -475,10 +475,7 @@ function CheckoutPage() {
                 ← 配送先情報を編集
               </button>
               {clientSecret ? (
-                <Elements
-                  stripe={stripePromise}
-                  options={{ clientSecret }}
-                >
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
                   <CheckoutForm orderId={orderId || ""} />
                 </Elements>
               ) : (
