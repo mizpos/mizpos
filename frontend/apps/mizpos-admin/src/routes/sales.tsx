@@ -78,7 +78,9 @@ function SalesPage() {
       const salesList = response.sales || [];
       // 日時順（新しい順）でソート
       return salesList.sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       });
     },
   });
@@ -124,7 +126,9 @@ function SalesPage() {
       (sale) =>
         sale.sale_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         sale.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (sale.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+        (sale.customer_email
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ??
           false),
     )
     .filter((sale) => showCancelled || sale.status !== "cancelled");
