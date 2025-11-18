@@ -48,7 +48,6 @@ from services import (
     set_config,
     set_stripe_terminal_config,
     update_order_payment_intent,
-    update_order_status,
     update_order_status_with_stripe,
     update_shipping_info,
     update_stripe_payment_status,
