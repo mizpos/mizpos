@@ -50,6 +50,9 @@ jobs:
       - name: Generate API Types
         run: pnpm generate-api-types
 
+      - name: Build API package (force rebuild after type generation)
+        run: pnpm turbo run build --filter=@mizpos/api --force
+
       - name: Run fix (format & lint)
         run: pnpm run fix
 
