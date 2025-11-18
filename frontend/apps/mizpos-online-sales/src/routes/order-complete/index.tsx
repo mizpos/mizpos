@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { css } from "styled-system/css";
-import { getOrder, getOrderPaymentStatus, getOrderReceipt } from "../../lib/api";
+import {
+  getOrder,
+  getOrderPaymentStatus,
+  getOrderReceipt,
+} from "../../lib/api";
 
 export const Route = createFileRoute("/order-complete/")({
   component: OrderCompletePage,
@@ -25,17 +29,19 @@ function OrderCompletePage() {
     enabled: !!order_id,
   });
 
-  const {
-    data: paymentStatus,
-    isLoading: isLoadingPayment,
-  } = useQuery({
+  const { data: paymentStatus, isLoading: isLoadingPayment } = useQuery({
     queryKey: ["payment-status", order_id],
     queryFn: () => getOrderPaymentStatus(order_id),
     enabled: !!order_id,
     refetchInterval: (query) => {
       const data = query.state.data;
       // succeeded または failed になるまで5秒ごとにポーリング
-      if (data && (data.payment_status === "succeeded" || data.payment_status === "canceled" || data.payment_status === "failed")) {
+      if (
+        data &&
+        (data.payment_status === "succeeded" ||
+          data.payment_status === "canceled" ||
+          data.payment_status === "failed")
+      ) {
         return false; // ポーリング停止
       }
       return 5000; // 5秒ごと
@@ -120,7 +126,11 @@ function OrderCompletePage() {
       };
     }
 
-    if (!paymentStatus || paymentStatus.payment_status === "processing" || paymentStatus.payment_status === "requires_capture") {
+    if (
+      !paymentStatus ||
+      paymentStatus.payment_status === "processing" ||
+      paymentStatus.payment_status === "requires_capture"
+    ) {
       return {
         bgColor: "#d9edf7",
         textColor: "#31708f",
@@ -138,12 +148,16 @@ function OrderCompletePage() {
       };
     }
 
-    if (paymentStatus.payment_status === "canceled" || paymentStatus.payment_status === "failed") {
+    if (
+      paymentStatus.payment_status === "canceled" ||
+      paymentStatus.payment_status === "failed"
+    ) {
       return {
         bgColor: "#f2dede",
         textColor: "#a94442",
         title: "決済に失敗しました",
-        message: "申し訳ございません。決済処理に失敗しました。再度お試しいただくか、別の支払い方法をお試しください。",
+        message:
+          "申し訳ございません。決済処理に失敗しました。再度お試しいただくか、別の支払い方法をお試しください。",
       };
     }
 
@@ -184,14 +198,23 @@ function OrderCompletePage() {
         >
           {statusMessage.title}
         </h1>
-        <p className={css({ fontSize: "16px", color: statusMessage.textColor })}>
+        <p
+          className={css({ fontSize: "16px", color: statusMessage.textColor })}
+        >
           {statusMessage.message}
         </p>
-        {paymentStatus?.payment_status && paymentStatus.payment_status !== "succeeded" && (
-          <p className={css({ fontSize: "14px", color: statusMessage.textColor, marginTop: "12px" })}>
-            決済ステータス: {paymentStatus.payment_status}
-          </p>
-        )}
+        {paymentStatus?.payment_status &&
+          paymentStatus.payment_status !== "succeeded" && (
+            <p
+              className={css({
+                fontSize: "14px",
+                color: statusMessage.textColor,
+                marginTop: "12px",
+              })}
+            >
+              決済ステータス: {paymentStatus.payment_status}
+            </p>
+          )}
       </div>
 
       <div

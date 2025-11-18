@@ -571,7 +571,9 @@ async def update_order_shipping(
         )
 
         if not updated_order:
-            raise HTTPException(status_code=500, detail="Failed to update shipping info")
+            raise HTTPException(
+                status_code=500, detail="Failed to update shipping info"
+            )
 
         return {"order": updated_order}
     except HTTPException:
@@ -591,11 +593,17 @@ async def get_order_payment_status(order_id: str):
 
         payment_intent_id = order.get("stripe_payment_intent_id")
         if not payment_intent_id:
-            return {"order_id": order_id, "payment_status": "no_payment_intent", "order_status": order.get("status")}
+            return {
+                "order_id": order_id,
+                "payment_status": "no_payment_intent",
+                "order_status": order.get("status"),
+            }
 
         try:
             intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-            intent_status = intent.get("status") if isinstance(intent, dict) else intent.status
+            intent_status = (
+                intent.get("status") if isinstance(intent, dict) else intent.status
+            )
 
             return {
                 "order_id": order_id,
@@ -604,7 +612,12 @@ async def get_order_payment_status(order_id: str):
             }
         except stripe._error.StripeError as e:
             logger.error(f"Failed to retrieve PaymentIntent: {e}")
-            return {"order_id": order_id, "payment_status": "error", "order_status": order.get("status"), "error": str(e)}
+            return {
+                "order_id": order_id,
+                "payment_status": "error",
+                "order_status": order.get("status"),
+                "error": str(e),
+            }
     except HTTPException:
         raise
     except ClientError as e:
@@ -649,7 +662,9 @@ async def get_order_receipt(order_id: str):
 
             if latest_charge:
                 charge_id = (
-                    latest_charge if isinstance(latest_charge, str) else latest_charge.id
+                    latest_charge
+                    if isinstance(latest_charge, str)
+                    else latest_charge.id
                 )
                 charge = stripe.Charge.retrieve(charge_id)
                 receipt_url = (

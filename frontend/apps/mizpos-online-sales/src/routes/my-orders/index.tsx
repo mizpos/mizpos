@@ -222,13 +222,15 @@ function MyOrdersPage() {
                       fontSize: "12px",
                       fontWeight: "bold",
                       backgroundColor:
-                        order.status === "completed" || order.status === "shipped"
+                        order.status === "completed" ||
+                        order.status === "shipped"
                           ? "#dff0d8"
                           : order.status === "pending"
                             ? "#fcf8e3"
                             : "#f8d7da",
                       color:
-                        order.status === "completed" || order.status === "shipped"
+                        order.status === "completed" ||
+                        order.status === "shipped"
                           ? "#3c763d"
                           : order.status === "pending"
                             ? "#8a6d3b"

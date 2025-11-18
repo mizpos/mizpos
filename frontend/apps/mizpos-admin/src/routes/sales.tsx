@@ -609,7 +609,10 @@ function SalesPage() {
                     fontSize: "sm",
                   })}
                 >
-                  <p>{selectedSale.customer_name || selectedSale.shipping_address.name}</p>
+                  <p>
+                    {selectedSale.customer_name ||
+                      selectedSale.shipping_address.name}
+                  </p>
                   <p>〒{selectedSale.shipping_address.postal_code}</p>
                   <p>
                     {selectedSale.shipping_address.prefecture}{" "}
@@ -625,47 +628,48 @@ function SalesPage() {
             )}
 
             {/* 発送情報 */}
-            {selectedSale.status === "shipped" && selectedSale.tracking_number && (
-              <div>
-                <p
-                  className={css({
-                    fontSize: "sm",
-                    fontWeight: "semibold",
-                    marginBottom: "2",
-                  })}
-                >
-                  発送情報
-                </p>
-                <div
-                  className={css({
-                    backgroundColor: "blue.50",
-                    padding: "3",
-                    borderRadius: "md",
-                    fontSize: "sm",
-                  })}
-                >
-                  {selectedSale.carrier && (
-                    <p className={css({ marginBottom: "1" })}>
-                      <strong>配送業者:</strong> {selectedSale.carrier}
-                    </p>
-                  )}
-                  <p className={css({ marginBottom: "1" })}>
-                    <strong>追跡番号:</strong> {selectedSale.tracking_number}
+            {selectedSale.status === "shipped" &&
+              selectedSale.tracking_number && (
+                <div>
+                  <p
+                    className={css({
+                      fontSize: "sm",
+                      fontWeight: "semibold",
+                      marginBottom: "2",
+                    })}
+                  >
+                    発送情報
                   </p>
-                  {selectedSale.shipped_at && (
+                  <div
+                    className={css({
+                      backgroundColor: "blue.50",
+                      padding: "3",
+                      borderRadius: "md",
+                      fontSize: "sm",
+                    })}
+                  >
+                    {selectedSale.carrier && (
+                      <p className={css({ marginBottom: "1" })}>
+                        <strong>配送業者:</strong> {selectedSale.carrier}
+                      </p>
+                    )}
                     <p className={css({ marginBottom: "1" })}>
-                      <strong>発送日時:</strong>{" "}
-                      {formatDate(selectedSale.shipped_at)}
+                      <strong>追跡番号:</strong> {selectedSale.tracking_number}
                     </p>
-                  )}
-                  {selectedSale.shipping_notes && (
-                    <p>
-                      <strong>備考:</strong> {selectedSale.shipping_notes}
-                    </p>
-                  )}
+                    {selectedSale.shipped_at && (
+                      <p className={css({ marginBottom: "1" })}>
+                        <strong>発送日時:</strong>{" "}
+                        {formatDate(selectedSale.shipped_at)}
+                      </p>
+                    )}
+                    {selectedSale.shipping_notes && (
+                      <p>
+                        <strong>備考:</strong> {selectedSale.shipping_notes}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* 発送登録フォーム */}
             {isShippingFormOpen && (
@@ -687,18 +691,10 @@ function SalesPage() {
                   })}
                 >
                   <div>
-                    <label
-                      className={css({
-                        display: "block",
-                        fontSize: "xs",
-                        fontWeight: "medium",
-                        marginBottom: "1",
-                      })}
-                    >
-                      配送業者
-                    </label>
+                    <label htmlFor="shipping-carrier">配送業者</label>
                     <input
                       type="text"
+                      id="shipping-carrier"
                       value={shippingFormData.carrier}
                       onChange={(e) =>
                         setShippingFormData({
@@ -719,6 +715,7 @@ function SalesPage() {
                   </div>
                   <div>
                     <label
+                      htmlFor="shipping-carrier"
                       className={css({
                         display: "block",
                         fontSize: "xs",
@@ -750,6 +747,7 @@ function SalesPage() {
                   </div>
                   <div>
                     <label
+                      htmlFor="shipping-notes"
                       className={css({
                         display: "block",
                         fontSize: "xs",
@@ -760,6 +758,7 @@ function SalesPage() {
                       備考
                     </label>
                     <textarea
+                      id="shipping-notes"
                       value={shippingFormData.notes}
                       onChange={(e) =>
                         setShippingFormData({
@@ -805,7 +804,8 @@ function SalesPage() {
                           updateShippingMutation.mutate({
                             saleId: selectedSale.sale_id,
                             data: {
-                              tracking_number: shippingFormData.tracking_number || undefined,
+                              tracking_number:
+                                shippingFormData.tracking_number || undefined,
                               carrier: shippingFormData.carrier || undefined,
                               notes: shippingFormData.notes || undefined,
                             },
@@ -849,12 +849,11 @@ function SalesPage() {
                   {cancelMutation.isPending ? "処理中..." : "キャンセル"}
                 </Button>
               )}
-              {(selectedSale.status === "completed" || selectedSale.status === "pending") &&
+              {(selectedSale.status === "completed" ||
+                selectedSale.status === "pending") &&
                 selectedSale.shipping_address &&
                 !isShippingFormOpen && (
-                  <Button
-                    onClick={() => setIsShippingFormOpen(true)}
-                  >
+                  <Button onClick={() => setIsShippingFormOpen(true)}>
                     発送登録
                   </Button>
                 )}
