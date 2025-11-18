@@ -333,7 +333,7 @@ async def create_payment_intent(
                 "status": intent.status,
             }
         }
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
@@ -354,7 +354,7 @@ async def get_payment_intent(
                 "receipt_email": intent.receipt_email,
             }
         }
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
@@ -566,20 +566,34 @@ async def create_order_payment_intent(order_id: str):
         if existing_pi_id:
             try:
                 intent = stripe.PaymentIntent.retrieve(existing_pi_id)
-                if intent.status in [
+                intent_status = (
+                    intent.get("status") if isinstance(intent, dict) else intent.status
+                )
+                if intent_status in [
                     "requires_payment_method",
                     "requires_confirmation",
                 ]:
-                    return {
-                        "payment_intent": {
-                            "id": intent.id,
-                            "client_secret": intent.client_secret,
-                            "amount": intent.amount,
-                            "currency": intent.currency,
-                            "status": intent.status,
+                    if isinstance(intent, dict):
+                        return {
+                            "payment_intent": {
+                                "id": intent.get("id"),
+                                "client_secret": intent.get("client_secret"),
+                                "amount": intent.get("amount"),
+                                "currency": intent.get("currency"),
+                                "status": intent.get("status"),
+                            }
                         }
-                    }
-            except stripe.error.StripeError:
+                    else:
+                        return {
+                            "payment_intent": {
+                                "id": intent.id,
+                                "client_secret": intent.client_secret,
+                                "amount": intent.amount,
+                                "currency": intent.currency,
+                                "status": intent.status,
+                            }
+                        }
+            except stripe._error.StripeError:
                 pass  # 既存のPaymentIntentが見つからない場合は新規作成
 
         # 新規PaymentIntent作成
@@ -601,23 +615,45 @@ async def create_order_payment_intent(order_id: str):
         )
 
         # 注文にPaymentIntentを紐付け
-        update_order_payment_intent(order_id, intent.id)
+        intent_id = intent.get("id") if isinstance(intent, dict) else intent.id
+        update_order_payment_intent(order_id, intent_id)
 
-        return {
-            "payment_intent": {
-                "id": intent.id,
-                "client_secret": intent.client_secret,
-                "amount": intent.amount,
-                "currency": intent.currency,
-                "status": intent.status,
+        # 辞書とオブジェクトの両方に対応
+        if isinstance(intent, dict):
+            return {
+                "payment_intent": {
+                    "id": intent.get("id"),
+                    "client_secret": intent.get("client_secret"),
+                    "amount": intent.get("amount"),
+                    "currency": intent.get("currency"),
+                    "status": intent.get("status"),
+                }
             }
-        }
+        else:
+            return {
+                "payment_intent": {
+                    "id": intent.id,
+                    "client_secret": intent.client_secret,
+                    "amount": intent.amount,
+                    "currency": intent.currency,
+                    "status": intent.status,
+                }
+            }
     except HTTPException:
         raise
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ClientError as e:
+        logger.error(f"DynamoDB error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) from e
+    except AttributeError as e:
+        logger.error(f"AttributeError in payment intent creation: {str(e)}")
+        logger.error(f"Order data: {order}")
+        logger.error(
+            f"Intent response: {intent if 'intent' in locals() else 'intent not created'}"
+        )
+        raise HTTPException(status_code=500, detail=f"AttributeError: {str(e)}") from e
 
 
 @router.post("/checkout/session", response_model=dict)
@@ -664,7 +700,7 @@ async def create_checkout_session(request: CreateCheckoutSessionRequest):
         return {"checkout_session": {"id": session.id, "url": session.url}}
     except HTTPException:
         raise
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -717,7 +753,7 @@ async def stripe_webhook(request: Request):
             pass
 
         return {"status": "success"}
-    except stripe.error.SignatureVerificationError as e:
+    except stripe._error.SignatureVerificationError as e:
         raise HTTPException(status_code=400, detail="Invalid signature") from e
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

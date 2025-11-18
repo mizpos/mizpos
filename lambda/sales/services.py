@@ -541,11 +541,18 @@ def get_orders_by_email(customer_email: str, limit: int = 50) -> list[dict]:
 
 def update_order_payment_intent(order_id: str, payment_intent_id: str) -> dict | None:
     """注文のPaymentIntentを更新"""
-    order = get_order_by_id(order_id)
-    if not order:
+    # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
+    response = sales_table.query(
+        KeyConditionExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": order_id},
+    )
+    items = response.get("Items", [])
+    if not items:
         return None
 
-    timestamp = order["timestamp"]
+    order = items[0]
+    timestamp = order["timestamp"]  # Decimal型のまま
+
     response = sales_table.update_item(
         Key={"sale_id": order_id, "timestamp": timestamp},
         UpdateExpression="SET stripe_payment_intent_id = :pi",
@@ -557,11 +564,18 @@ def update_order_payment_intent(order_id: str, payment_intent_id: str) -> dict |
 
 def update_order_status(order_id: str, status: str) -> dict | None:
     """注文のステータスを更新"""
-    order = get_order_by_id(order_id)
-    if not order:
+    # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
+    response = sales_table.query(
+        KeyConditionExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": order_id},
+    )
+    items = response.get("Items", [])
+    if not items:
         return None
 
-    timestamp = order["timestamp"]
+    order = items[0]
+    timestamp = order["timestamp"]  # Decimal型のまま
+
     response = sales_table.update_item(
         Key={"sale_id": order_id, "timestamp": timestamp},
         UpdateExpression="SET #st = :status",
