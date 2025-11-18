@@ -65,8 +65,12 @@ class CreateEventRequest(BaseModel):
 
 # 設定管理用モデル
 class StripeTerminalConfigRequest(BaseModel):
-    location_id: str = Field(..., min_length=1, description="Stripe Terminal Location ID")
-    reader_id: str | None = Field(default=None, description="Stripe Terminal Reader ID (optional)")
+    location_id: str = Field(
+        ..., min_length=1, description="Stripe Terminal Location ID"
+    )
+    reader_id: str | None = Field(
+        default=None, description="Stripe Terminal Reader ID (optional)"
+    )
     description: str | None = Field(default=None, description="設定の説明")
 
 

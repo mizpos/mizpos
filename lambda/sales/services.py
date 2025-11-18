@@ -15,10 +15,14 @@ from models import CartItem
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 SALES_TABLE = os.environ.get("SALES_TABLE", f"{ENVIRONMENT}-mizpos-sales")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
-STOCK_HISTORY_TABLE = os.environ.get("STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history")
+STOCK_HISTORY_TABLE = os.environ.get(
+    "STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history"
+)
 EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
 CONFIG_TABLE = os.environ.get("CONFIG_TABLE", f"{ENVIRONMENT}-mizpos-config")
-PUBLISHERS_TABLE = os.environ.get("PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers")
+PUBLISHERS_TABLE = os.environ.get(
+    "PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers"
+)
 STRIPE_SECRET_ARN = os.environ.get("STRIPE_SECRET_ARN", "")
 
 # AWS クライアント
@@ -36,7 +40,9 @@ def init_stripe() -> None:
     """Stripe APIキーを初期化"""
     if not stripe.api_key and STRIPE_SECRET_ARN:
         try:
-            secret_response = secrets_client.get_secret_value(SecretId=STRIPE_SECRET_ARN)
+            secret_response = secrets_client.get_secret_value(
+                SecretId=STRIPE_SECRET_ARN
+            )
             secret_data = json.loads(secret_response["SecretString"])
             stripe.api_key = secret_data.get("api_key", "")
         except ClientError:
@@ -86,7 +92,9 @@ def validate_and_reserve_stock(cart_items: list[CartItem]) -> list[dict]:
         product = product_response.get("Item")
 
         if not product:
-            raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Product {item.product_id} not found"
+            )
 
         current_stock = int(product.get("stock_quantity", 0))
         if current_stock < item.quantity:
@@ -166,7 +174,9 @@ def calculate_coupon_discount(
 
     if not coupon_filter:
         # フィルタなし = 全商品に適用
-        applicable_subtotal = sum(item.unit_price * item.quantity for item in cart_items)
+        applicable_subtotal = sum(
+            item.unit_price * item.quantity for item in cart_items
+        )
     else:
         product_ids_filter = coupon_filter.get("product_ids", [])
         categories_filter = coupon_filter.get("categories", [])
@@ -318,17 +328,19 @@ def calculate_commission_fees(
         payment_fee_amount = subtotal * (payment_fee_rate / 100)
         net_amount = subtotal - commission_amount - payment_fee_amount
 
-        result_items.append({
-            "product_id": product_id,
-            "publisher_id": publisher_id,
-            "publisher_name": publisher_name,
-            "subtotal": subtotal,
-            "commission_rate": commission_rate,
-            "commission_amount": commission_amount,
-            "payment_fee_rate": payment_fee_rate,
-            "payment_fee_amount": payment_fee_amount,
-            "net_amount": net_amount,
-        })
+        result_items.append(
+            {
+                "product_id": product_id,
+                "publisher_id": publisher_id,
+                "publisher_name": publisher_name,
+                "subtotal": subtotal,
+                "commission_rate": commission_rate,
+                "commission_amount": commission_amount,
+                "payment_fee_rate": payment_fee_rate,
+                "payment_fee_amount": payment_fee_amount,
+                "net_amount": net_amount,
+            }
+        )
 
         total_commission += commission_amount
         total_payment_fee += payment_fee_amount
@@ -441,13 +453,17 @@ def create_online_order(
         coupon = get_coupon_by_code(coupon_code)
         if coupon:
             validate_coupon(coupon)
-            discount = calculate_coupon_discount(coupon, cart_items_models, products_info)
+            discount = calculate_coupon_discount(
+                coupon, cart_items_models, products_info
+            )
             increment_coupon_usage(coupon)
 
     total = subtotal - discount
 
     # 手数料情報を計算（オンライン販売はstripe_online）
-    commission_info = calculate_commission_fees(reserved_items, products_info, "stripe_online")
+    commission_info = calculate_commission_fees(
+        reserved_items, products_info, "stripe_online"
+    )
 
     order_id = str(uuid.uuid4())
     timestamp = int(time.time() * 1000)
@@ -491,7 +507,8 @@ def create_online_order(
 def get_order_by_id(order_id: str) -> dict | None:
     """注文IDから注文を取得"""
     response = sales_table.query(
-        KeyConditionExpression="sale_id = :sid", ExpressionAttributeValues={":sid": order_id}
+        KeyConditionExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": order_id},
     )
     items = response.get("Items", [])
     return dynamo_to_dict(items[0]) if items else None

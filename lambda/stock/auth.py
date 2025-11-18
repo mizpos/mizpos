@@ -99,7 +99,9 @@ def verify_token(token: str) -> dict:
             )
 
         # Verify issuer
-        expected_issuer = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}"
+        expected_issuer = (
+            f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}"
+        )
         if claims.get("iss") != expected_issuer:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

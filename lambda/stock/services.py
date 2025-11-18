@@ -13,8 +13,12 @@ from models import VariantType
 # 環境変数
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
-STOCK_HISTORY_TABLE = os.environ.get("STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history")
-PUBLISHERS_TABLE = os.environ.get("PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers")
+STOCK_HISTORY_TABLE = os.environ.get(
+    "STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history"
+)
+PUBLISHERS_TABLE = os.environ.get(
+    "PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers"
+)
 CDN_BUCKET_NAME = os.environ.get("CDN_BUCKET_NAME", f"{ENVIRONMENT}-mizpos-cdn-assets")
 CDN_DOMAIN = os.environ.get("CDN_DOMAIN", "")
 
@@ -66,8 +70,20 @@ def build_update_expression(request_dict: dict) -> tuple[list[str], dict, dict]:
     """更新式と値を構築（予約語対応）"""
     # DynamoDB予約語のリスト（よく使うものを含む）
     reserved_keywords = {
-        "name", "description", "status", "type", "value", "data", "date",
-        "timestamp", "count", "size", "key", "user", "group", "comment"
+        "name",
+        "description",
+        "status",
+        "type",
+        "value",
+        "data",
+        "date",
+        "timestamp",
+        "count",
+        "size",
+        "key",
+        "user",
+        "group",
+        "comment",
     }
 
     update_expressions = []
@@ -76,7 +92,12 @@ def build_update_expression(request_dict: dict) -> tuple[list[str], dict, dict]:
 
     for field, value in request_dict.items():
         if value is not None:
-            if field in ("price", "commission_rate", "stripe_online_fee_rate", "stripe_terminal_fee_rate"):
+            if field in (
+                "price",
+                "commission_rate",
+                "stripe_online_fee_rate",
+                "stripe_terminal_fee_rate",
+            ):
                 value = Decimal(str(value))
             elif field == "variant_type":
                 value = value.value if isinstance(value, VariantType) else value
