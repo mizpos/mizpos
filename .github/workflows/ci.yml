@@ -6,10 +6,14 @@ on:
   pull_request:
     branches: [main, develop]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   frontend:
     name: Frontend Check (Turborepo)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     defaults:
       run:
         working-directory: frontend
@@ -33,6 +37,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: |
+            frontend/.turbo
+            frontend/**/node_modules/.cache/turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
       - name: Generate API Types
         run: pnpm generate-api-types
 
@@ -47,7 +61,7 @@ jobs:
 
   backend:
     name: Backend Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: Checkout code
