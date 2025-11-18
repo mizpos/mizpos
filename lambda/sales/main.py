@@ -14,10 +14,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 
-# ロガーの設定
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
 from auth import get_current_user
 from models import (
     ApplyCouponRequest,
@@ -55,6 +51,10 @@ from services import (
     validate_and_reserve_stock,
     validate_coupon,
 )
+
+# ロガーの設定
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # FastAPI アプリ
 app = FastAPI(
@@ -508,12 +508,16 @@ async def create_order(request: CreateOnlineOrderRequest):
         raise
     except ClientError as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"DynamoDB error: {str(e)}") from e
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.get("/orders/{order_id}", response_model=dict)
@@ -847,7 +851,9 @@ def handler(event, context):
             app, lifespan="off", api_gateway_base_path=api_gateway_base_path
         )
         response = mangum_handler(event, context)
-        logger.info(f"Request completed - Status: {response.get('statusCode', 'unknown')}")
+        logger.info(
+            f"Request completed - Status: {response.get('statusCode', 'unknown')}"
+        )
         return response
 
     except Exception as e:

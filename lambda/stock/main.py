@@ -12,10 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 
-# ロガーの設定
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
 from auth import get_current_user
 from models import (
     AdjustStockRequest,
@@ -28,7 +24,6 @@ from models import (
     UploadRequest,
     UploadResponse,
 )
-from isdn import generate_full_barcode_info, generate_isdn, validate_isdn
 from services import (
     build_update_expression,
     dynamo_to_dict,
@@ -40,6 +35,11 @@ from services import (
     stock_history_table,
     stock_table,
 )
+from isdn import generate_full_barcode_info, generate_isdn, validate_isdn
+
+# ロガーの設定
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # FastAPI アプリ
 app = FastAPI(
@@ -572,7 +572,9 @@ def handler(event, context):
             app, lifespan="off", api_gateway_base_path=api_gateway_base_path
         )
         response = mangum_handler(event, context)
-        logger.info(f"Request completed - Status: {response.get('statusCode', 'unknown')}")
+        logger.info(
+            f"Request completed - Status: {response.get('statusCode', 'unknown')}"
+        )
         return response
 
     except Exception as e:

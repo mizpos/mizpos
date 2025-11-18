@@ -10,10 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 
-# ロガーの設定
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
 from auth import get_current_user
 from models import (
     AdminResetPasswordRequest,
@@ -40,6 +36,10 @@ from services import (
     roles_table,
     users_table,
 )
+
+# ロガーの設定
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # FastAPI アプリ
 app = FastAPI(
@@ -424,7 +424,9 @@ def handler(event, context):
             app, lifespan="off", api_gateway_base_path=api_gateway_base_path
         )
         response = mangum_handler(event, context)
-        logger.info(f"Request completed - Status: {response.get('statusCode', 'unknown')}")
+        logger.info(
+            f"Request completed - Status: {response.get('statusCode', 'unknown')}"
+        )
         return response
 
     except Exception as e:
