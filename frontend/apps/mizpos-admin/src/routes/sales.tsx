@@ -270,7 +270,7 @@ function SalesPage() {
     {
       key: "items",
       header: "商品数",
-      render: (item: Sale) => `${(item.items?.length ?? 0)}点`,
+      render: (item: Sale) => `${item.items?.length ?? 0}点`,
     },
     {
       key: "total",
@@ -607,7 +607,8 @@ function SalesPage() {
                         {item.product_name}
                       </p>
                       <p className={css({ fontSize: "xs", color: "gray.500" })}>
-                        ¥{(item.unit_price ?? 0).toLocaleString()} × {item.quantity ?? 0}
+                        ¥{(item.unit_price ?? 0).toLocaleString()} ×{" "}
+                        {item.quantity ?? 0}
                       </p>
                     </div>
                     <p
