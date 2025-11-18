@@ -15,10 +15,14 @@ from models import CartItem
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 SALES_TABLE = os.environ.get("SALES_TABLE", f"{ENVIRONMENT}-mizpos-sales")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
-STOCK_HISTORY_TABLE = os.environ.get("STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history")
+STOCK_HISTORY_TABLE = os.environ.get(
+    "STOCK_HISTORY_TABLE", f"{ENVIRONMENT}-mizpos-stock-history"
+)
 EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
 CONFIG_TABLE = os.environ.get("CONFIG_TABLE", f"{ENVIRONMENT}-mizpos-config")
-PUBLISHERS_TABLE = os.environ.get("PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers")
+PUBLISHERS_TABLE = os.environ.get(
+    "PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers"
+)
 STRIPE_SECRET_ARN = os.environ.get("STRIPE_SECRET_ARN", "")
 
 # AWS クライアント
@@ -36,7 +40,9 @@ def init_stripe() -> None:
     """Stripe APIキーを初期化"""
     if not stripe.api_key and STRIPE_SECRET_ARN:
         try:
-            secret_response = secrets_client.get_secret_value(SecretId=STRIPE_SECRET_ARN)
+            secret_response = secrets_client.get_secret_value(
+                SecretId=STRIPE_SECRET_ARN
+            )
             secret_data = json.loads(secret_response["SecretString"])
             stripe.api_key = secret_data.get("api_key", "")
         except ClientError:
@@ -86,7 +92,9 @@ def validate_and_reserve_stock(cart_items: list[CartItem]) -> list[dict]:
         product = product_response.get("Item")
 
         if not product:
-            raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Product {item.product_id} not found"
+            )
 
         current_stock = int(product.get("stock_quantity", 0))
         if current_stock < item.quantity:
@@ -166,7 +174,9 @@ def calculate_coupon_discount(
 
     if not coupon_filter:
         # フィルタなし = 全商品に適用
-        applicable_subtotal = sum(item.unit_price * item.quantity for item in cart_items)
+        applicable_subtotal = sum(
+            item.unit_price * item.quantity for item in cart_items
+        )
     else:
         product_ids_filter = coupon_filter.get("product_ids", [])
         categories_filter = coupon_filter.get("categories", [])
@@ -318,17 +328,19 @@ def calculate_commission_fees(
         payment_fee_amount = subtotal * (payment_fee_rate / 100)
         net_amount = subtotal - commission_amount - payment_fee_amount
 
-        result_items.append({
-            "product_id": product_id,
-            "publisher_id": publisher_id,
-            "publisher_name": publisher_name,
-            "subtotal": subtotal,
-            "commission_rate": commission_rate,
-            "commission_amount": commission_amount,
-            "payment_fee_rate": payment_fee_rate,
-            "payment_fee_amount": payment_fee_amount,
-            "net_amount": net_amount,
-        })
+        result_items.append(
+            {
+                "product_id": product_id,
+                "publisher_id": publisher_id,
+                "publisher_name": publisher_name,
+                "subtotal": subtotal,
+                "commission_rate": commission_rate,
+                "commission_amount": commission_amount,
+                "payment_fee_rate": payment_fee_rate,
+                "payment_fee_amount": payment_fee_amount,
+                "net_amount": net_amount,
+            }
+        )
 
         total_commission += commission_amount
         total_payment_fee += payment_fee_amount
@@ -409,3 +421,143 @@ def set_stripe_terminal_config(
         "updated_at": config["updated_at"],
         "created_at": config["created_at"],
     }
+
+
+# オンライン販売用のサービス関数
+def create_online_order(
+    cart_items: list,
+    customer_email: str,
+    customer_name: str,
+    shipping_address: dict,
+    coupon_code: str | None = None,
+    notes: str | None = None,
+) -> dict:
+    """オンライン注文を作成（顧客向け、認証不要）"""
+    import uuid
+
+    # 在庫確認・確保
+    from models import CartItem
+
+    cart_items_models = [CartItem(**item) for item in cart_items]
+    reserved_items = validate_and_reserve_stock(cart_items_models)
+
+    # 商品情報を取得
+    products_info = get_products_info(cart_items_models)
+
+    # 小計計算
+    subtotal = sum(item["subtotal"] for item in reserved_items)
+
+    # クーポン適用
+    discount = 0.0
+    if coupon_code:
+        coupon = get_coupon_by_code(coupon_code)
+        if coupon:
+            validate_coupon(coupon)
+            discount = calculate_coupon_discount(
+                coupon, cart_items_models, products_info
+            )
+            increment_coupon_usage(coupon)
+
+    total = subtotal - discount
+
+    # 手数料情報を計算（オンライン販売はstripe_online）
+    commission_info = calculate_commission_fees(
+        reserved_items, products_info, "stripe_online"
+    )
+
+    order_id = str(uuid.uuid4())
+    timestamp = int(time.time() * 1000)
+    now = datetime.now(timezone.utc).isoformat()
+
+    # オンライン注文として保存（event_idは"online"固定、user_idは"customer"固定）
+    order_item = {
+        "sale_id": order_id,
+        "timestamp": timestamp,
+        "event_id": "online",
+        "user_id": "customer",
+        "items": reserved_items,
+        "subtotal": Decimal(str(subtotal)),
+        "discount": Decimal(str(discount)),
+        "total": Decimal(str(total)),
+        "payment_method": "stripe_online",
+        "status": "pending",
+        "coupon_code": coupon_code or "",
+        "customer_email": customer_email,
+        "customer_name": customer_name,
+        "shipping_address": shipping_address,
+        "notes": notes or "",
+        "stripe_payment_intent_id": "",
+        "stripe_checkout_session_id": "",
+        "created_at": now,
+        # 委託販売手数料情報
+        "commission_details": commission_info["items"],
+        "total_commission": Decimal(str(commission_info["total_commission"])),
+        "total_payment_fee": Decimal(str(commission_info["total_payment_fee"])),
+        "total_net_amount": Decimal(str(commission_info["total_net_amount"])),
+    }
+
+    sales_table.put_item(Item=order_item)
+
+    # 在庫を減らす（注文時点で確保）
+    deduct_stock(reserved_items, order_id, "customer")
+
+    return dynamo_to_dict(order_item)
+
+
+def get_order_by_id(order_id: str) -> dict | None:
+    """注文IDから注文を取得"""
+    response = sales_table.query(
+        KeyConditionExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": order_id},
+    )
+    items = response.get("Items", [])
+    return dynamo_to_dict(items[0]) if items else None
+
+
+def get_orders_by_email(customer_email: str, limit: int = 50) -> list[dict]:
+    """顧客メールアドレスから注文一覧を取得"""
+    # DynamoDBのscanでcustomer_emailをフィルタ（本番環境ではGSI推奨）
+    response = sales_table.scan(
+        FilterExpression="customer_email = :email AND event_id = :eid",
+        ExpressionAttributeValues={":email": customer_email, ":eid": "online"},
+        Limit=limit,
+    )
+    orders = [
+        dynamo_to_dict(item)
+        for item in response.get("Items", [])
+        if not item.get("sale_id", "").startswith("coupon_")
+    ]
+    return orders
+
+
+def update_order_payment_intent(order_id: str, payment_intent_id: str) -> dict | None:
+    """注文のPaymentIntentを更新"""
+    order = get_order_by_id(order_id)
+    if not order:
+        return None
+
+    timestamp = order["timestamp"]
+    response = sales_table.update_item(
+        Key={"sale_id": order_id, "timestamp": timestamp},
+        UpdateExpression="SET stripe_payment_intent_id = :pi",
+        ExpressionAttributeValues={":pi": payment_intent_id},
+        ReturnValues="ALL_NEW",
+    )
+    return dynamo_to_dict(response["Attributes"])
+
+
+def update_order_status(order_id: str, status: str) -> dict | None:
+    """注文のステータスを更新"""
+    order = get_order_by_id(order_id)
+    if not order:
+        return None
+
+    timestamp = order["timestamp"]
+    response = sales_table.update_item(
+        Key={"sale_id": order_id, "timestamp": timestamp},
+        UpdateExpression="SET #st = :status",
+        ExpressionAttributeNames={"#st": "status"},
+        ExpressionAttributeValues={":status": status},
+        ReturnValues="ALL_NEW",
+    )
+    return dynamo_to_dict(response["Attributes"])

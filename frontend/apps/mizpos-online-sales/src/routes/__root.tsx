@@ -1,13 +1,19 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import Header from "../components/Header";
+import { useCart } from "../contexts/CartContext";
 
-export const Route = createRootRoute({
-  component: () => (
+function RootComponent() {
+  const { totalItems } = useCart();
+
+  return (
     <>
-      <Header />
+      <div>
+        <Header cartItemCount={totalItems} />
+        <Link to="/cart">カートへ</Link>
+      </div>
       <Outlet />
       <TanStackDevtools
         config={{
@@ -21,5 +27,9 @@ export const Route = createRootRoute({
         ]}
       />
     </>
-  ),
+  );
+}
+
+export const Route = createRootRoute({
+  component: RootComponent,
 });

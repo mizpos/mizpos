@@ -1,0 +1,5 @@
+**/*.gen.ts
+**/dist/**
+**/build/**
+**/.next/**
+**/node_modules/**

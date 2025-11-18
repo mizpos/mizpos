@@ -152,6 +152,7 @@ def generate_instore_barcode(product_id: str, price: int) -> str:
     # 商品IDから数値部分を抽出（UUIDなら最初の8文字のハッシュ）
     # 8桁の識別子を生成
     import hashlib
+
     hash_val = hashlib.md5(product_id.encode()).hexdigest()
     product_num = str(int(hash_val[:8], 16) % 100000000).zfill(8)
 
