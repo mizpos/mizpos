@@ -56,9 +56,8 @@ router = APIRouter()
 @router.get("/products", response_model=dict)
 async def list_products(
     category: str | None = Query(default=None, description="カテゴリでフィルタ"),
-    current_user: dict = Depends(get_current_user),
 ):
-    """商品一覧取得"""
+    """商品一覧取得（認証不要）"""
     try:
         if category:
             response = stock_table.query(
@@ -76,7 +75,9 @@ async def list_products(
 
 
 @router.post("/products", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_product(request: CreateProductRequest, current_user: dict = Depends(get_current_user)):
+async def create_product(
+    request: CreateProductRequest, current_user: dict = Depends(get_current_user)
+):
     """商品作成"""
     try:
         product_id = str(uuid.uuid4())
@@ -125,8 +126,8 @@ async def create_product(request: CreateProductRequest, current_user: dict = Dep
 
 
 @router.get("/products/{product_id}", response_model=dict)
-async def get_product(product_id: str, current_user: dict = Depends(get_current_user)):
-    """商品詳細取得"""
+async def get_product(product_id: str):
+    """商品詳細取得（認証不要）"""
     try:
         response = stock_table.get_item(Key={"product_id": product_id})
         product = response.get("Item")
@@ -141,7 +142,9 @@ async def get_product(product_id: str, current_user: dict = Depends(get_current_
 
 @router.put("/products/{product_id}", response_model=dict)
 async def update_product(
-    product_id: str, request: UpdateProductRequest, current_user: dict = Depends(get_current_user)
+    product_id: str,
+    request: UpdateProductRequest,
+    current_user: dict = Depends(get_current_user),
 ):
     """商品情報更新"""
     try:
@@ -149,7 +152,9 @@ async def update_product(
         if not request_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        update_expressions, expression_values, expression_names = build_update_expression(request_dict)
+        update_expressions, expression_values, expression_names = (
+            build_update_expression(request_dict)
+        )
 
         now = datetime.now(timezone.utc).isoformat()
         update_expressions.append("updated_at = :updated_at")
@@ -176,7 +181,9 @@ async def update_product(
 
 
 @router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_product(
+    product_id: str, current_user: dict = Depends(get_current_user)
+):
     """商品削除"""
     try:
         stock_table.delete_item(Key={"product_id": product_id})
@@ -187,7 +194,9 @@ async def delete_product(product_id: str, current_user: dict = Depends(get_curre
 # 在庫管理エンドポイント
 @router.post("/products/{product_id}/adjust", response_model=dict)
 async def adjust_stock(
-    product_id: str, request: AdjustStockRequest, current_user: dict = Depends(get_current_user)
+    product_id: str,
+    request: AdjustStockRequest,
+    current_user: dict = Depends(get_current_user),
 ):
     """在庫調整"""
     try:
@@ -257,7 +266,9 @@ async def list_categories(current_user: dict = Depends(get_current_user)):
     try:
         response = stock_table.scan(ProjectionExpression="category")
         items = response.get("Items", [])
-        categories = sorted(set(item.get("category") for item in items if item.get("category")))
+        categories = sorted(
+            set(item.get("category") for item in items if item.get("category"))
+        )
         return {"categories": categories}
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -275,7 +286,9 @@ async def list_publishers_endpoint(current_user: dict = Depends(get_current_user
 
 
 @router.post("/publishers", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_publisher(request: CreatePublisherRequest, current_user: dict = Depends(get_current_user)):
+async def create_publisher(
+    request: CreatePublisherRequest, current_user: dict = Depends(get_current_user)
+):
     """出版社/サークル作成"""
     try:
         publisher_id = str(uuid.uuid4())
@@ -301,7 +314,9 @@ async def create_publisher(request: CreatePublisherRequest, current_user: dict =
 
 
 @router.get("/publishers/{publisher_id}", response_model=dict)
-async def get_publisher_endpoint(publisher_id: str, current_user: dict = Depends(get_current_user)):
+async def get_publisher_endpoint(
+    publisher_id: str, current_user: dict = Depends(get_current_user)
+):
     """出版社/サークル詳細取得"""
     try:
         publisher = get_publisher(publisher_id)
@@ -316,7 +331,9 @@ async def get_publisher_endpoint(publisher_id: str, current_user: dict = Depends
 
 @router.put("/publishers/{publisher_id}", response_model=dict)
 async def update_publisher(
-    publisher_id: str, request: UpdatePublisherRequest, current_user: dict = Depends(get_current_user)
+    publisher_id: str,
+    request: UpdatePublisherRequest,
+    current_user: dict = Depends(get_current_user),
 ):
     """出版社/サークル情報更新"""
     try:
@@ -324,7 +341,9 @@ async def update_publisher(
         if not request_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        update_expressions, expression_values, expression_names = build_update_expression(request_dict)
+        update_expressions, expression_values, expression_names = (
+            build_update_expression(request_dict)
+        )
 
         now = datetime.now(timezone.utc).isoformat()
         update_expressions.append("updated_at = :updated_at")
@@ -351,7 +370,9 @@ async def update_publisher(
 
 
 @router.delete("/publishers/{publisher_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_publisher(publisher_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_publisher(
+    publisher_id: str, current_user: dict = Depends(get_current_user)
+):
     """出版社/サークル削除"""
     try:
         publishers_table.delete_item(Key={"publisher_id": publisher_id})
@@ -484,6 +505,7 @@ async def create_upload_url(
 # ルーターを登録
 app.include_router(router)
 
+
 # Mangum ハンドラー（API Gateway base path対応）
 def handler(event, context):
     # OPTIONS リクエストは認証なしで即座にCORSレスポンスを返す
@@ -506,5 +528,7 @@ def handler(event, context):
     # HTTP API v2.0ではrawPathにステージ名が含まれるため、動的にbase pathを設定
     environment = os.environ.get("ENVIRONMENT", "dev")
     api_gateway_base_path = f"/{environment}/stock"
-    mangum_handler = Mangum(app, lifespan="off", api_gateway_base_path=api_gateway_base_path)
+    mangum_handler = Mangum(
+        app, lifespan="off", api_gateway_base_path=api_gateway_base_path
+    )
     return mangum_handler(event, context)

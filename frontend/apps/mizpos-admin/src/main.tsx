@@ -22,6 +22,7 @@ const handleAuthError = async (error: unknown) => {
         await signOut();
         window.location.href = "/login";
       } catch (signOutError) {
+        console.error(signOutError);
         window.location.href = "/login";
       }
     }

@@ -29,7 +29,9 @@ def dynamo_to_dict(item: dict) -> dict:
     return result
 
 
-def create_cognito_user(email: str, password: str, skip_verification: bool = False) -> str:
+def create_cognito_user(
+    email: str, password: str, skip_verification: bool = False
+) -> str:
     """Cognitoにユーザーを作成"""
     if skip_verification:
         # メール確認をスキップ（管理者による作成）
@@ -112,7 +114,9 @@ def get_user_status(email: str) -> dict:
     }
 
 
-def change_user_password(access_token: str, old_password: str, new_password: str) -> None:
+def change_user_password(
+    access_token: str, old_password: str, new_password: str
+) -> None:
     """ユーザー自身がパスワードを変更"""
     cognito.change_password(
         PreviousPassword=old_password,

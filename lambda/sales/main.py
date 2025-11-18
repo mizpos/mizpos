@@ -6,15 +6,17 @@ from decimal import Decimal
 
 import stripe
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
 from auth import get_current_user
 from models import (
     ApplyCouponRequest,
+    CreateCheckoutSessionRequest,
     CreateCouponRequest,
     CreateEventRequest,
+    CreateOnlineOrderRequest,
     CreatePaymentIntentRequest,
     CreateSaleRequest,
     SaleStatus,
@@ -25,19 +27,23 @@ from services import (
     calculate_commission_fees,
     calculate_coupon_discount,
     config_table,
+    create_online_order,
     deduct_stock,
     dynamo_to_dict,
     events_table,
     get_config,
     get_coupon_by_code,
+    get_order_by_id,
+    get_orders_by_email,
     get_products_info,
-    get_stripe_terminal_config,
     increment_coupon_usage,
     init_stripe,
     restore_stock,
     sales_table,
     set_config,
     set_stripe_terminal_config,
+    update_order_payment_intent,
+    update_order_status,
     validate_and_reserve_stock,
     validate_coupon,
 )
@@ -106,7 +112,8 @@ async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user))
     """販売詳細取得"""
     try:
         response = sales_table.query(
-            KeyConditionExpression="sale_id = :sid", ExpressionAttributeValues={":sid": sale_id}
+            KeyConditionExpression="sale_id = :sid",
+            ExpressionAttributeValues={":sid": sale_id},
         )
         items = response.get("Items", [])
         if not items:
@@ -119,7 +126,9 @@ async def get_sale(sale_id: str, current_user: dict = Depends(get_current_user))
 
 
 @router.post("/sales", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_sale(request: CreateSaleRequest, current_user: dict = Depends(get_current_user)):
+async def create_sale(
+    request: CreateSaleRequest, current_user: dict = Depends(get_current_user)
+):
     """販売を作成"""
     try:
         # 在庫確認・確保
@@ -139,7 +148,9 @@ async def create_sale(request: CreateSaleRequest, current_user: dict = Depends(g
                 raise HTTPException(status_code=400, detail="Invalid coupon code")
 
             validate_coupon(coupon)
-            discount = calculate_coupon_discount(coupon, request.cart_items, products_info)
+            discount = calculate_coupon_discount(
+                coupon, request.cart_items, products_info
+            )
             increment_coupon_usage(coupon)
 
         total = subtotal - discount
@@ -196,7 +207,8 @@ async def complete_sale(
     """販売を完了にする"""
     try:
         response = sales_table.query(
-            KeyConditionExpression="sale_id = :sid", ExpressionAttributeValues={":sid": sale_id}
+            KeyConditionExpression="sale_id = :sid",
+            ExpressionAttributeValues={":sid": sale_id},
         )
         items = response.get("Items", [])
         if not items:
@@ -233,7 +245,8 @@ async def cancel_sale(sale_id: str, current_user: dict = Depends(get_current_use
     """販売をキャンセル（在庫を戻す）"""
     try:
         response = sales_table.query(
-            KeyConditionExpression="sale_id = :sid", ExpressionAttributeValues={":sid": sale_id}
+            KeyConditionExpression="sale_id = :sid",
+            ExpressionAttributeValues={":sid": sale_id},
         )
         items = response.get("Items", [])
         if not items:
@@ -292,7 +305,9 @@ async def create_payment_intent(
 
 
 @router.get("/stripe/payment-intent/{payment_intent_id}", response_model=dict)
-async def get_payment_intent(payment_intent_id: str, current_user: dict = Depends(get_current_user)):
+async def get_payment_intent(
+    payment_intent_id: str, current_user: dict = Depends(get_current_user)
+):
     """Stripe Payment Intent の状態を取得"""
     init_stripe()
     try:
@@ -312,7 +327,9 @@ async def get_payment_intent(payment_intent_id: str, current_user: dict = Depend
 
 # クーポン管理
 @router.post("/coupons", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_coupon(request: CreateCouponRequest, current_user: dict = Depends(get_current_user)):
+async def create_coupon(
+    request: CreateCouponRequest, current_user: dict = Depends(get_current_user)
+):
     """クーポンを作成"""
     try:
         existing = get_coupon_by_code(request.code)
@@ -362,7 +379,9 @@ async def get_coupon(code: str, current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/coupons/apply", response_model=dict)
-async def apply_coupon(request: ApplyCouponRequest, current_user: dict = Depends(get_current_user)):
+async def apply_coupon(
+    request: ApplyCouponRequest, current_user: dict = Depends(get_current_user)
+):
     """クーポンを適用して割引額を計算"""
     try:
         coupon = get_coupon_by_code(request.code)
@@ -374,7 +393,11 @@ async def apply_coupon(request: ApplyCouponRequest, current_user: dict = Depends
         discount = calculate_coupon_discount(coupon, request.cart_items, products_info)
         subtotal = sum(item.unit_price * item.quantity for item in request.cart_items)
 
-        return {"subtotal": subtotal, "discount": discount, "total": subtotal - discount}
+        return {
+            "subtotal": subtotal,
+            "discount": discount,
+            "total": subtotal - discount,
+        }
     except HTTPException:
         raise
     except ClientError as e:
@@ -413,7 +436,9 @@ async def list_events(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/events", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_event(request: CreateEventRequest, current_user: dict = Depends(get_current_user)):
+async def create_event(
+    request: CreateEventRequest, current_user: dict = Depends(get_current_user)
+):
     """イベントを作成"""
     try:
         event_id = str(uuid.uuid4())
@@ -434,17 +459,242 @@ async def create_event(request: CreateEventRequest, current_user: dict = Depends
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+# オンライン販売エンドポイント（認証不要）
+@router.post("/orders", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_order(request: CreateOnlineOrderRequest):
+    """オンライン注文を作成（顧客向け、認証不要）"""
+    try:
+        order = create_online_order(
+            cart_items=[item.model_dump() for item in request.cart_items],
+            customer_email=request.customer_email,
+            customer_name=request.customer_name,
+            shipping_address=request.shipping_address.model_dump(),
+            coupon_code=request.coupon_code,
+            notes=request.notes,
+        )
+        return {"order": order}
+    except HTTPException:
+        raise
+    except ClientError as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"DynamoDB error: {str(e)}") from e
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+
+
+@router.get("/orders/{order_id}", response_model=dict)
+async def get_order(order_id: str):
+    """注文詳細を取得（認証不要、メール確認推奨）"""
+    try:
+        order = get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        return {"order": order}
+    except HTTPException:
+        raise
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/orders", response_model=dict)
+async def list_orders_by_email(
+    customer_email: str = Query(..., description="顧客メールアドレス"),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    """顧客メールアドレスで注文一覧を取得（認証不要）"""
+    try:
+        orders = get_orders_by_email(customer_email, limit)
+        return {"orders": orders}
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/orders/{order_id}/payment-intent", response_model=dict)
+async def create_order_payment_intent(order_id: str):
+    """注文用のStripe PaymentIntentを作成"""
+    init_stripe()
+    try:
+        order = get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        if order.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Order is not pending")
+
+        # 既にPaymentIntentがある場合は取得
+        existing_pi_id = order.get("stripe_payment_intent_id")
+        if existing_pi_id:
+            try:
+                intent = stripe.PaymentIntent.retrieve(existing_pi_id)
+                if intent.status in [
+                    "requires_payment_method",
+                    "requires_confirmation",
+                ]:
+                    return {
+                        "payment_intent": {
+                            "id": intent.id,
+                            "client_secret": intent.client_secret,
+                            "amount": intent.amount,
+                            "currency": intent.currency,
+                            "status": intent.status,
+                        }
+                    }
+            except stripe.error.StripeError:
+                pass  # 既存のPaymentIntentが見つからない場合は新規作成
+
+        # 新規PaymentIntent作成
+        amount_jpy = int(float(order["total"]))
+        intent = stripe.PaymentIntent.create(
+            amount=amount_jpy,
+            currency="jpy",
+            receipt_email=order.get("customer_email"),
+            metadata={
+                "order_id": order_id,
+                "customer_name": order.get("customer_name", ""),
+            },
+        )
+
+        # 注文にPaymentIntentを紐付け
+        update_order_payment_intent(order_id, intent.id)
+
+        return {
+            "payment_intent": {
+                "id": intent.id,
+                "client_secret": intent.client_secret,
+                "amount": intent.amount,
+                "currency": intent.currency,
+                "status": intent.status,
+            }
+        }
+    except HTTPException:
+        raise
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/checkout/session", response_model=dict)
+async def create_checkout_session(request: CreateCheckoutSessionRequest):
+    """Stripe Checkoutセッションを作成（オプション機能）"""
+    init_stripe()
+    try:
+        # 在庫確認
+        from models import CartItem
+
+        cart_items = [CartItem(**item.model_dump()) for item in request.cart_items]
+        reserved_items = validate_and_reserve_stock(cart_items)
+
+        # Stripe Checkoutの商品ラインアイテム作成
+        line_items = []
+        for item in reserved_items:
+            line_items.append(
+                {
+                    "price_data": {
+                        "currency": "jpy",
+                        "product_data": {
+                            "name": item["product_name"],
+                        },
+                        "unit_amount": int(item["unit_price"]),
+                    },
+                    "quantity": item["quantity"],
+                }
+            )
+
+        # Checkoutセッション作成
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=line_items,
+            mode="payment",
+            success_url=request.success_url,
+            cancel_url=request.cancel_url,
+            customer_email=request.customer_email,
+            metadata={
+                "cart_items": str([item.model_dump() for item in request.cart_items]),
+                "coupon_code": request.coupon_code or "",
+            },
+        )
+
+        return {"checkout_session": {"id": session.id, "url": session.url}}
+    except HTTPException:
+        raise
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# Stripe Webhookエンドポイント
+@router.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Stripe Webhookイベントを処理"""
+    init_stripe()
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    # Webhook署名検証用のシークレットを取得
+    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+    try:
+        if webhook_secret:
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        else:
+            # 開発環境では署名検証をスキップ（本番環境では必須）
+            import json
+
+            event = json.loads(payload)
+
+        # イベントタイプに応じて処理
+        if event["type"] == "payment_intent.succeeded":
+            payment_intent = event["data"]["object"]
+            order_id = payment_intent.get("metadata", {}).get("order_id")
+
+            if order_id:
+                # 注文ステータスを「完了」に更新
+                update_order_status(order_id, SaleStatus.COMPLETED.value)
+
+        elif event["type"] == "payment_intent.payment_failed":
+            payment_intent = event["data"]["object"]
+            order_id = payment_intent.get("metadata", {}).get("order_id")
+
+            if order_id:
+                # 注文ステータスを「キャンセル」に更新し、在庫を戻す
+                order = get_order_by_id(order_id)
+                if order and order.get("status") == "pending":
+                    restore_stock(order)
+                    update_order_status(order_id, SaleStatus.CANCELLED.value)
+
+        elif event["type"] == "checkout.session.completed":
+            _session = event["data"]["object"]  # noqa: F841
+            # Checkoutセッションから注文を作成
+            # （必要に応じて実装）
+            pass
+
+        return {"status": "success"}
+    except stripe.error.SignatureVerificationError as e:
+        raise HTTPException(status_code=400, detail="Invalid signature") from e
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 # 設定管理エンドポイント
 @router.get("/config/stripe-terminal", response_model=dict)
 async def get_stripe_terminal_config_endpoint(
-    config_key: str = Query(default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"),
+    config_key: str = Query(
+        default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"
+    ),
     current_user: dict = Depends(get_current_user),
 ):
     """Stripe Terminal設定を取得"""
     try:
         config = get_config(config_key)
         if not config:
-            raise HTTPException(status_code=404, detail=f"Config '{config_key}' not found")
+            raise HTTPException(
+                status_code=404, detail=f"Config '{config_key}' not found"
+            )
 
         value = config.get("value", {})
         return {
@@ -466,7 +716,9 @@ async def get_stripe_terminal_config_endpoint(
 @router.put("/config/stripe-terminal", response_model=dict)
 async def update_stripe_terminal_config_endpoint(
     request: StripeTerminalConfigRequest,
-    config_key: str = Query(default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"),
+    config_key: str = Query(
+        default="stripe_terminal", description="設定キー（デフォルト: stripe_terminal）"
+    ),
     current_user: dict = Depends(get_current_user),
 ):
     """Stripe Terminal設定を作成/更新"""
@@ -494,12 +746,16 @@ async def list_configs(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/config/{config_key}", response_model=dict)
-async def get_config_endpoint(config_key: str, current_user: dict = Depends(get_current_user)):
+async def get_config_endpoint(
+    config_key: str, current_user: dict = Depends(get_current_user)
+):
     """任意の設定を取得"""
     try:
         config = get_config(config_key)
         if not config:
-            raise HTTPException(status_code=404, detail=f"Config '{config_key}' not found")
+            raise HTTPException(
+                status_code=404, detail=f"Config '{config_key}' not found"
+            )
         return {"config": config}
     except HTTPException:
         raise
@@ -509,7 +765,9 @@ async def get_config_endpoint(config_key: str, current_user: dict = Depends(get_
 
 @router.put("/config/{config_key}", response_model=dict)
 async def update_config_endpoint(
-    config_key: str, request: UpdateConfigRequest, current_user: dict = Depends(get_current_user)
+    config_key: str,
+    request: UpdateConfigRequest,
+    current_user: dict = Depends(get_current_user),
 ):
     """任意の設定を作成/更新"""
     try:
@@ -521,6 +779,7 @@ async def update_config_endpoint(
 
 # ルーターを登録
 app.include_router(router)
+
 
 # Mangum ハンドラー（API Gateway base path対応）
 def handler(event, context):
@@ -544,5 +803,7 @@ def handler(event, context):
     # HTTP API v2.0ではrawPathにステージ名が含まれるため、動的にbase pathを設定
     environment = os.environ.get("ENVIRONMENT", "dev")
     api_gateway_base_path = f"/{environment}/sales"
-    mangum_handler = Mangum(app, lifespan="off", api_gateway_base_path=api_gateway_base_path)
+    mangum_handler = Mangum(
+        app, lifespan="off", api_gateway_base_path=api_gateway_base_path
+    )
     return mangum_handler(event, context)
