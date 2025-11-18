@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { css } from "styled-system/css";
-import { getOrder, getOrderPaymentStatus } from "../../lib/api";
+import { getOrder, getOrderPaymentStatus, getOrderReceipt } from "../../lib/api";
 
 export const Route = createFileRoute("/order-complete/")({
   component: OrderCompletePage,
@@ -40,6 +40,14 @@ function OrderCompletePage() {
       }
       return 5000; // 5秒ごと
     },
+  });
+
+  // 領収書URLを取得
+  const { data: receiptData } = useQuery({
+    queryKey: ["receipt", order_id],
+    queryFn: () => getOrderReceipt(order_id),
+    enabled: !!order_id && paymentStatus?.payment_status === "succeeded",
+    retry: false, // 領収書がない場合はリトライしない
   });
 
   if (!order_id) {
@@ -261,6 +269,54 @@ function OrderCompletePage() {
           </p>
         </div>
 
+        {/* 配送追跡情報 */}
+        {order.status === "shipped" && order.tracking_number && (
+          <div className={css({ marginBottom: "16px" })}>
+            <p
+              className={css({
+                fontSize: "14px",
+                color: "#666",
+                marginBottom: "4px",
+              })}
+            >
+              配送状況
+            </p>
+            <div
+              className={css({
+                backgroundColor: "#f0f8ff",
+                padding: "12px",
+                borderRadius: "4px",
+                marginBottom: "12px",
+              })}
+            >
+              {order.carrier && (
+                <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
+                  <strong>配送業者:</strong> {order.carrier}
+                </p>
+              )}
+              <p className={css({ fontSize: "14px", marginBottom: "8px" })}>
+                <strong>追跡番号:</strong> {order.tracking_number}
+              </p>
+              {order.shipped_at && (
+                <p className={css({ fontSize: "12px", color: "#666" })}>
+                  発送日時: {new Date(order.shipped_at).toLocaleString("ja-JP")}
+                </p>
+              )}
+            </div>
+            {/* 17track iframe */}
+            <iframe
+              src={`https://t.17track.net/ja#nums=${order.tracking_number}`}
+              style={{
+                width: "100%",
+                height: "400px",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+              }}
+              title="配送追跡情報"
+            />
+          </div>
+        )}
+
         <div
           className={css({
             borderTop: "1px solid #ddd",
@@ -390,6 +446,7 @@ function OrderCompletePage() {
             textDecoration: "none",
             color: "black",
             fontWeight: "bold",
+            marginRight: "12px",
             _hover: {
               backgroundColor: "#f5f5f5",
             },
@@ -397,6 +454,28 @@ function OrderCompletePage() {
         >
           注文履歴を見る
         </Link>
+        {receiptData?.receipt_url && (
+          <a
+            href={receiptData.receipt_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={css({
+              display: "inline-block",
+              padding: "12px 24px",
+              backgroundColor: "#0066c0",
+              border: "1px solid #004d99",
+              borderRadius: "3px",
+              textDecoration: "none",
+              color: "white",
+              fontWeight: "bold",
+              _hover: {
+                backgroundColor: "#005299",
+              },
+            })}
+          >
+            領収書を表示
+          </a>
+        )}
       </div>
     </div>
   );
