@@ -333,7 +333,7 @@ async def create_payment_intent(
                 "status": intent.status,
             }
         }
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
@@ -354,7 +354,7 @@ async def get_payment_intent(
                 "receipt_email": intent.receipt_email,
             }
         }
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
@@ -591,7 +591,7 @@ async def create_order_payment_intent(order_id: str):
                                 "status": intent.status,
                             }
                         }
-            except stripe.error.StripeError:
+            except stripe._error.StripeError:
                 pass  # 既存のPaymentIntentが見つからない場合は新規作成
 
         # 新規PaymentIntent作成
@@ -639,7 +639,7 @@ async def create_order_payment_intent(order_id: str):
             }
     except HTTPException:
         raise
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
         logger.error(f"Stripe error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ClientError as e:
@@ -696,7 +696,7 @@ async def create_checkout_session(request: CreateCheckoutSessionRequest):
         return {"checkout_session": {"id": session.id, "url": session.url}}
     except HTTPException:
         raise
-    except stripe.error.StripeError as e:
+    except stripe._error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -749,7 +749,7 @@ async def stripe_webhook(request: Request):
             pass
 
         return {"status": "success"}
-    except stripe.error.SignatureVerificationError as e:
+    except stripe._error.SignatureVerificationError as e:
         raise HTTPException(status_code=400, detail="Invalid signature") from e
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
