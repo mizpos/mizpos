@@ -172,15 +172,17 @@ async def create_sale(
         subtotal = sum(item["subtotal"] for item in reserved_items)
 
         # クーポン適用
-        discount = 0.0
+        discount = Decimal("0.0")
         if request.coupon_code:
             coupon = get_coupon_by_code(request.coupon_code)
             if not coupon:
                 raise HTTPException(status_code=400, detail="Invalid coupon code")
 
             validate_coupon(coupon)
-            discount = calculate_coupon_discount(
-                coupon, request.cart_items, products_info
+            discount = Decimal(
+                str(
+                    calculate_coupon_discount(coupon, request.cart_items, products_info)
+                )
             )
             increment_coupon_usage(coupon)
 
