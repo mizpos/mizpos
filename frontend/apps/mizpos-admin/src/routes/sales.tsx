@@ -26,9 +26,9 @@ interface Sale {
   event_id: string;
   user_id: string;
   items: SaleItem[];
-  total_amount: number;
-  discount_amount: number;
-  final_amount: number;
+  subtotal: number;
+  discount: number;
+  total: number;
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
   status: "pending" | "completed" | "shipped" | "cancelled";
   coupon_code?: string;
@@ -203,9 +203,9 @@ function SalesPage() {
       render: (item: Sale) => `${(item.items?.length ?? 0)}点`,
     },
     {
-      key: "final_amount",
+      key: "total",
       header: "合計金額",
-      render: (item: Sale) => `¥${(item.final_amount ?? 0).toLocaleString()}`,
+      render: (item: Sale) => `¥${(item.total ?? 0).toLocaleString()}`,
     },
     {
       key: "payment_method",
@@ -231,7 +231,7 @@ function SalesPage() {
 
   const totalRevenue = filteredSales
     .filter((s) => s.status === "completed")
-    .reduce((sum, s) => sum + (s.final_amount ?? 0), 0);
+    .reduce((sum, s) => sum + (s.total ?? 0), 0);
 
   const totalOrders = filteredSales.filter(
     (s) => s.status === "completed",
@@ -554,10 +554,10 @@ function SalesPage() {
                   小計
                 </span>
                 <span className={css({ fontSize: "sm" })}>
-                  ¥{(selectedSale.total_amount ?? 0).toLocaleString()}
+                  ¥{(selectedSale.subtotal ?? 0).toLocaleString()}
                 </span>
               </div>
-              {(selectedSale.discount_amount ?? 0) > 0 && (
+              {(selectedSale.discount ?? 0) > 0 && (
                 <div
                   className={css({
                     display: "flex",
@@ -571,7 +571,7 @@ function SalesPage() {
                       `(${selectedSale.coupon_code})`}
                   </span>
                   <span className={css({ fontSize: "sm", color: "error" })}>
-                    -¥{(selectedSale.discount_amount ?? 0).toLocaleString()}
+                    -¥{(selectedSale.discount ?? 0).toLocaleString()}
                   </span>
                 </div>
               )}
@@ -584,7 +584,7 @@ function SalesPage() {
               >
                 <span className={css({ fontSize: "sm" })}>合計</span>
                 <span className={css({ fontSize: "lg" })}>
-                  ¥{(selectedSale.final_amount ?? 0).toLocaleString()}
+                  ¥{(selectedSale.total ?? 0).toLocaleString()}
                 </span>
               </div>
             </div>
