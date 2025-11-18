@@ -448,14 +448,14 @@ def create_online_order(
     subtotal = sum(item["subtotal"] for item in reserved_items)
 
     # クーポン適用
-    discount = 0.0
+    discount = Decimal("0.0")
     if coupon_code:
         coupon = get_coupon_by_code(coupon_code)
         if coupon:
             validate_coupon(coupon)
-            discount = calculate_coupon_discount(
+            discount = Decimal(str(calculate_coupon_discount(
                 coupon, cart_items_models, products_info
-            )
+            )))
             increment_coupon_usage(coupon)
 
     total = subtotal - discount
