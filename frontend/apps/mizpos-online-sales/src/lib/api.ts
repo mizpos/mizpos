@@ -163,10 +163,14 @@ export interface Order {
   subtotal: number;
   discount: number;
   total: number;
-  status: "pending" | "completed" | "cancelled" | "refunded";
+  status: "pending" | "completed" | "shipped" | "cancelled" | "refunded";
   shipping_address: ShippingAddress;
   stripe_payment_intent_id?: string;
   stripe_checkout_session_id?: string;
+  tracking_number?: string;
+  carrier?: string;
+  shipping_notes?: string;
+  shipped_at?: string;
   created_at: string;
 }
 
@@ -234,6 +238,22 @@ export async function createOrderPaymentIntent(
 }
 
 /**
+ * 注文のPaymentIntentステータスを確認（認証不要）
+ */
+export async function getOrderPaymentStatus(orderId: string): Promise<{
+  order_id: string;
+  payment_status: string;
+  order_status: string;
+  error?: string;
+}> {
+  return await fetchJSON(
+    `${SALES_API_URL}/orders/${orderId}/payment-status`,
+    { method: "GET" },
+    false, // 認証不要
+  );
+}
+
+/**
  * クーポンを適用（認証不要）
  */
 export async function applyCoupon(
@@ -250,6 +270,20 @@ export async function applyCoupon(
       method: "POST",
       body: JSON.stringify({ code, cart_items: cartItems }),
     },
+    false, // 認証不要
+  );
+}
+
+/**
+ * 注文の領収書URLを取得（認証不要）
+ */
+export async function getOrderReceipt(orderId: string): Promise<{
+  order_id: string;
+  receipt_url: string;
+}> {
+  return await fetchJSON(
+    `${SALES_API_URL}/orders/${orderId}/receipt`,
+    { method: "GET" },
     false, // 認証不要
   );
 }

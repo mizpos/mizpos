@@ -26,6 +26,7 @@ from models import (
     SaleStatus,
     StripeTerminalConfigRequest,
     UpdateConfigRequest,
+    UpdateShippingRequest,
 )
 from services import (
     calculate_commission_fees,
@@ -48,6 +49,7 @@ from services import (
     set_stripe_terminal_config,
     update_order_payment_intent,
     update_order_status,
+    update_shipping_info,
     validate_and_reserve_stock,
     validate_coupon,
 )
@@ -545,6 +547,150 @@ async def list_orders_by_email(
     try:
         orders = get_orders_by_email(customer_email, limit)
         return {"orders": orders}
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/orders/{order_id}/shipping", response_model=dict)
+async def update_order_shipping(
+    order_id: str,
+    request: UpdateShippingRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """注文の発送情報を更新（管理者のみ）"""
+    try:
+        order = get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        updated_order = update_shipping_info(
+            order_id=order_id,
+            tracking_number=request.tracking_number,
+            carrier=request.carrier,
+            notes=request.notes,
+        )
+
+        if not updated_order:
+            raise HTTPException(
+                status_code=500, detail="Failed to update shipping info"
+            )
+
+        return {"order": updated_order}
+    except HTTPException:
+        raise
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/orders/{order_id}/payment-status", response_model=dict)
+async def get_order_payment_status(order_id: str):
+    """注文のPaymentIntentステータスを確認"""
+    init_stripe()
+    try:
+        order = get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        payment_intent_id = order.get("stripe_payment_intent_id")
+        if not payment_intent_id:
+            return {
+                "order_id": order_id,
+                "payment_status": "no_payment_intent",
+                "order_status": order.get("status"),
+            }
+
+        try:
+            intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            intent_status = (
+                intent.get("status") if isinstance(intent, dict) else intent.status
+            )
+
+            return {
+                "order_id": order_id,
+                "payment_status": intent_status,
+                "order_status": order.get("status"),
+            }
+        except stripe._error.StripeError as e:
+            logger.error(f"Failed to retrieve PaymentIntent: {e}")
+            return {
+                "order_id": order_id,
+                "payment_status": "error",
+                "order_status": order.get("status"),
+                "error": str(e),
+            }
+    except HTTPException:
+        raise
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/orders/{order_id}/receipt", response_model=dict)
+async def get_order_receipt(order_id: str):
+    """注文の領収書URLを取得（認証不要）"""
+    init_stripe()
+    try:
+        order = get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        payment_intent_id = order.get("stripe_payment_intent_id")
+        if not payment_intent_id:
+            raise HTTPException(
+                status_code=400, detail="Payment intent not found for this order"
+            )
+
+        try:
+            payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            intent_status = (
+                payment_intent.get("status")
+                if isinstance(payment_intent, dict)
+                else payment_intent.status
+            )
+
+            if intent_status != "succeeded":
+                raise HTTPException(
+                    status_code=400,
+                    detail="Payment has not been completed yet",
+                )
+
+            # Chargeから領収書URLを取得
+            latest_charge = (
+                payment_intent.get("latest_charge")
+                if isinstance(payment_intent, dict)
+                else payment_intent.latest_charge
+            )
+
+            if latest_charge:
+                charge_id = (
+                    latest_charge
+                    if isinstance(latest_charge, str)
+                    else latest_charge.id
+                )
+                charge = stripe.Charge.retrieve(charge_id)
+                receipt_url = (
+                    charge.get("receipt_url")
+                    if isinstance(charge, dict)
+                    else charge.receipt_url
+                )
+
+                if receipt_url:
+                    return {
+                        "order_id": order_id,
+                        "receipt_url": receipt_url,
+                    }
+
+            raise HTTPException(
+                status_code=404, detail="Receipt not found for this order"
+            )
+
+        except stripe._error.StripeError as e:
+            logger.error(f"Failed to retrieve receipt: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Stripe error: {str(e)}"
+            ) from e
+
+    except HTTPException:
+        raise
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

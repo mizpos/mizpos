@@ -524,18 +524,32 @@ def get_order_by_id(order_id: str) -> dict | None:
 
 
 def get_orders_by_email(customer_email: str, limit: int = 50) -> list[dict]:
-    """顧客メールアドレスから注文一覧を取得"""
+    """顧客メールアドレスから注文一覧を取得（10分以上経過したpending注文は除外）"""
     # DynamoDBのscanでcustomer_emailをフィルタ（本番環境ではGSI推奨）
     response = sales_table.scan(
         FilterExpression="customer_email = :email AND event_id = :eid",
         ExpressionAttributeValues={":email": customer_email, ":eid": "online"},
         Limit=limit,
     )
-    orders = [
-        dynamo_to_dict(item)
-        for item in response.get("Items", [])
-        if not item.get("sale_id", "").startswith("coupon_")
-    ]
+
+    # 現在時刻（ミリ秒）
+    current_time_ms = int(time.time() * 1000)
+    ten_minutes_ms = 10 * 60 * 1000  # 10分
+
+    orders = []
+    for item in response.get("Items", []):
+        # クーポンは除外
+        if item.get("sale_id", "").startswith("coupon_"):
+            continue
+
+        # pending かつ 10分以上経過した注文は除外
+        if item.get("status") == "pending":
+            order_timestamp = int(item.get("timestamp", 0))
+            if current_time_ms - order_timestamp > ten_minutes_ms:
+                continue
+
+        orders.append(dynamo_to_dict(item))
+
     return orders
 
 
@@ -581,6 +595,52 @@ def update_order_status(order_id: str, status: str) -> dict | None:
         UpdateExpression="SET #st = :status",
         ExpressionAttributeNames={"#st": "status"},
         ExpressionAttributeValues={":status": status},
+        ReturnValues="ALL_NEW",
+    )
+    return dynamo_to_dict(response["Attributes"])
+
+
+def update_shipping_info(
+    order_id: str,
+    tracking_number: str | None = None,
+    carrier: str | None = None,
+    notes: str | None = None,
+) -> dict | None:
+    """注文の発送情報を更新し、ステータスをSHIPPEDに変更"""
+    # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
+    response = sales_table.query(
+        KeyConditionExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": order_id},
+    )
+    items = response.get("Items", [])
+    if not items:
+        return None
+
+    order = items[0]
+    timestamp = order["timestamp"]  # Decimal型のまま
+    now = datetime.now(timezone.utc).isoformat()
+
+    update_parts = ["#st = :status", "shipped_at = :shipped_at"]
+    expression_values = {":status": "shipped", ":shipped_at": now}
+    expression_names = {"#st": "status"}
+
+    if tracking_number:
+        update_parts.append("tracking_number = :tracking")
+        expression_values[":tracking"] = tracking_number
+
+    if carrier:
+        update_parts.append("carrier = :carrier")
+        expression_values[":carrier"] = carrier
+
+    if notes:
+        update_parts.append("shipping_notes = :notes")
+        expression_values[":notes"] = notes
+
+    response = sales_table.update_item(
+        Key={"sale_id": order_id, "timestamp": timestamp},
+        UpdateExpression=f"SET {', '.join(update_parts)}",
+        ExpressionAttributeNames=expression_names,
+        ExpressionAttributeValues=expression_values,
         ReturnValues="ALL_NEW",
     )
     return dynamo_to_dict(response["Attributes"])
