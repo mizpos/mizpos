@@ -234,6 +234,22 @@ export async function createOrderPaymentIntent(
 }
 
 /**
+ * 注文のPaymentIntentステータスを確認（認証不要）
+ */
+export async function getOrderPaymentStatus(orderId: string): Promise<{
+  order_id: string;
+  payment_status: string;
+  order_status: string;
+  error?: string;
+}> {
+  return await fetchJSON(
+    `${SALES_API_URL}/orders/${orderId}/payment-status`,
+    { method: "GET" },
+    false, // 認証不要
+  );
+}
+
+/**
  * クーポンを適用（認証不要）
  */
 export async function applyCoupon(
