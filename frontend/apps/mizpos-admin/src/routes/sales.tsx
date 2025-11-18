@@ -58,6 +58,7 @@ function SalesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isShippingFormOpen, setIsShippingFormOpen] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
   const [shippingFormData, setShippingFormData] = useState({
     tracking_number: "",
     carrier: "",
@@ -118,13 +119,15 @@ function SalesPage() {
     },
   });
 
-  const filteredSales = salesData.filter(
-    (sale) =>
-      sale.sale_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (sale.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-        false),
-  );
+  const filteredSales = salesData
+    .filter(
+      (sale) =>
+        sale.sale_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sale.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (sale.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+          false),
+    )
+    .filter((sale) => showCancelled || sale.status !== "cancelled");
 
   const getStatusBadge = (status: Sale["status"]) => {
     const styles = {
@@ -401,6 +404,9 @@ function SalesPage() {
         <div
           className={css({
             marginBottom: "6",
+            display: "flex",
+            gap: "4",
+            alignItems: "center",
           })}
         >
           <div
@@ -441,6 +447,29 @@ function SalesPage() {
               })}
             />
           </div>
+          <label
+            className={css({
+              display: "flex",
+              alignItems: "center",
+              gap: "2",
+              fontSize: "sm",
+              color: "gray.700",
+              cursor: "pointer",
+              userSelect: "none",
+            })}
+          >
+            <input
+              type="checkbox"
+              checked={showCancelled}
+              onChange={(e) => setShowCancelled(e.target.checked)}
+              className={css({
+                width: "4",
+                height: "4",
+                cursor: "pointer",
+              })}
+            />
+            キャンセル済みを表示
+          </label>
         </div>
 
         {/* Table */}
