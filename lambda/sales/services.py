@@ -600,6 +600,58 @@ def update_order_status(order_id: str, status: str) -> dict | None:
     return dynamo_to_dict(response["Attributes"])
 
 
+def update_order_status_with_stripe(
+    order_id: str, status: str, stripe_payment_status: str
+) -> dict | None:
+    """注文のステータスとStripe支払いステータスを更新"""
+    # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
+    response = sales_table.query(
+        KeyConditionExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": order_id},
+    )
+    items = response.get("Items", [])
+    if not items:
+        return None
+
+    order = items[0]
+    timestamp = order["timestamp"]  # Decimal型のまま
+
+    response = sales_table.update_item(
+        Key={"sale_id": order_id, "timestamp": timestamp},
+        UpdateExpression="SET #st = :status, stripe_payment_status = :stripe_status",
+        ExpressionAttributeNames={"#st": "status"},
+        ExpressionAttributeValues={
+            ":status": status,
+            ":stripe_status": stripe_payment_status,
+        },
+        ReturnValues="ALL_NEW",
+    )
+    return dynamo_to_dict(response["Attributes"])
+
+
+def update_stripe_payment_status(order_id: str, stripe_payment_status: str) -> dict | None:
+    """注文のStripe支払いステータスのみ更新"""
+    # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
+    response = sales_table.query(
+        KeyConditionExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": order_id},
+    )
+    items = response.get("Items", [])
+    if not items:
+        return None
+
+    order = items[0]
+    timestamp = order["timestamp"]  # Decimal型のまま
+
+    response = sales_table.update_item(
+        Key={"sale_id": order_id, "timestamp": timestamp},
+        UpdateExpression="SET stripe_payment_status = :stripe_status",
+        ExpressionAttributeValues={":stripe_status": stripe_payment_status},
+        ReturnValues="ALL_NEW",
+    )
+    return dynamo_to_dict(response["Attributes"])
+
+
 def update_shipping_info(
     order_id: str,
     tracking_number: str | None = None,
