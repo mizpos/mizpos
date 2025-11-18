@@ -566,7 +566,9 @@ async def create_order_payment_intent(order_id: str):
         if existing_pi_id:
             try:
                 intent = stripe.PaymentIntent.retrieve(existing_pi_id)
-                intent_status = intent.get("status") if isinstance(intent, dict) else intent.status
+                intent_status = (
+                    intent.get("status") if isinstance(intent, dict) else intent.status
+                )
                 if intent_status in [
                     "requires_payment_method",
                     "requires_confirmation",
@@ -648,7 +650,9 @@ async def create_order_payment_intent(order_id: str):
     except AttributeError as e:
         logger.error(f"AttributeError in payment intent creation: {str(e)}")
         logger.error(f"Order data: {order}")
-        logger.error(f"Intent response: {intent if 'intent' in locals() else 'intent not created'}")
+        logger.error(
+            f"Intent response: {intent if 'intent' in locals() else 'intent not created'}"
+        )
         raise HTTPException(status_code=500, detail=f"AttributeError: {str(e)}") from e
 
 
