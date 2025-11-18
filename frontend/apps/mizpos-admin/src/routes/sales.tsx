@@ -26,11 +26,13 @@ interface Sale {
   event_id: string;
   user_id: string;
   items: SaleItem[];
-  total_amount: number;
-  discount_amount: number;
-  final_amount: number;
+  subtotal: number;
+  discount: number;
+  total: number;
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
   status: "pending" | "completed" | "shipped" | "cancelled";
+  stripe_payment_status?: string;
+  stripe_payment_intent_id?: string;
   coupon_code?: string;
   customer_email?: string;
   customer_name?: string;
@@ -172,6 +174,74 @@ function SalesPage() {
     return labels[method];
   };
 
+  const getStripeStatusBadge = (stripeStatus?: string) => {
+    if (!stripeStatus) return null;
+
+    const styles: Record<
+      string,
+      { backgroundColor: string; color: string; label: string }
+    > = {
+      succeeded: {
+        backgroundColor: "green.100",
+        color: "green.800",
+        label: "決済成功",
+      },
+      processing: {
+        backgroundColor: "blue.100",
+        color: "blue.800",
+        label: "処理中",
+      },
+      requires_payment_method: {
+        backgroundColor: "yellow.100",
+        color: "yellow.800",
+        label: "支払い方法待ち",
+      },
+      requires_confirmation: {
+        backgroundColor: "yellow.100",
+        color: "yellow.800",
+        label: "確認待ち",
+      },
+      requires_action: {
+        backgroundColor: "orange.100",
+        color: "orange.800",
+        label: "アクション必要",
+      },
+      canceled: {
+        backgroundColor: "gray.100",
+        color: "gray.800",
+        label: "キャンセル",
+      },
+      failed: {
+        backgroundColor: "red.100",
+        color: "red.800",
+        label: "決済失敗",
+      },
+    };
+
+    const style = styles[stripeStatus] || {
+      backgroundColor: "gray.100",
+      color: "gray.800",
+      label: stripeStatus,
+    };
+
+    return (
+      <span
+        className={css({
+          display: "inline-flex",
+          paddingX: "2",
+          paddingY: "0.5",
+          borderRadius: "full",
+          fontSize: "xs",
+          fontWeight: "medium",
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+        })}
+      >
+        {style.label}
+      </span>
+    );
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ja-JP", {
       year: "numeric",
@@ -200,12 +270,12 @@ function SalesPage() {
     {
       key: "items",
       header: "商品数",
-      render: (item: Sale) => `${item.items.length}点`,
+      render: (item: Sale) => `${item.items?.length ?? 0}点`,
     },
     {
-      key: "final_amount",
+      key: "total",
       header: "合計金額",
-      render: (item: Sale) => `¥${item.final_amount.toLocaleString()}`,
+      render: (item: Sale) => `¥${(item.total ?? 0).toLocaleString()}`,
     },
     {
       key: "payment_method",
@@ -231,7 +301,7 @@ function SalesPage() {
 
   const totalRevenue = filteredSales
     .filter((s) => s.status === "completed")
-    .reduce((sum, s) => sum + s.final_amount, 0);
+    .reduce((sum, s) => sum + (s.total ?? 0), 0);
 
   const totalOrders = filteredSales.filter(
     (s) => s.status === "completed",
@@ -465,6 +535,20 @@ function SalesPage() {
                   {getPaymentMethodLabel(selectedSale.payment_method)}
                 </p>
               </div>
+              {selectedSale.stripe_payment_status && (
+                <div>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginBottom: "1",
+                    })}
+                  >
+                    Stripe決済ステータス
+                  </p>
+                  {getStripeStatusBadge(selectedSale.stripe_payment_status)}
+                </div>
+              )}
               {selectedSale.customer_email && (
                 <div className={css({ gridColumn: "span 2" })}>
                   <p
@@ -501,7 +585,7 @@ function SalesPage() {
                   overflow: "hidden",
                 })}
               >
-                {selectedSale.items.map((item) => (
+                {(selectedSale.items ?? []).map((item) => (
                   <div
                     key={item.product_id}
                     className={css({
@@ -523,13 +607,14 @@ function SalesPage() {
                         {item.product_name}
                       </p>
                       <p className={css({ fontSize: "xs", color: "gray.500" })}>
-                        ¥{item.unit_price.toLocaleString()} × {item.quantity}
+                        ¥{(item.unit_price ?? 0).toLocaleString()} ×{" "}
+                        {item.quantity ?? 0}
                       </p>
                     </div>
                     <p
                       className={css({ fontSize: "sm", fontWeight: "medium" })}
                     >
-                      ¥{item.subtotal.toLocaleString()}
+                      ¥{(item.subtotal ?? 0).toLocaleString()}
                     </p>
                   </div>
                 ))}
@@ -554,10 +639,10 @@ function SalesPage() {
                   小計
                 </span>
                 <span className={css({ fontSize: "sm" })}>
-                  ¥{selectedSale.total_amount.toLocaleString()}
+                  ¥{(selectedSale.subtotal ?? 0).toLocaleString()}
                 </span>
               </div>
-              {selectedSale.discount_amount > 0 && (
+              {(selectedSale.discount ?? 0) > 0 && (
                 <div
                   className={css({
                     display: "flex",
@@ -571,7 +656,7 @@ function SalesPage() {
                       `(${selectedSale.coupon_code})`}
                   </span>
                   <span className={css({ fontSize: "sm", color: "error" })}>
-                    -¥{selectedSale.discount_amount.toLocaleString()}
+                    -¥{(selectedSale.discount ?? 0).toLocaleString()}
                   </span>
                 </div>
               )}
@@ -584,7 +669,7 @@ function SalesPage() {
               >
                 <span className={css({ fontSize: "sm" })}>合計</span>
                 <span className={css({ fontSize: "lg" })}>
-                  ¥{selectedSale.final_amount.toLocaleString()}
+                  ¥{(selectedSale.total ?? 0).toLocaleString()}
                 </span>
               </div>
             </div>

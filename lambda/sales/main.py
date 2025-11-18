@@ -49,7 +49,9 @@ from services import (
     set_stripe_terminal_config,
     update_order_payment_intent,
     update_order_status,
+    update_order_status_with_stripe,
     update_shipping_info,
+    update_stripe_payment_status,
     validate_and_reserve_stock,
     validate_coupon,
 )
@@ -760,9 +762,12 @@ async def create_order_payment_intent(order_id: str):
             },
         )
 
-        # 注文にPaymentIntentを紐付け
+        # 注文にPaymentIntentとステータスを紐付け
         intent_id = intent.get("id") if isinstance(intent, dict) else intent.id
-        update_order_payment_intent(order_id, intent_id)
+        intent_status = (
+            intent.get("status") if isinstance(intent, dict) else intent.status
+        )
+        update_order_payment_intent(order_id, intent_id, intent_status)
 
         # 辞書とオブジェクトの両方に対応
         if isinstance(intent, dict):
@@ -876,21 +881,49 @@ async def stripe_webhook(request: Request):
         if event["type"] == "payment_intent.succeeded":
             payment_intent = event["data"]["object"]
             order_id = payment_intent.get("metadata", {}).get("order_id")
+            payment_status = payment_intent.get("status", "succeeded")
 
             if order_id:
-                # 注文ステータスを「完了」に更新
-                update_order_status(order_id, SaleStatus.COMPLETED.value)
+                # 注文ステータスを「完了」に更新し、Stripeステータスも保存
+                update_order_status_with_stripe(
+                    order_id, SaleStatus.COMPLETED.value, payment_status
+                )
 
         elif event["type"] == "payment_intent.payment_failed":
             payment_intent = event["data"]["object"]
             order_id = payment_intent.get("metadata", {}).get("order_id")
+            payment_status = payment_intent.get("status", "failed")
 
             if order_id:
                 # 注文ステータスを「キャンセル」に更新し、在庫を戻す
                 order = get_order_by_id(order_id)
                 if order and order.get("status") == "pending":
                     restore_stock(order)
-                    update_order_status(order_id, SaleStatus.CANCELLED.value)
+                    update_order_status_with_stripe(
+                        order_id, SaleStatus.CANCELLED.value, payment_status
+                    )
+
+        elif event["type"] == "payment_intent.processing":
+            payment_intent = event["data"]["object"]
+            order_id = payment_intent.get("metadata", {}).get("order_id")
+            payment_status = payment_intent.get("status", "processing")
+
+            if order_id:
+                # Stripeステータスのみ更新（注文ステータスはpendingのまま）
+                update_stripe_payment_status(order_id, payment_status)
+
+        elif event["type"] == "payment_intent.canceled":
+            payment_intent = event["data"]["object"]
+            order_id = payment_intent.get("metadata", {}).get("order_id")
+            payment_status = payment_intent.get("status", "canceled")
+
+            if order_id:
+                order = get_order_by_id(order_id)
+                if order and order.get("status") == "pending":
+                    restore_stock(order)
+                    update_order_status_with_stripe(
+                        order_id, SaleStatus.CANCELLED.value, payment_status
+                    )
 
         elif event["type"] == "checkout.session.completed":
             _session = event["data"]["object"]  # noqa: F841
