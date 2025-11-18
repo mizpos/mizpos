@@ -19,10 +19,22 @@ function CartPage() {
           textAlign: "center",
         })}
       >
-        <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "20px" })}>
+        <h1
+          className={css({
+            fontSize: "32px",
+            fontWeight: "bold",
+            marginBottom: "20px",
+          })}
+        >
           ショッピングカート
         </h1>
-        <p className={css({ fontSize: "18px", marginBottom: "30px", color: "#666" })}>
+        <p
+          className={css({
+            fontSize: "18px",
+            marginBottom: "30px",
+            color: "#666",
+          })}
+        >
           カートは空です
         </p>
         <Link
@@ -48,12 +60,30 @@ function CartPage() {
   }
 
   return (
-    <div className={css({ maxWidth: "1200px", margin: "0 auto", padding: "40px 20px" })}>
-      <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "30px" })}>
+    <div
+      className={css({
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "40px 20px",
+      })}
+    >
+      <h1
+        className={css({
+          fontSize: "32px",
+          fontWeight: "bold",
+          marginBottom: "30px",
+        })}
+      >
         ショッピングカート ({totalItems}点)
       </h1>
 
-      <div className={css({ display: "grid", gridTemplateColumns: { base: "1fr", md: "2fr 1fr" }, gap: "30px" })}>
+      <div
+        className={css({
+          display: "grid",
+          gridTemplateColumns: { base: "1fr", md: "2fr 1fr" },
+          gap: "30px",
+        })}
+      >
         {/* カートアイテム一覧 */}
         <div>
           {items.map((item) => (
@@ -91,7 +121,9 @@ function CartPage() {
                     })}
                   />
                 ) : (
-                  <p className={css({ color: "#999", fontSize: "12px" })}>No Image</p>
+                  <p className={css({ color: "#999", fontSize: "12px" })}>
+                    No Image
+                  </p>
                 )}
               </div>
 
@@ -115,22 +147,48 @@ function CartPage() {
                 >
                   {item.product.name}
                 </Link>
-                <p className={css({ fontSize: "14px", color: "#666", marginBottom: "4px" })}>
+                <p
+                  className={css({
+                    fontSize: "14px",
+                    color: "#666",
+                    marginBottom: "4px",
+                  })}
+                >
                   著者: {item.product.author}
                 </p>
-                <p className={css({ fontSize: "14px", color: "#666", marginBottom: "12px" })}>
+                <p
+                  className={css({
+                    fontSize: "14px",
+                    color: "#666",
+                    marginBottom: "12px",
+                  })}
+                >
                   在庫: {item.product.stock_quantity}点
                 </p>
 
                 {/* 数量選択 */}
-                <div className={css({ display: "flex", alignItems: "center", gap: "12px" })}>
-                  <label htmlFor={`qty-${item.product.product_id}`} className={css({ fontSize: "14px" })}>
+                <div
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  })}
+                >
+                  <label
+                    htmlFor={`qty-${item.product.product_id}`}
+                    className={css({ fontSize: "14px" })}
+                  >
                     数量:
                   </label>
                   <select
                     id={`qty-${item.product.product_id}`}
                     value={item.quantity}
-                    onChange={(e) => updateQuantity(item.product.product_id, Number(e.target.value))}
+                    onChange={(e) =>
+                      updateQuantity(
+                        item.product.product_id,
+                        Number(e.target.value),
+                      )
+                    }
                     className={css({
                       padding: "6px",
                       borderRadius: "3px",
@@ -138,15 +196,17 @@ function CartPage() {
                       fontSize: "14px",
                     })}
                   >
-                    {Array.from({ length: Math.min(item.product.stock_quantity, 10) }, (_, i) => i + 1).map(
-                      (num) => (
-                        <option key={num} value={num}>
-                          {num}
-                        </option>
-                      )
-                    )}
+                    {Array.from(
+                      { length: Math.min(item.product.stock_quantity, 10) },
+                      (_, i) => i + 1,
+                    ).map((num) => (
+                      <option key={num} value={num}>
+                        {num}
+                      </option>
+                    ))}
                   </select>
                   <button
+                    type="button"
                     onClick={() => removeItem(item.product.product_id)}
                     className={css({
                       fontSize: "14px",
@@ -167,7 +227,13 @@ function CartPage() {
 
               {/* 価格 */}
               <div className={css({ textAlign: "right" })}>
-                <p className={css({ fontSize: "20px", fontWeight: "bold", color: "#e47911" })}>
+                <p
+                  className={css({
+                    fontSize: "20px",
+                    fontWeight: "bold",
+                    color: "#e47911",
+                  })}
+                >
                   ¥{(item.product.price * item.quantity).toLocaleString()}
                 </p>
                 <p className={css({ fontSize: "14px", color: "#666" })}>
@@ -187,7 +253,13 @@ function CartPage() {
             height: "fit-content",
           })}
         >
-          <h2 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "16px" })}>
+          <h2
+            className={css({
+              fontSize: "20px",
+              fontWeight: "bold",
+              marginBottom: "16px",
+            })}
+          >
             注文内容
           </h2>
           <div
@@ -197,8 +269,16 @@ function CartPage() {
               marginBottom: "16px",
             })}
           >
-            <div className={css({ display: "flex", justifyContent: "space-between", marginBottom: "8px" })}>
-              <span className={css({ fontSize: "14px" })}>小計 ({totalItems}点):</span>
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              })}
+            >
+              <span className={css({ fontSize: "14px" })}>
+                小計 ({totalItems}点):
+              </span>
               <span className={css({ fontSize: "14px", fontWeight: "bold" })}>
                 ¥{subtotal.toLocaleString()}
               </span>
@@ -206,9 +286,22 @@ function CartPage() {
           </div>
 
           <div className={css({ marginBottom: "16px" })}>
-            <div className={css({ display: "flex", justifyContent: "space-between" })}>
-              <span className={css({ fontSize: "18px", fontWeight: "bold" })}>合計:</span>
-              <span className={css({ fontSize: "24px", fontWeight: "bold", color: "#e47911" })}>
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+              })}
+            >
+              <span className={css({ fontSize: "18px", fontWeight: "bold" })}>
+                合計:
+              </span>
+              <span
+                className={css({
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  color: "#e47911",
+                })}
+              >
                 ¥{subtotal.toLocaleString()}
               </span>
             </div>

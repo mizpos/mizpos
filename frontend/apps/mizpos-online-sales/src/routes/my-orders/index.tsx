@@ -22,7 +22,11 @@ function MyOrdersPage() {
     }
   }, [user]);
 
-  const { data: orders, isLoading, error } = useQuery({
+  const {
+    data: orders,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["orders", searchEmail],
     queryFn: () => getOrdersByEmail(searchEmail),
     enabled: !!searchEmail,
@@ -34,8 +38,20 @@ function MyOrdersPage() {
   };
 
   return (
-    <div className={css({ maxWidth: "1200px", margin: "0 auto", padding: "40px 20px" })}>
-      <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "30px" })}>
+    <div
+      className={css({
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "40px 20px",
+      })}
+    >
+      <h1
+        className={css({
+          fontSize: "32px",
+          fontWeight: "bold",
+          marginBottom: "30px",
+        })}
+      >
         注文履歴
       </h1>
 
@@ -49,10 +65,19 @@ function MyOrdersPage() {
             marginBottom: "30px",
           })}
         >
-          <p className={css({ marginBottom: "16px", fontSize: "14px", color: "#666" })}>
+          <p
+            className={css({
+              marginBottom: "16px",
+              fontSize: "14px",
+              color: "#666",
+            })}
+          >
             ご登録のメールアドレスを入力して注文履歴を確認できます
           </p>
-          <form onSubmit={handleSearch} className={css({ display: "flex", gap: "12px" })}>
+          <form
+            onSubmit={handleSearch}
+            className={css({ display: "flex", gap: "12px" })}
+          >
             <input
               type="email"
               placeholder="メールアドレスを入力"
@@ -126,13 +151,26 @@ function MyOrdersPage() {
       )}
 
       {error && (
-        <div className={css({ padding: "20px", backgroundColor: "#f8d7da", borderRadius: "4px", color: "#721c24" })}>
+        <div
+          className={css({
+            padding: "20px",
+            backgroundColor: "#f8d7da",
+            borderRadius: "4px",
+            color: "#721c24",
+          })}
+        >
           <p>注文履歴の読み込みに失敗しました</p>
         </div>
       )}
 
       {orders && orders.length === 0 && (
-        <div className={css({ padding: "40px", textAlign: "center", color: "#666" })}>
+        <div
+          className={css({
+            padding: "40px",
+            textAlign: "center",
+            color: "#666",
+          })}
+        >
           <p>注文履歴がありません</p>
         </div>
       )}
@@ -161,11 +199,18 @@ function MyOrdersPage() {
                 })}
               >
                 <div>
-                  <p className={css({ fontSize: "14px", color: "#666", marginBottom: "4px" })}>
+                  <p
+                    className={css({
+                      fontSize: "14px",
+                      color: "#666",
+                      marginBottom: "4px",
+                    })}
+                  >
                     注文番号: {order.order_id || order.sale_id}
                   </p>
                   <p className={css({ fontSize: "14px", color: "#666" })}>
-                    注文日時: {new Date(order.created_at).toLocaleString("ja-JP")}
+                    注文日時:{" "}
+                    {new Date(order.created_at).toLocaleString("ja-JP")}
                   </p>
                 </div>
                 <div>
@@ -212,14 +257,21 @@ function MyOrdersPage() {
                     })}
                   >
                     <div>
-                      <p className={css({ fontSize: "14px", fontWeight: "bold" })}>
+                      <p
+                        className={css({
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                        })}
+                      >
                         {item.product_name}
                       </p>
                       <p className={css({ fontSize: "12px", color: "#666" })}>
                         数量: {item.quantity}
                       </p>
                     </div>
-                    <p className={css({ fontSize: "14px", fontWeight: "bold" })}>
+                    <p
+                      className={css({ fontSize: "14px", fontWeight: "bold" })}
+                    >
                       ¥{item.subtotal.toLocaleString()}
                     </p>
                   </div>
@@ -237,12 +289,15 @@ function MyOrdersPage() {
               >
                 <div>
                   <p className={css({ fontSize: "18px", fontWeight: "bold" })}>
-                    合計: <span className={css({ color: "#e47911" })}>¥{order.total.toLocaleString()}</span>
+                    合計:{" "}
+                    <span className={css({ color: "#e47911" })}>
+                      ¥{order.total.toLocaleString()}
+                    </span>
                   </p>
                 </div>
                 <Link
                   to="/order-complete"
-                  search={{ order_id: order.order_id || order.sale_id }}
+                  search={{ order_id: order.order_id || order.sale_id || "" }}
                   className={css({
                     display: "inline-block",
                     padding: "8px 16px",

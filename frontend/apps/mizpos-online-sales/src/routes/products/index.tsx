@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { css } from "styled-system/css";
-import { getProducts } from "../../lib/api";
 import { useCart } from "../../contexts/CartContext";
+import { getProducts } from "../../lib/api";
 
 export const Route = createFileRoute("/products/")({
   component: ProductsPage,
@@ -10,7 +10,11 @@ export const Route = createFileRoute("/products/")({
 
 function ProductsPage() {
   const { addItem } = useCart();
-  const { data: products, isLoading, error } = useQuery({
+  const {
+    data: products,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["products"],
     queryFn: () => getProducts(),
   });
@@ -25,7 +29,9 @@ function ProductsPage() {
 
   if (error) {
     return (
-      <div className={css({ padding: "40px", textAlign: "center", color: "red" })}>
+      <div
+        className={css({ padding: "40px", textAlign: "center", color: "red" })}
+      >
         <p>商品の読み込みに失敗しました</p>
         <p>{error.message}</p>
       </div>
@@ -35,13 +41,27 @@ function ProductsPage() {
   const activeProducts = products?.filter((p) => p.is_active) || [];
 
   return (
-    <div className={css({ maxWidth: "1200px", margin: "0 auto", padding: "40px 20px" })}>
-      <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "30px" })}>
+    <div
+      className={css({
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "40px 20px",
+      })}
+    >
+      <h1
+        className={css({
+          fontSize: "32px",
+          fontWeight: "bold",
+          marginBottom: "30px",
+        })}
+      >
         商品一覧
       </h1>
 
       {activeProducts.length === 0 ? (
-        <p className={css({ textAlign: "center", color: "#666" })}>商品がありません</p>
+        <p className={css({ textAlign: "center", color: "#666" })}>
+          商品がありません
+        </p>
       ) : (
         <div
           className={css({
@@ -112,7 +132,13 @@ function ProductsPage() {
                   >
                     {product.name}
                   </h2>
-                  <p className={css({ fontSize: "14px", color: "#666", marginBottom: "8px" })}>
+                  <p
+                    className={css({
+                      fontSize: "14px",
+                      color: "#666",
+                      marginBottom: "8px",
+                    })}
+                  >
                     {product.author}
                   </p>
                   <p
@@ -133,6 +159,7 @@ function ProductsPage() {
 
               <div className={css({ padding: "0 16px 16px" })}>
                 <button
+                  type="button"
                   onClick={() => addItem(product, 1)}
                   disabled={product.stock_quantity <= 0}
                   className={css({

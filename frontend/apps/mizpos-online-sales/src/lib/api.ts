@@ -3,9 +3,12 @@
  * Stock API、Sales API、Accounts APIへのリクエストを管理
  */
 
-const STOCK_API_URL = import.meta.env.VITE_STOCK_API_URL || "http://localhost:8000/stock";
-const SALES_API_URL = import.meta.env.VITE_SALES_API_URL || "http://localhost:8001/sales";
-const ACCOUNTS_API_URL = import.meta.env.VITE_ACCOUNTS_API_URL || "http://localhost:8002/accounts";
+const STOCK_API_URL =
+  import.meta.env.VITE_STOCK_API_URL || "http://localhost:8000/stock";
+const SALES_API_URL =
+  import.meta.env.VITE_SALES_API_URL || "http://localhost:8001/sales";
+// const ACCOUNTS_API_URL =
+//   import.meta.env.VITE_ACCOUNTS_API_URL || "http://localhost:8002/accounts";
 
 /**
  * 認証トークンを取得する関数（Amplifyから）
@@ -25,11 +28,22 @@ async function getAuthToken(): Promise<string | null> {
  * 共通のHTTPリクエスト関数
  * @param requireAuth - trueの場合、認証ヘッダを付与
  */
-async function fetchJSON<T>(url: string, options?: RequestInit, requireAuth = false): Promise<T> {
-  const headers: HeadersInit = {
+async function fetchJSON<T>(
+  url: string,
+  options?: RequestInit,
+  requireAuth = false,
+): Promise<T> {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options?.headers,
   };
+
+  // 既存のヘッダーを追加
+  if (options?.headers) {
+    const existingHeaders = new Headers(options.headers);
+    existingHeaders.forEach((value, key) => {
+      headers[key] = value;
+    });
+  }
 
   // 認証が必要な場合のみトークンを取得して付与
   if (requireAuth) {
@@ -45,7 +59,9 @@ async function fetchJSON<T>(url: string, options?: RequestInit, requireAuth = fa
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+    const errorData = await response
+      .json()
+      .catch(() => ({ detail: "Unknown error" }));
     throw new Error(errorData.detail || `HTTP Error: ${response.status}`);
   }
 
@@ -85,7 +101,11 @@ export async function getProducts(category?: string): Promise<Product[]> {
   if (category) {
     url.searchParams.set("category", category);
   }
-  const data = await fetchJSON<ProductsResponse>(url.toString(), undefined, false);
+  const data = await fetchJSON<ProductsResponse>(
+    url.toString(),
+    undefined,
+    false,
+  );
   return data.products;
 }
 
@@ -93,7 +113,11 @@ export async function getProducts(category?: string): Promise<Product[]> {
  * 商品詳細を取得（認証不要）
  */
 export async function getProduct(productId: string): Promise<Product> {
-  const data = await fetchJSON<{ product: Product }>(`${STOCK_API_URL}/products/${productId}`, undefined, false);
+  const data = await fetchJSON<{ product: Product }>(
+    `${STOCK_API_URL}/products/${productId}`,
+    undefined,
+    false,
+  );
   return data.product;
 }
 
@@ -126,6 +150,7 @@ export interface CreateOrderRequest {
 
 export interface Order {
   order_id: string;
+  sale_id?: string; // 後方互換性のため
   customer_email: string;
   customer_name: string;
   items: Array<{
@@ -163,7 +188,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<Order> {
       method: "POST",
       body: JSON.stringify(request),
     },
-    false // 認証不要
+    false, // 認証不要
   );
   return data.order;
 }
@@ -172,7 +197,11 @@ export async function createOrder(request: CreateOrderRequest): Promise<Order> {
  * 注文詳細を取得（認証不要）
  */
 export async function getOrder(orderId: string): Promise<Order> {
-  const data = await fetchJSON<{ order: Order }>(`${SALES_API_URL}/orders/${orderId}`, undefined, false);
+  const data = await fetchJSON<{ order: Order }>(
+    `${SALES_API_URL}/orders/${orderId}`,
+    undefined,
+    false,
+  );
   return data.order;
 }
 
@@ -182,18 +211,24 @@ export async function getOrder(orderId: string): Promise<Order> {
 export async function getOrdersByEmail(email: string): Promise<Order[]> {
   const url = new URL(`${SALES_API_URL}/orders`);
   url.searchParams.set("customer_email", email);
-  const data = await fetchJSON<{ orders: Order[] }>(url.toString(), undefined, false);
+  const data = await fetchJSON<{ orders: Order[] }>(
+    url.toString(),
+    undefined,
+    false,
+  );
   return data.orders;
 }
 
 /**
  * 注文用のPaymentIntentを作成（認証不要）
  */
-export async function createOrderPaymentIntent(orderId: string): Promise<PaymentIntent> {
+export async function createOrderPaymentIntent(
+  orderId: string,
+): Promise<PaymentIntent> {
   const data = await fetchJSON<{ payment_intent: PaymentIntent }>(
     `${SALES_API_URL}/orders/${orderId}/payment-intent`,
     { method: "POST" },
-    false // 認証不要
+    false, // 認証不要
   );
   return data.payment_intent;
 }
@@ -203,7 +238,7 @@ export async function createOrderPaymentIntent(orderId: string): Promise<Payment
  */
 export async function applyCoupon(
   code: string,
-  cartItems: CartItem[]
+  cartItems: CartItem[],
 ): Promise<{
   subtotal: number;
   discount: number;
@@ -215,6 +250,6 @@ export async function applyCoupon(
       method: "POST",
       body: JSON.stringify({ code, cart_items: cartItems }),
     },
-    false // 認証不要
+    false, // 認証不要
   );
 }

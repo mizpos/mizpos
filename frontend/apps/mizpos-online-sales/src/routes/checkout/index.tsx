@@ -3,13 +3,11 @@ import { loadStripe } from "@stripe/stripe-js";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
-import { useCart } from "../../contexts/CartContext";
 import CheckoutForm from "../../components/CheckoutForm";
+import { useCart } from "../../contexts/CartContext";
 
 // Stripe公開可能キーを読み込み
-const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLIC_KEY || ""
-);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
 
 export const Route = createFileRoute("/checkout/")({
   component: CheckoutPage,
@@ -31,11 +29,30 @@ function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className={css({ maxWidth: "1200px", margin: "0 auto", padding: "40px 20px", textAlign: "center" })}>
-        <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "20px" })}>
+      <div
+        className={css({
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "40px 20px",
+          textAlign: "center",
+        })}
+      >
+        <h1
+          className={css({
+            fontSize: "32px",
+            fontWeight: "bold",
+            marginBottom: "20px",
+          })}
+        >
           チェックアウト
         </h1>
-        <p className={css({ fontSize: "18px", marginBottom: "30px", color: "#666" })}>
+        <p
+          className={css({
+            fontSize: "18px",
+            marginBottom: "30px",
+            color: "#666",
+          })}
+        >
           カートが空です
         </p>
       </div>
@@ -48,31 +65,75 @@ function CheckoutPage() {
   };
 
   return (
-    <div className={css({ maxWidth: "1200px", margin: "0 auto", padding: "40px 20px" })}>
-      <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "30px" })}>
+    <div
+      className={css({
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "40px 20px",
+      })}
+    >
+      <h1
+        className={css({
+          fontSize: "32px",
+          fontWeight: "bold",
+          marginBottom: "30px",
+        })}
+      >
         チェックアウト
       </h1>
 
-      <div className={css({ display: "grid", gridTemplateColumns: { base: "1fr", md: "2fr 1fr" }, gap: "30px" })}>
+      <div
+        className={css({
+          display: "grid",
+          gridTemplateColumns: { base: "1fr", md: "2fr 1fr" },
+          gap: "30px",
+        })}
+      >
         {/* メインコンテンツ */}
         <div>
           {step === "info" ? (
             /* 配送情報入力フォーム */
-            <div className={css({ padding: "24px", backgroundColor: "white", borderRadius: "8px", border: "1px solid #ddd" })}>
-              <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "20px" })}>
+            <div
+              className={css({
+                padding: "24px",
+                backgroundColor: "white",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+              })}
+            >
+              <h2
+                className={css({
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  marginBottom: "20px",
+                })}
+              >
                 配送先情報
               </h2>
               <form onSubmit={handleInfoSubmit}>
                 <div className={css({ marginBottom: "16px" })}>
-                  <label htmlFor="email" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="email"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     メールアドレス *
                   </label>
                   <input
                     type="email"
+                    autoComplete="email"
                     id="email"
                     required
                     value={customerInfo.email}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({
+                        ...customerInfo,
+                        email: e.target.value,
+                      })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -84,7 +145,14 @@ function CheckoutPage() {
                 </div>
 
                 <div className={css({ marginBottom: "16px" })}>
-                  <label htmlFor="name" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="name"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     お名前 *
                   </label>
                   <input
@@ -92,7 +160,9 @@ function CheckoutPage() {
                     id="name"
                     required
                     value={customerInfo.name}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({ ...customerInfo, name: e.target.value })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -104,7 +174,14 @@ function CheckoutPage() {
                 </div>
 
                 <div className={css({ marginBottom: "16px" })}>
-                  <label htmlFor="postalCode" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="postalCode"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     郵便番号 *
                   </label>
                   <input
@@ -113,7 +190,12 @@ function CheckoutPage() {
                     required
                     placeholder="例: 123-4567"
                     value={customerInfo.postalCode}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, postalCode: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({
+                        ...customerInfo,
+                        postalCode: e.target.value,
+                      })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -125,7 +207,14 @@ function CheckoutPage() {
                 </div>
 
                 <div className={css({ marginBottom: "16px" })}>
-                  <label htmlFor="prefecture" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="prefecture"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     都道府県 *
                   </label>
                   <input
@@ -134,7 +223,12 @@ function CheckoutPage() {
                     required
                     placeholder="例: 東京都"
                     value={customerInfo.prefecture}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, prefecture: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({
+                        ...customerInfo,
+                        prefecture: e.target.value,
+                      })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -146,7 +240,14 @@ function CheckoutPage() {
                 </div>
 
                 <div className={css({ marginBottom: "16px" })}>
-                  <label htmlFor="city" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="city"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     市区町村 *
                   </label>
                   <input
@@ -155,7 +256,9 @@ function CheckoutPage() {
                     required
                     placeholder="例: 渋谷区"
                     value={customerInfo.city}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, city: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({ ...customerInfo, city: e.target.value })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -167,7 +270,14 @@ function CheckoutPage() {
                 </div>
 
                 <div className={css({ marginBottom: "16px" })}>
-                  <label htmlFor="address1" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="address1"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     町名・番地 *
                   </label>
                   <input
@@ -176,7 +286,12 @@ function CheckoutPage() {
                     required
                     placeholder="例: 道玄坂1-2-3"
                     value={customerInfo.address_line1}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, address_line1: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({
+                        ...customerInfo,
+                        address_line1: e.target.value,
+                      })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -188,7 +303,14 @@ function CheckoutPage() {
                 </div>
 
                 <div className={css({ marginBottom: "16px" })}>
-                  <label htmlFor="address2" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="address2"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     建物名・部屋番号
                   </label>
                   <input
@@ -196,7 +318,12 @@ function CheckoutPage() {
                     id="address2"
                     placeholder="例: ○○ビル 101号室"
                     value={customerInfo.address_line2}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, address_line2: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({
+                        ...customerInfo,
+                        address_line2: e.target.value,
+                      })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -208,7 +335,14 @@ function CheckoutPage() {
                 </div>
 
                 <div className={css({ marginBottom: "24px" })}>
-                  <label htmlFor="phone" className={css({ display: "block", marginBottom: "8px", fontWeight: "bold" })}>
+                  <label
+                    htmlFor="phone"
+                    className={css({
+                      display: "block",
+                      marginBottom: "8px",
+                      fontWeight: "bold",
+                    })}
+                  >
                     電話番号 *
                   </label>
                   <input
@@ -217,7 +351,12 @@ function CheckoutPage() {
                     required
                     placeholder="例: 03-1234-5678"
                     value={customerInfo.phone_number}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, phone_number: e.target.value })}
+                    onChange={(e) =>
+                      setCustomerInfo({
+                        ...customerInfo,
+                        phone_number: e.target.value,
+                      })
+                    }
                     className={css({
                       width: "100%",
                       padding: "10px",
@@ -250,11 +389,25 @@ function CheckoutPage() {
             </div>
           ) : (
             /* 決済フォーム */
-            <div className={css({ padding: "24px", backgroundColor: "white", borderRadius: "8px", border: "1px solid #ddd" })}>
-              <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "20px" })}>
+            <div
+              className={css({
+                padding: "24px",
+                backgroundColor: "white",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+              })}
+            >
+              <h2
+                className={css({
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  marginBottom: "20px",
+                })}
+              >
                 お支払い情報
               </h2>
               <button
+                type="button"
                 onClick={() => setStep("info")}
                 className={css({
                   marginBottom: "16px",
@@ -287,7 +440,13 @@ function CheckoutPage() {
             height: "fit-content",
           })}
         >
-          <h2 className={css({ fontSize: "20px", fontWeight: "bold", marginBottom: "16px" })}>
+          <h2
+            className={css({
+              fontSize: "20px",
+              fontWeight: "bold",
+              marginBottom: "16px",
+            })}
+          >
             注文内容
           </h2>
 
@@ -317,22 +476,47 @@ function CheckoutPage() {
                     <img
                       src={item.product.image_url}
                       alt={item.product.name}
-                      className={css({ width: "100%", height: "100%", objectFit: "cover" })}
+                      className={css({
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      })}
                     />
                   ) : (
-                    <div className={css({ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#999", fontSize: "10px" })}>
+                    <div
+                      className={css({
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "100%",
+                        color: "#999",
+                        fontSize: "10px",
+                      })}
+                    >
                       No Image
                     </div>
                   )}
                 </div>
                 <div className={css({ flex: 1 })}>
-                  <p className={css({ fontSize: "14px", fontWeight: "bold", marginBottom: "4px" })}>
+                  <p
+                    className={css({
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      marginBottom: "4px",
+                    })}
+                  >
                     {item.product.name}
                   </p>
                   <p className={css({ fontSize: "12px", color: "#666" })}>
                     数量: {item.quantity}
                   </p>
-                  <p className={css({ fontSize: "14px", fontWeight: "bold", color: "#e47911" })}>
+                  <p
+                    className={css({
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      color: "#e47911",
+                    })}
+                  >
                     ¥{(item.product.price * item.quantity).toLocaleString()}
                   </p>
                 </div>
@@ -347,13 +531,25 @@ function CheckoutPage() {
               marginBottom: "16px",
             })}
           >
-            <div className={css({ display: "flex", justifyContent: "space-between", marginBottom: "8px" })}>
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              })}
+            >
               <span className={css({ fontSize: "14px" })}>小計:</span>
               <span className={css({ fontSize: "14px", fontWeight: "bold" })}>
                 ¥{subtotal.toLocaleString()}
               </span>
             </div>
-            <div className={css({ display: "flex", justifyContent: "space-between", marginBottom: "8px" })}>
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              })}
+            >
               <span className={css({ fontSize: "14px" })}>配送料:</span>
               <span className={css({ fontSize: "14px", fontWeight: "bold" })}>
                 ¥0
@@ -361,10 +557,25 @@ function CheckoutPage() {
             </div>
           </div>
 
-          <div className={css({ borderTop: "2px solid #ddd", paddingTop: "16px" })}>
-            <div className={css({ display: "flex", justifyContent: "space-between" })}>
-              <span className={css({ fontSize: "18px", fontWeight: "bold" })}>合計:</span>
-              <span className={css({ fontSize: "24px", fontWeight: "bold", color: "#e47911" })}>
+          <div
+            className={css({ borderTop: "2px solid #ddd", paddingTop: "16px" })}
+          >
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+              })}
+            >
+              <span className={css({ fontSize: "18px", fontWeight: "bold" })}>
+                合計:
+              </span>
+              <span
+                className={css({
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  color: "#e47911",
+                })}
+              >
                 ¥{subtotal.toLocaleString()}
               </span>
             </div>

@@ -78,8 +78,10 @@ function LoginPage() {
     try {
       await signIn(email, password);
       navigate({ to: "/" });
-    } catch (err: any) {
-      setError(err.message || "ログインに失敗しました");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "ログインに失敗しました";
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -93,8 +95,10 @@ function LoginPage() {
     try {
       await signUp(email, password, name);
       setMode("confirm");
-    } catch (err: any) {
-      setError(err.message || "サインアップに失敗しました");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "サインアップに失敗しました";
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -109,8 +113,10 @@ function LoginPage() {
       await confirmSignUp(email, confirmationCode);
       await signIn(email, password);
       navigate({ to: "/" });
-    } catch (err: any) {
-      setError(err.message || "確認に失敗しました");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "確認に失敗しました";
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -143,8 +149,8 @@ function LoginPage() {
           {mode === "signin"
             ? "ログイン"
             : mode === "signup"
-            ? "新規登録"
-            : "確認コード入力"}
+              ? "新規登録"
+              : "確認コード入力"}
         </h1>
 
         {error && (

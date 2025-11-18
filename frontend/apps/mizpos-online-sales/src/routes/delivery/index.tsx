@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { css } from "styled-system/css";
 import { useEffect, useState } from "react";
+import { css } from "styled-system/css";
 
 export const Route = createFileRoute("/delivery/")({
   component: App,
@@ -52,7 +52,7 @@ function App() {
 
     if (!scriptLoaded || !window.YQV5) {
       alert(
-        "トラッキングシステムの読み込み中です。しばらく待ってから再度お試しください。"
+        "トラッキングシステムの読み込み中です。しばらく待ってから再度お試しください。",
       );
       return;
     }
@@ -112,6 +112,7 @@ function App() {
         <a
           href="https://www.post.japanpost.jp/send/fee/kokunai/pdf/kanto.pdf"
           target="_blank"
+          rel="noopener"
         >
           日本郵便
         </a>
@@ -119,6 +120,7 @@ function App() {
         <a
           href="https://www.sagawa-exp.co.jp/send/fare/faretable04.html"
           target="_blank"
+          rel="noopener"
         >
           佐川運輸
         </a>
@@ -126,6 +128,7 @@ function App() {
         <a
           href="https://www.kuronekoyamato.co.jp/ytc/search/estimate/ichiran.html"
           target="_blank"
+          rel="noopener"
         >
           ヤマト運輸
         </a>
@@ -159,6 +162,7 @@ function App() {
         <a
           href="https://www.post.japanpost.jp/int/UGX/index.html"
           target="_blank"
+          rel="noopener"
         >
           こちら
         </a>
@@ -253,6 +257,7 @@ function App() {
             }}
           />
           <button
+            type="button"
             onClick={handleTrack}
             className={css({
               padding: "10px 20px",

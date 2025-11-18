@@ -1,21 +1,26 @@
 import { Amplify } from "aws-amplify";
-import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
 import {
   confirmSignUp,
   fetchAuthSession,
   fetchUserAttributes,
+  type SignInInput,
+  type SignUpInput,
   signIn,
   signOut,
   signUp,
-  type SignInInput,
-  type SignUpInput,
 } from "aws-amplify/auth";
+import type React from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 // Amplify設定
 const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
 const userPoolClientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
-const region = import.meta.env.VITE_COGNITO_REGION || "ap-northeast-1";
 
 if (userPoolId && userPoolClientId) {
   Amplify.configure({
@@ -23,7 +28,6 @@ if (userPoolId && userPoolClientId) {
       Cognito: {
         userPoolId,
         userPoolClientId,
-        region,
       },
     },
   });
@@ -52,12 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 初回マウント時に認証状態を確認
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const session = await fetchAuthSession();
       if (session.tokens?.accessToken) {
@@ -74,7 +73,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // 初回マウント時に認証状態を確認
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const handleSignIn = async (email: string, password: string) => {
     try {
@@ -90,7 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleSignUp = async (email: string, password: string, name?: string) => {
+  const handleSignUp = async (
+    email: string,
+    password: string,
+    name?: string,
+  ) => {
     try {
       const input: SignUpInput = {
         username: email,

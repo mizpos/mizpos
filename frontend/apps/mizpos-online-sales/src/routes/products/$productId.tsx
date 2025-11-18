@@ -14,7 +14,11 @@ function ProductDetailPage() {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
 
-  const { data: product, isLoading, error } = useQuery({
+  const {
+    data: product,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["product", productId],
     queryFn: () => getProduct(productId),
   });
@@ -29,9 +33,14 @@ function ProductDetailPage() {
 
   if (error || !product) {
     return (
-      <div className={css({ padding: "40px", textAlign: "center", color: "red" })}>
+      <div
+        className={css({ padding: "40px", textAlign: "center", color: "red" })}
+      >
         <p>商品の読み込みに失敗しました</p>
-        <Link to="/products" className={css({ color: "blue", textDecoration: "underline" })}>
+        <Link
+          to="/products"
+          className={css({ color: "blue", textDecoration: "underline" })}
+        >
           商品一覧に戻る
         </Link>
       </div>
@@ -44,7 +53,13 @@ function ProductDetailPage() {
   };
 
   return (
-    <div className={css({ maxWidth: "1200px", margin: "0 auto", padding: "40px 20px" })}>
+    <div
+      className={css({
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "40px 20px",
+      })}
+    >
       <Link
         to="/products"
         className={css({
@@ -89,22 +104,42 @@ function ProductDetailPage() {
                 })}
               />
             ) : (
-              <p className={css({ color: "#999", fontSize: "18px" })}>No Image</p>
+              <p className={css({ color: "#999", fontSize: "18px" })}>
+                No Image
+              </p>
             )}
           </div>
         </div>
 
         {/* 商品情報 */}
         <div>
-          <h1 className={css({ fontSize: "28px", fontWeight: "bold", marginBottom: "12px" })}>
+          <h1
+            className={css({
+              fontSize: "28px",
+              fontWeight: "bold",
+              marginBottom: "12px",
+            })}
+          >
             {product.name}
           </h1>
 
-          <p className={css({ fontSize: "16px", color: "#666", marginBottom: "8px" })}>
+          <p
+            className={css({
+              fontSize: "16px",
+              color: "#666",
+              marginBottom: "8px",
+            })}
+          >
             著者: {product.author}
           </p>
 
-          <p className={css({ fontSize: "16px", color: "#666", marginBottom: "20px" })}>
+          <p
+            className={css({
+              fontSize: "16px",
+              color: "#666",
+              marginBottom: "20px",
+            })}
+          >
             出版社: {product.publisher}
           </p>
 
@@ -128,10 +163,22 @@ function ProductDetailPage() {
           </div>
 
           <div className={css({ marginBottom: "20px" })}>
-            <h2 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "8px" })}>
+            <h2
+              className={css({
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "8px",
+              })}
+            >
               商品説明
             </h2>
-            <p className={css({ fontSize: "14px", lineHeight: "1.6", color: "#333" })}>
+            <p
+              className={css({
+                fontSize: "14px",
+                lineHeight: "1.6",
+                color: "#333",
+              })}
+            >
               {product.description || "商品説明はありません"}
             </p>
           </div>
@@ -144,7 +191,12 @@ function ProductDetailPage() {
               在庫: {product.stock_quantity}点
             </p>
             <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
-              種類: {product.variant_type === "physical" ? "物理商品" : product.variant_type === "digital" ? "デジタル商品" : "両方"}
+              種類:{" "}
+              {product.variant_type === "physical"
+                ? "物理商品"
+                : product.variant_type === "digital"
+                  ? "デジタル商品"
+                  : "両方"}
             </p>
           </div>
 
@@ -159,7 +211,12 @@ function ProductDetailPage() {
             <div className={css({ marginBottom: "16px" })}>
               <label
                 htmlFor="quantity"
-                className={css({ fontSize: "14px", fontWeight: "bold", marginBottom: "8px", display: "block" })}
+                className={css({
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  marginBottom: "8px",
+                  display: "block",
+                })}
               >
                 数量:
               </label>
@@ -174,17 +231,19 @@ function ProductDetailPage() {
                   fontSize: "14px",
                 })}
               >
-                {Array.from({ length: Math.min(product.stock_quantity, 10) }, (_, i) => i + 1).map(
-                  (num) => (
-                    <option key={num} value={num}>
-                      {num}
-                    </option>
-                  )
-                )}
+                {Array.from(
+                  { length: Math.min(product.stock_quantity, 10) },
+                  (_, i) => i + 1,
+                ).map((num) => (
+                  <option key={num} value={num}>
+                    {num}
+                  </option>
+                ))}
               </select>
             </div>
 
             <button
+              type="button"
               onClick={handleAddToCart}
               disabled={product.stock_quantity <= 0}
               className={css({

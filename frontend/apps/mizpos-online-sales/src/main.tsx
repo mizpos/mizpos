@@ -2,15 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
-
-// Import the generated route tree
-import { routeTree } from "./routeTree.gen";
-
 // Import providers
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
-
 import reportWebVitals from "./reportWebVitals.ts";
+// Import the generated route tree
+import { routeTree } from "./routeTree.gen";
 import "./panda.css";
 import "./styles.scss";
 
@@ -54,7 +51,7 @@ if (rootElement && !rootElement.innerHTML) {
           </CartProvider>
         </AuthProvider>
       </QueryClientProvider>
-    </StrictMode>
+    </StrictMode>,
   );
 }
 

@@ -15,7 +15,11 @@ export const Route = createFileRoute("/order-complete/")({
 function OrderCompletePage() {
   const { order_id } = Route.useSearch();
 
-  const { data: order, isLoading, error } = useQuery({
+  const {
+    data: order,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["order", order_id],
     queryFn: () => getOrder(order_id),
     enabled: !!order_id,
@@ -23,8 +27,21 @@ function OrderCompletePage() {
 
   if (!order_id) {
     return (
-      <div className={css({ maxWidth: "800px", margin: "0 auto", padding: "40px 20px", textAlign: "center" })}>
-        <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "20px" })}>
+      <div
+        className={css({
+          maxWidth: "800px",
+          margin: "0 auto",
+          padding: "40px 20px",
+          textAlign: "center",
+        })}
+      >
+        <h1
+          className={css({
+            fontSize: "32px",
+            fontWeight: "bold",
+            marginBottom: "20px",
+          })}
+        >
           注文情報が見つかりません
         </h1>
         <Link
@@ -59,14 +76,22 @@ function OrderCompletePage() {
 
   if (error || !order) {
     return (
-      <div className={css({ padding: "40px", textAlign: "center", color: "red" })}>
+      <div
+        className={css({ padding: "40px", textAlign: "center", color: "red" })}
+      >
         <p>注文情報の読み込みに失敗しました</p>
       </div>
     );
   }
 
   return (
-    <div className={css({ maxWidth: "800px", margin: "0 auto", padding: "40px 20px" })}>
+    <div
+      className={css({
+        maxWidth: "800px",
+        margin: "0 auto",
+        padding: "40px 20px",
+      })}
+    >
       <div
         className={css({
           padding: "40px",
@@ -76,11 +101,19 @@ function OrderCompletePage() {
           textAlign: "center",
         })}
       >
-        <h1 className={css({ fontSize: "32px", fontWeight: "bold", marginBottom: "16px", color: "#3c763d" })}>
+        <h1
+          className={css({
+            fontSize: "32px",
+            fontWeight: "bold",
+            marginBottom: "16px",
+            color: "#3c763d",
+          })}
+        >
           ご注文ありがとうございます！
         </h1>
         <p className={css({ fontSize: "16px", color: "#3c763d" })}>
-          注文が完了しました。確認メールを {order.customer_email} に送信しました。
+          注文が完了しました。確認メールを {order.customer_email}{" "}
+          に送信しました。
         </p>
       </div>
 
@@ -93,12 +126,24 @@ function OrderCompletePage() {
           marginBottom: "20px",
         })}
       >
-        <h2 className={css({ fontSize: "24px", fontWeight: "bold", marginBottom: "20px" })}>
+        <h2
+          className={css({
+            fontSize: "24px",
+            fontWeight: "bold",
+            marginBottom: "20px",
+          })}
+        >
           注文詳細
         </h2>
 
         <div className={css({ marginBottom: "16px" })}>
-          <p className={css({ fontSize: "14px", color: "#666", marginBottom: "4px" })}>
+          <p
+            className={css({
+              fontSize: "14px",
+              color: "#666",
+              marginBottom: "4px",
+            })}
+          >
             注文番号
           </p>
           <p className={css({ fontSize: "16px", fontWeight: "bold" })}>
@@ -107,7 +152,13 @@ function OrderCompletePage() {
         </div>
 
         <div className={css({ marginBottom: "16px" })}>
-          <p className={css({ fontSize: "14px", color: "#666", marginBottom: "4px" })}>
+          <p
+            className={css({
+              fontSize: "14px",
+              color: "#666",
+              marginBottom: "4px",
+            })}
+          >
             注文日時
           </p>
           <p className={css({ fontSize: "16px", fontWeight: "bold" })}>
@@ -116,13 +167,18 @@ function OrderCompletePage() {
         </div>
 
         <div className={css({ marginBottom: "16px" })}>
-          <p className={css({ fontSize: "14px", color: "#666", marginBottom: "4px" })}>
+          <p
+            className={css({
+              fontSize: "14px",
+              color: "#666",
+              marginBottom: "4px",
+            })}
+          >
             配送先
           </p>
           <p className={css({ fontSize: "16px" })}>
             {order.customer_name}
-            <br />
-            〒{order.shipping_address?.postal_code}
+            <br />〒{order.shipping_address?.postal_code}
             <br />
             {order.shipping_address?.prefecture} {order.shipping_address?.city}
             <br />
@@ -136,8 +192,20 @@ function OrderCompletePage() {
           </p>
         </div>
 
-        <div className={css({ borderTop: "1px solid #ddd", paddingTop: "16px", marginTop: "16px" })}>
-          <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "12px" })}>
+        <div
+          className={css({
+            borderTop: "1px solid #ddd",
+            paddingTop: "16px",
+            marginTop: "16px",
+          })}
+        >
+          <h3
+            className={css({
+              fontSize: "18px",
+              fontWeight: "bold",
+              marginBottom: "12px",
+            })}
+          >
             注文商品
           </h3>
           {order.items.map((item) => (
@@ -165,24 +233,56 @@ function OrderCompletePage() {
             </div>
           ))}
 
-          <div className={css({ borderTop: "2px solid #ddd", paddingTop: "12px", marginTop: "12px" })}>
-            <div className={css({ display: "flex", justifyContent: "space-between", marginBottom: "8px" })}>
+          <div
+            className={css({
+              borderTop: "2px solid #ddd",
+              paddingTop: "12px",
+              marginTop: "12px",
+            })}
+          >
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              })}
+            >
               <span className={css({ fontSize: "14px" })}>小計:</span>
               <span className={css({ fontSize: "14px", fontWeight: "bold" })}>
                 ¥{order.subtotal.toLocaleString()}
               </span>
             </div>
             {order.discount > 0 && (
-              <div className={css({ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "#c7511f" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
+                  color: "#c7511f",
+                })}
+              >
                 <span className={css({ fontSize: "14px" })}>割引:</span>
                 <span className={css({ fontSize: "14px", fontWeight: "bold" })}>
                   -¥{order.discount.toLocaleString()}
                 </span>
               </div>
             )}
-            <div className={css({ display: "flex", justifyContent: "space-between" })}>
-              <span className={css({ fontSize: "18px", fontWeight: "bold" })}>合計:</span>
-              <span className={css({ fontSize: "24px", fontWeight: "bold", color: "#e47911" })}>
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+              })}
+            >
+              <span className={css({ fontSize: "18px", fontWeight: "bold" })}>
+                合計:
+              </span>
+              <span
+                className={css({
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  color: "#e47911",
+                })}
+              >
                 ¥{order.total.toLocaleString()}
               </span>
             </div>

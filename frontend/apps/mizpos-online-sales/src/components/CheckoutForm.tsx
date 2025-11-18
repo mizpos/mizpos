@@ -1,10 +1,18 @@
-import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import {
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { useCart } from "../contexts/CartContext";
-import { createOrder, createOrderPaymentIntent, type CartItem as ApiCartItem } from "../lib/api";
+import {
+  type CartItem as ApiCartItem,
+  createOrder,
+  createOrderPaymentIntent,
+} from "../lib/api";
 
 interface CheckoutFormProps {
   customerInfo: {
@@ -57,11 +65,12 @@ export default function CheckoutForm({ customerInfo }: CheckoutFormProps) {
       return order;
     },
     onSuccess: async (order) => {
-      setOrderId(order.order_id || order.sale_id);
+      const orderId = order.order_id || order.sale_id || "";
+      setOrderId(orderId);
 
       // PaymentIntent作成
       try {
-        const paymentIntent = await createOrderPaymentIntent(order.order_id || order.sale_id);
+        const paymentIntent = await createOrderPaymentIntent(orderId);
         setClientSecret(paymentIntent.client_secret);
         setPaymentIntentReady(true);
       } catch (error) {
@@ -110,8 +119,10 @@ export default function CheckoutForm({ customerInfo }: CheckoutFormProps) {
           search: { order_id: orderId || "" },
         });
       }
-    } catch (error) {
-      setErrorMessage("決済処理中にエラーが発生しました");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "不明なエラー";
+      setErrorMessage(`決済処理中にエラーが発生しました: ${errorMessage}`);
       setIsProcessing(false);
     }
   };
@@ -126,7 +137,14 @@ export default function CheckoutForm({ customerInfo }: CheckoutFormProps) {
 
   if (createOrderMutation.isError) {
     return (
-      <div className={css({ padding: "20px", backgroundColor: "#f8d7da", borderRadius: "4px", color: "#721c24" })}>
+      <div
+        className={css({
+          padding: "20px",
+          backgroundColor: "#f8d7da",
+          borderRadius: "4px",
+          color: "#721c24",
+        })}
+      >
         <p>{errorMessage}</p>
       </div>
     );
@@ -177,7 +195,14 @@ export default function CheckoutForm({ customerInfo }: CheckoutFormProps) {
               },
             })}
           >
-            {isProcessing ? "処理中..." : `¥${items.reduce((sum, item) => sum + item.product.price * item.quantity, 0).toLocaleString()} を支払う`}
+            {isProcessing
+              ? "処理中..."
+              : `¥${items
+                  .reduce(
+                    (sum, item) => sum + item.product.price * item.quantity,
+                    0,
+                  )
+                  .toLocaleString()} を支払う`}
           </button>
         </>
       ) : (

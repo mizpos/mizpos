@@ -1,8 +1,8 @@
 import { IconSearch } from "@tabler/icons-react";
-import { css } from "styled-system/css";
-import { CartIcon } from "./CartIcon";
 import { Link } from "@tanstack/react-router";
+import { css } from "styled-system/css";
 import { useAuth } from "../contexts/AuthContext";
+import { CartIcon } from "./CartIcon";
 
 interface NavigationItem {
   label: string;
@@ -104,6 +104,7 @@ export default function Header({
             })}
           />
           <button
+            type="button"
             className={css({
               display: "flex",
               gap: "10px",
@@ -142,7 +143,13 @@ export default function Header({
             >
               こんにちは、{user.name || user.email.split("@")[0]}さん
             </p>
-            <div className={css({ display: "flex", gap: "8px", alignItems: "center" })}>
+            <div
+              className={css({
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+              })}
+            >
               <Link
                 to="/my-orders"
                 className={css({
@@ -157,8 +164,11 @@ export default function Header({
               >
                 注文履歴
               </Link>
-              <span className={css({ color: "white", fontSize: "12px" })}>|</span>
+              <span className={css({ color: "white", fontSize: "12px" })}>
+                |
+              </span>
               <button
+                type="button"
                 onClick={handleSignOut}
                 className={css({
                   fontSize: "14px",
@@ -269,9 +279,9 @@ export default function Header({
         })}
         style={{ backgroundColor: colors.navigationBar }}
       >
-        {navigationItems.map((item, index) => (
+        {navigationItems.map((item) => (
           <a
-            key={index}
+            key={item.href}
             href={item.href}
             className={css({
               cursor: "pointer",

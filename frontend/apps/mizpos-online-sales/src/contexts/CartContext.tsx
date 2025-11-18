@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import type React from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import type { Product } from "../lib/api";
 
 export interface CartItem {
@@ -65,14 +66,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (product: Product, quantity = 1) => {
     setItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.product.product_id === product.product_id);
+      const existingItem = prevItems.find(
+        (item) => item.product.product_id === product.product_id,
+      );
 
       if (existingItem) {
         // 既存のアイテムの数量を更新
         return prevItems.map((item) =>
           item.product.product_id === product.product_id
             ? { ...item, quantity: item.quantity + quantity }
-            : item
+            : item,
         );
       }
 
@@ -82,7 +85,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeItem = (productId: string) => {
-    setItems((prevItems) => prevItems.filter((item) => item.product.product_id !== productId));
+    setItems((prevItems) =>
+      prevItems.filter((item) => item.product.product_id !== productId),
+    );
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -93,8 +98,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.product.product_id === productId ? { ...item, quantity } : item
-      )
+        item.product.product_id === productId ? { ...item, quantity } : item,
+      ),
     );
   };
 
@@ -103,7 +108,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0,
+  );
 
   return (
     <CartContext.Provider
