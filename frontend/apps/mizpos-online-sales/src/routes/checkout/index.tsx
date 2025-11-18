@@ -1,10 +1,16 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import CheckoutForm from "../../components/CheckoutForm";
 import { useCart } from "../../contexts/CartContext";
+import {
+  type CartItem as ApiCartItem,
+  createOrder,
+  createOrderPaymentIntent,
+} from "../../lib/api";
 
 // Stripe公開可能キーを読み込み
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
@@ -16,6 +22,8 @@ export const Route = createFileRoute("/checkout/")({
 function CheckoutPage() {
   const { items, subtotal } = useCart();
   const [step, setStep] = useState<"info" | "payment">("info");
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [customerInfo, setCustomerInfo] = useState({
     email: "",
     name: "",
@@ -25,6 +33,46 @@ function CheckoutPage() {
     address_line1: "",
     address_line2: "",
     phone_number: "",
+  });
+
+  // 注文作成mutation
+  const createOrderMutation = useMutation({
+    mutationFn: async () => {
+      const cartItems: ApiCartItem[] = items.map((item) => ({
+        product_id: item.product.product_id,
+        quantity: item.quantity,
+        unit_price: item.product.price,
+      }));
+
+      const order = await createOrder({
+        cart_items: cartItems,
+        customer_email: customerInfo.email,
+        customer_name: customerInfo.name,
+        shipping_address: {
+          name: customerInfo.name,
+          postal_code: customerInfo.postalCode,
+          prefecture: customerInfo.prefecture,
+          city: customerInfo.city,
+          address_line1: customerInfo.address_line1,
+          address_line2: customerInfo.address_line2,
+          phone_number: customerInfo.phone_number,
+        },
+      });
+
+      return order;
+    },
+    onSuccess: async (order) => {
+      const orderId = order.order_id || order.sale_id || "";
+      setOrderId(orderId);
+
+      // PaymentIntent作成
+      try {
+        const paymentIntent = await createOrderPaymentIntent(orderId);
+        setClientSecret(paymentIntent.client_secret);
+      } catch (error) {
+        console.error("PaymentIntent creation failed:", error);
+      }
+    },
   });
 
   if (items.length === 0) {
@@ -61,6 +109,8 @@ function CheckoutPage() {
 
   const handleInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // 注文を作成してPaymentIntentを取得
+    createOrderMutation.mutate();
     setStep("payment");
   };
 
@@ -424,9 +474,18 @@ function CheckoutPage() {
               >
                 ← 配送先情報を編集
               </button>
-              <Elements stripe={stripePromise}>
-                <CheckoutForm customerInfo={customerInfo} />
-              </Elements>
+              {clientSecret ? (
+                <Elements
+                  stripe={stripePromise}
+                  options={{ clientSecret }}
+                >
+                  <CheckoutForm orderId={orderId || ""} />
+                </Elements>
+              ) : (
+                <div className={css({ padding: "40px", textAlign: "center" })}>
+                  <p>決済の準備中...</p>
+                </div>
+              )}
             </div>
           )}
         </div>
