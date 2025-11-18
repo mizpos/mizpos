@@ -453,9 +453,9 @@ def create_online_order(
         coupon = get_coupon_by_code(coupon_code)
         if coupon:
             validate_coupon(coupon)
-            discount = Decimal(str(calculate_coupon_discount(
-                coupon, cart_items_models, products_info
-            )))
+            discount = Decimal(
+                str(calculate_coupon_discount(coupon, cart_items_models, products_info))
+            )
             increment_coupon_usage(coupon)
 
     total = subtotal - discount

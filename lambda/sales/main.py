@@ -179,9 +179,11 @@ async def create_sale(
                 raise HTTPException(status_code=400, detail="Invalid coupon code")
 
             validate_coupon(coupon)
-            discount = Decimal(str(calculate_coupon_discount(
-                coupon, request.cart_items, products_info
-            )))
+            discount = Decimal(
+                str(
+                    calculate_coupon_discount(coupon, request.cart_items, products_info)
+                )
+            )
             increment_coupon_usage(coupon)
 
         total = subtotal - discount
