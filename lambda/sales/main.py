@@ -583,7 +583,9 @@ async def create_order_payment_intent(order_id: str):
                 pass  # 既存のPaymentIntentが見つからない場合は新規作成
 
         # 新規PaymentIntent作成
-        amount_jpy = int(float(order["total"]))
+        total = order["total"]
+        # Decimalまたはfloatをintに変換
+        amount_jpy = int(total) if isinstance(total, (int, float, Decimal)) else int(float(total))
         intent = stripe.PaymentIntent.create(
             amount=amount_jpy,
             currency="jpy",

@@ -51,12 +51,20 @@ def init_stripe() -> None:
 
 def dynamo_to_dict(item: dict) -> dict:
     """DynamoDB のレスポンスを通常のdictに変換"""
+    def convert_value(value):
+        """再帰的にDecimalを変換"""
+        if isinstance(value, Decimal):
+            return float(value)
+        elif isinstance(value, dict):
+            return {k: convert_value(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [convert_value(v) for v in value]
+        else:
+            return value
+
     result = {}
     for key, value in item.items():
-        if isinstance(value, Decimal):
-            result[key] = float(value)
-        else:
-            result[key] = value
+        result[key] = convert_value(value)
     return result
 
 
