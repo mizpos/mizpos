@@ -30,9 +30,23 @@ interface Sale {
   discount_amount: number;
   final_amount: number;
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
-  status: "pending" | "completed" | "cancelled";
+  status: "pending" | "completed" | "shipped" | "cancelled";
   coupon_code?: string;
   customer_email?: string;
+  customer_name?: string;
+  shipping_address?: {
+    name: string;
+    postal_code: string;
+    prefecture: string;
+    city: string;
+    address_line1: string;
+    address_line2?: string;
+    phone_number: string;
+  };
+  tracking_number?: string;
+  carrier?: string;
+  shipping_notes?: string;
+  shipped_at?: string;
   created_at: string;
   completed_at?: string;
 }
@@ -41,6 +55,12 @@ function SalesPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [isShippingFormOpen, setIsShippingFormOpen] = useState(false);
+  const [shippingFormData, setShippingFormData] = useState({
+    tracking_number: "",
+    carrier: "",
+    notes: "",
+  });
 
   const { data: salesData = [], isLoading } = useQuery({
     queryKey: ["sales"],
@@ -70,6 +90,28 @@ function SalesPage() {
     },
   });
 
+  const updateShippingMutation = useMutation({
+    mutationFn: async ({
+      saleId,
+      data,
+    }: {
+      saleId: string;
+      data: { tracking_number?: string; carrier?: string; notes?: string };
+    }) => {
+      const { sales } = await getAuthenticatedClients();
+      const { error } = await sales.POST("/orders/{order_id}/shipping", {
+        params: { path: { order_id: saleId } },
+        body: data,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      setIsShippingFormOpen(false);
+      setShippingFormData({ tracking_number: "", carrier: "", notes: "" });
+    },
+  });
+
   const filteredSales = salesData.filter(
     (sale) =>
       sale.sale_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,6 +131,11 @@ function SalesPage() {
         backgroundColor: "green.100",
         color: "green.800",
         label: "完了",
+      },
+      shipped: {
+        backgroundColor: "blue.100",
+        color: "blue.800",
+        label: "発送済み",
       },
       cancelled: {
         backgroundColor: "red.100",
@@ -542,14 +589,249 @@ function SalesPage() {
               </div>
             </div>
 
-            {selectedSale.status === "pending" && (
-              <div
-                className={css({
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "2",
-                })}
-              >
+            {/* 配送先住所 */}
+            {selectedSale.shipping_address && (
+              <div>
+                <p
+                  className={css({
+                    fontSize: "sm",
+                    fontWeight: "semibold",
+                    marginBottom: "2",
+                  })}
+                >
+                  配送先
+                </p>
+                <div
+                  className={css({
+                    backgroundColor: "gray.50",
+                    padding: "3",
+                    borderRadius: "md",
+                    fontSize: "sm",
+                  })}
+                >
+                  <p>{selectedSale.customer_name || selectedSale.shipping_address.name}</p>
+                  <p>〒{selectedSale.shipping_address.postal_code}</p>
+                  <p>
+                    {selectedSale.shipping_address.prefecture}{" "}
+                    {selectedSale.shipping_address.city}
+                  </p>
+                  <p>{selectedSale.shipping_address.address_line1}</p>
+                  {selectedSale.shipping_address.address_line2 && (
+                    <p>{selectedSale.shipping_address.address_line2}</p>
+                  )}
+                  <p>電話: {selectedSale.shipping_address.phone_number}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 発送情報 */}
+            {selectedSale.status === "shipped" && selectedSale.tracking_number && (
+              <div>
+                <p
+                  className={css({
+                    fontSize: "sm",
+                    fontWeight: "semibold",
+                    marginBottom: "2",
+                  })}
+                >
+                  発送情報
+                </p>
+                <div
+                  className={css({
+                    backgroundColor: "blue.50",
+                    padding: "3",
+                    borderRadius: "md",
+                    fontSize: "sm",
+                  })}
+                >
+                  {selectedSale.carrier && (
+                    <p className={css({ marginBottom: "1" })}>
+                      <strong>配送業者:</strong> {selectedSale.carrier}
+                    </p>
+                  )}
+                  <p className={css({ marginBottom: "1" })}>
+                    <strong>追跡番号:</strong> {selectedSale.tracking_number}
+                  </p>
+                  {selectedSale.shipped_at && (
+                    <p className={css({ marginBottom: "1" })}>
+                      <strong>発送日時:</strong>{" "}
+                      {formatDate(selectedSale.shipped_at)}
+                    </p>
+                  )}
+                  {selectedSale.shipping_notes && (
+                    <p>
+                      <strong>備考:</strong> {selectedSale.shipping_notes}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 発送登録フォーム */}
+            {isShippingFormOpen && (
+              <div>
+                <p
+                  className={css({
+                    fontSize: "sm",
+                    fontWeight: "semibold",
+                    marginBottom: "2",
+                  })}
+                >
+                  発送情報を登録
+                </p>
+                <div
+                  className={css({
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "3",
+                  })}
+                >
+                  <div>
+                    <label
+                      className={css({
+                        display: "block",
+                        fontSize: "xs",
+                        fontWeight: "medium",
+                        marginBottom: "1",
+                      })}
+                    >
+                      配送業者
+                    </label>
+                    <input
+                      type="text"
+                      value={shippingFormData.carrier}
+                      onChange={(e) =>
+                        setShippingFormData({
+                          ...shippingFormData,
+                          carrier: e.target.value,
+                        })
+                      }
+                      placeholder="例: ヤマト運輸"
+                      className={css({
+                        width: "100%",
+                        padding: "2",
+                        border: "1px solid",
+                        borderColor: "gray.300",
+                        borderRadius: "md",
+                        fontSize: "sm",
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className={css({
+                        display: "block",
+                        fontSize: "xs",
+                        fontWeight: "medium",
+                        marginBottom: "1",
+                      })}
+                    >
+                      追跡番号
+                    </label>
+                    <input
+                      type="text"
+                      value={shippingFormData.tracking_number}
+                      onChange={(e) =>
+                        setShippingFormData({
+                          ...shippingFormData,
+                          tracking_number: e.target.value,
+                        })
+                      }
+                      placeholder="追跡番号を入力"
+                      className={css({
+                        width: "100%",
+                        padding: "2",
+                        border: "1px solid",
+                        borderColor: "gray.300",
+                        borderRadius: "md",
+                        fontSize: "sm",
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className={css({
+                        display: "block",
+                        fontSize: "xs",
+                        fontWeight: "medium",
+                        marginBottom: "1",
+                      })}
+                    >
+                      備考
+                    </label>
+                    <textarea
+                      value={shippingFormData.notes}
+                      onChange={(e) =>
+                        setShippingFormData({
+                          ...shippingFormData,
+                          notes: e.target.value,
+                        })
+                      }
+                      placeholder="配送に関する備考があれば入力"
+                      rows={3}
+                      className={css({
+                        width: "100%",
+                        padding: "2",
+                        border: "1px solid",
+                        borderColor: "gray.300",
+                        borderRadius: "md",
+                        fontSize: "sm",
+                      })}
+                    />
+                  </div>
+                  <div
+                    className={css({
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: "2",
+                    })}
+                  >
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setIsShippingFormOpen(false);
+                        setShippingFormData({
+                          tracking_number: "",
+                          carrier: "",
+                          notes: "",
+                        });
+                      }}
+                    >
+                      キャンセル
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (selectedSale) {
+                          updateShippingMutation.mutate({
+                            saleId: selectedSale.sale_id,
+                            data: {
+                              tracking_number: shippingFormData.tracking_number || undefined,
+                              carrier: shippingFormData.carrier || undefined,
+                              notes: shippingFormData.notes || undefined,
+                            },
+                          });
+                        }
+                      }}
+                      disabled={updateShippingMutation.isPending}
+                    >
+                      {updateShippingMutation.isPending
+                        ? "登録中..."
+                        : "発送登録"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* アクションボタン */}
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "2",
+              })}
+            >
+              {selectedSale.status === "pending" && (
                 <Button
                   variant="danger"
                   onClick={() => {
@@ -566,8 +848,17 @@ function SalesPage() {
                   <IconX size={16} />
                   {cancelMutation.isPending ? "処理中..." : "キャンセル"}
                 </Button>
-              </div>
-            )}
+              )}
+              {(selectedSale.status === "completed" || selectedSale.status === "pending") &&
+                selectedSale.shipping_address &&
+                !isShippingFormOpen && (
+                  <Button
+                    onClick={() => setIsShippingFormOpen(true)}
+                  >
+                    発送登録
+                  </Button>
+                )}
+            </div>
           </div>
         )}
       </Modal>
