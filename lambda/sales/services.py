@@ -51,6 +51,7 @@ def init_stripe() -> None:
 
 def dynamo_to_dict(item: dict) -> dict:
     """DynamoDB のレスポンスを通常のdictに変換"""
+
     def convert_value(value):
         """再帰的にDecimalを変換"""
         if isinstance(value, Decimal):
