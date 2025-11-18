@@ -54,12 +54,9 @@ importers:
         specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
     devDependencies:
-      '@biomejs/biome':
-        specifier: 2.2.4
-        version: 2.2.4
       '@pandacss/dev':
         specifier: ^1.5.1
-        version: 1.5.1(jsdom@27.2.0)(typescript@5.9.2)
+        version: 1.5.1(jsdom@27.2.0)(typescript@5.9.3)
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.1
@@ -81,9 +78,6 @@ importers:
       jsdom:
         specifier: ^27.0.0
         version: 27.2.0
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.2
       vite:
         specifier: ^7.1.7
         version: 7.2.2(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.94.1)(tsx@4.20.6)
@@ -106,9 +100,6 @@ importers:
         specifier: ^19.1.0
         version: 19.2.0(react@19.2.0)
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.3.5
-        version: 2.3.5
       '@tauri-apps/cli':
         specifier: ^2
         version: 2.9.4
@@ -121,9 +112,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.6.0
         version: 4.7.0(vite@7.2.2(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.94.1)(tsx@4.20.6))
-      typescript:
-        specifier: ~5.8.3
-        version: 5.8.3
       vite:
         specifier: ^7.0.4
         version: 7.2.2(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.94.1)(tsx@4.20.6)
@@ -170,12 +158,9 @@ importers:
         specifier: ^1.94.1
         version: 1.94.1
     devDependencies:
-      '@biomejs/biome':
-        specifier: 2.2.4
-        version: 2.2.4
       '@pandacss/dev':
         specifier: ^1.5.1
-        version: 1.5.1(jsdom@27.2.0)(typescript@5.9.2)
+        version: 1.5.1(jsdom@27.2.0)(typescript@5.9.3)
       '@tanstack/devtools-vite':
         specifier: ^0.3.11
         version: 0.3.11(vite@7.2.2(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.94.1)(tsx@4.20.6))
@@ -200,9 +185,6 @@ importers:
       jsdom:
         specifier: ^27.0.0
         version: 27.2.0
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.2
       vite:
         specifier: ^7.1.7
         version: 7.2.2(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.94.1)(tsx@4.20.6)
@@ -219,15 +201,9 @@ importers:
         specifier: ^0.15.0
         version: 0.15.0
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.3.5
-        version: 2.3.5
       openapi-typescript:
         specifier: ^7.10.1
-        version: 7.10.1(typescript@5.9.2)
-      typescript:
-        specifier: 5.9.2
-        version: 5.9.2
+        version: 7.10.1(typescript@5.9.3)
 
 packages:
 
@@ -580,32 +556,15 @@ packages:
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
 
-  '@biomejs/biome@2.2.4':
-    resolution: {integrity: sha512-TBHU5bUy/Ok6m8c0y3pZiuO/BZoY/OcGxoLlrfQof5s8ISVwbVBdFINPQZyFfKwil8XibYWb7JMwnT8wT4WVPg==}
-    engines: {node: '>=14.21.3'}
-    hasBin: true
-
   '@biomejs/biome@2.3.5':
     resolution: {integrity: sha512-HvLhNlIlBIbAV77VysRIBEwp55oM/QAjQEin74QQX9Xb259/XP/D5AGGnZMOyF1el4zcvlNYYR3AyTMUV3ILhg==}
     engines: {node: '>=14.21.3'}
     hasBin: true
 
-  '@biomejs/cli-darwin-arm64@2.2.4':
-    resolution: {integrity: sha512-RJe2uiyaloN4hne4d2+qVj3d3gFJFbmrr5PYtkkjei1O9c+BjGXgpUPVbi8Pl8syumhzJjFsSIYkcLt2VlVLMA==}
-    engines: {node: '>=14.21.3'}
-    cpu: [arm64]
-    os: [darwin]
-
   '@biomejs/cli-darwin-arm64@2.3.5':
     resolution: {integrity: sha512-fLdTur8cJU33HxHUUsii3GLx/TR0BsfQx8FkeqIiW33cGMtUD56fAtrh+2Fx1uhiCsVZlFh6iLKUU3pniZREQw==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
-    os: [darwin]
-
-  '@biomejs/cli-darwin-x64@2.2.4':
-    resolution: {integrity: sha512-cFsdB4ePanVWfTnPVaUX+yr8qV8ifxjBKMkZwN7gKb20qXPxd/PmwqUH8mY5wnM9+U0QwM76CxFyBRJhC9tQwg==}
-    engines: {node: '>=14.21.3'}
-    cpu: [x64]
     os: [darwin]
 
   '@biomejs/cli-darwin-x64@2.3.5':
@@ -614,20 +573,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@biomejs/cli-linux-arm64-musl@2.2.4':
-    resolution: {integrity: sha512-7TNPkMQEWfjvJDaZRSkDCPT/2r5ESFPKx+TEev+I2BXDGIjfCZk2+b88FOhnJNHtksbOZv8ZWnxrA5gyTYhSsQ==}
-    engines: {node: '>=14.21.3'}
-    cpu: [arm64]
-    os: [linux]
-
   '@biomejs/cli-linux-arm64-musl@2.3.5':
     resolution: {integrity: sha512-eGUG7+hcLgGnMNl1KHVZUYxahYAhC462jF/wQolqu4qso2MSk32Q+QrpN7eN4jAHAg7FUMIo897muIhK4hXhqg==}
-    engines: {node: '>=14.21.3'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@biomejs/cli-linux-arm64@2.2.4':
-    resolution: {integrity: sha512-M/Iz48p4NAzMXOuH+tsn5BvG/Jb07KOMTdSVwJpicmhN309BeEyRyQX+n1XDF0JVSlu28+hiTQ2L4rZPvu7nMw==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
     os: [linux]
@@ -638,20 +585,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@biomejs/cli-linux-x64-musl@2.2.4':
-    resolution: {integrity: sha512-m41nFDS0ksXK2gwXL6W6yZTYPMH0LughqbsxInSKetoH6morVj43szqKx79Iudkp8WRT5SxSh7qVb8KCUiewGg==}
-    engines: {node: '>=14.21.3'}
-    cpu: [x64]
-    os: [linux]
-
   '@biomejs/cli-linux-x64-musl@2.3.5':
     resolution: {integrity: sha512-awVuycTPpVTH/+WDVnEEYSf6nbCBHf/4wB3lquwT7puhNg8R4XvonWNZzUsfHZrCkjkLhFH/vCZK5jHatD9FEg==}
-    engines: {node: '>=14.21.3'}
-    cpu: [x64]
-    os: [linux]
-
-  '@biomejs/cli-linux-x64@2.2.4':
-    resolution: {integrity: sha512-orr3nnf2Dpb2ssl6aihQtvcKtLySLta4E2UcXdp7+RTa7mfJjBgIsbS0B9GC8gVu0hjOu021aU8b3/I1tn+pVQ==}
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [linux]
@@ -662,22 +597,10 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@biomejs/cli-win32-arm64@2.2.4':
-    resolution: {integrity: sha512-NXnfTeKHDFUWfxAefa57DiGmu9VyKi0cDqFpdI+1hJWQjGJhJutHPX0b5m+eXvTKOaf+brU+P0JrQAZMb5yYaQ==}
-    engines: {node: '>=14.21.3'}
-    cpu: [arm64]
-    os: [win32]
-
   '@biomejs/cli-win32-arm64@2.3.5':
     resolution: {integrity: sha512-DlBiMlBZZ9eIq4H7RimDSGsYcOtfOIfZOaI5CqsWiSlbTfqbPVfWtCf92wNzx8GNMbu1s7/g3ZZESr6+GwM/SA==}
     engines: {node: '>=14.21.3'}
     cpu: [arm64]
-    os: [win32]
-
-  '@biomejs/cli-win32-x64@2.2.4':
-    resolution: {integrity: sha512-3Y4V4zVRarVh/B/eSHczR4LYoSVyv3Dfuvm3cWs5w/HScccS0+Wt/lHOcDTRYeHjQmMYVC3rIRWqyN2EI52+zg==}
-    engines: {node: '>=14.21.3'}
-    cpu: [x64]
     os: [win32]
 
   '@biomejs/cli-win32-x64@2.3.5':
@@ -2976,11 +2899,6 @@ packages:
     resolution: {integrity: sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA==}
     engines: {node: '>=16'}
 
-  typescript@5.8.3:
-    resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   typescript@5.9.2:
     resolution: {integrity: sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==}
     engines: {node: '>=14.17'}
@@ -3978,17 +3896,6 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@biomejs/biome@2.2.4':
-    optionalDependencies:
-      '@biomejs/cli-darwin-arm64': 2.2.4
-      '@biomejs/cli-darwin-x64': 2.2.4
-      '@biomejs/cli-linux-arm64': 2.2.4
-      '@biomejs/cli-linux-arm64-musl': 2.2.4
-      '@biomejs/cli-linux-x64': 2.2.4
-      '@biomejs/cli-linux-x64-musl': 2.2.4
-      '@biomejs/cli-win32-arm64': 2.2.4
-      '@biomejs/cli-win32-x64': 2.2.4
-
   '@biomejs/biome@2.3.5':
     optionalDependencies:
       '@biomejs/cli-darwin-arm64': 2.3.5
@@ -4000,49 +3907,25 @@ snapshots:
       '@biomejs/cli-win32-arm64': 2.3.5
       '@biomejs/cli-win32-x64': 2.3.5
 
-  '@biomejs/cli-darwin-arm64@2.2.4':
-    optional: true
-
   '@biomejs/cli-darwin-arm64@2.3.5':
-    optional: true
-
-  '@biomejs/cli-darwin-x64@2.2.4':
     optional: true
 
   '@biomejs/cli-darwin-x64@2.3.5':
     optional: true
 
-  '@biomejs/cli-linux-arm64-musl@2.2.4':
-    optional: true
-
   '@biomejs/cli-linux-arm64-musl@2.3.5':
-    optional: true
-
-  '@biomejs/cli-linux-arm64@2.2.4':
     optional: true
 
   '@biomejs/cli-linux-arm64@2.3.5':
     optional: true
 
-  '@biomejs/cli-linux-x64-musl@2.2.4':
-    optional: true
-
   '@biomejs/cli-linux-x64-musl@2.3.5':
-    optional: true
-
-  '@biomejs/cli-linux-x64@2.2.4':
     optional: true
 
   '@biomejs/cli-linux-x64@2.3.5':
     optional: true
 
-  '@biomejs/cli-win32-arm64@2.2.4':
-    optional: true
-
   '@biomejs/cli-win32-arm64@2.3.5':
-    optional: true
-
-  '@biomejs/cli-win32-x64@2.2.4':
     optional: true
 
   '@biomejs/cli-win32-x64@2.3.5':
@@ -4242,13 +4125,13 @@ snapshots:
       postcss-selector-parser: 7.1.0
       ts-pattern: 5.9.0
 
-  '@pandacss/dev@1.5.1(jsdom@27.2.0)(typescript@5.9.2)':
+  '@pandacss/dev@1.5.1(jsdom@27.2.0)(typescript@5.9.3)':
     dependencies:
       '@clack/prompts': 0.11.0
       '@pandacss/config': 1.5.1
       '@pandacss/logger': 1.5.1
-      '@pandacss/node': 1.5.1(jsdom@27.2.0)(typescript@5.9.2)
-      '@pandacss/postcss': 1.5.1(jsdom@27.2.0)(typescript@5.9.2)
+      '@pandacss/node': 1.5.1(jsdom@27.2.0)(typescript@5.9.3)
+      '@pandacss/postcss': 1.5.1(jsdom@27.2.0)(typescript@5.9.3)
       '@pandacss/preset-base': 1.5.1
       '@pandacss/preset-panda': 1.5.1
       '@pandacss/shared': 1.5.1
@@ -4259,10 +4142,10 @@ snapshots:
       - jsdom
       - typescript
 
-  '@pandacss/extractor@1.5.1(jsdom@27.2.0)(typescript@5.9.2)':
+  '@pandacss/extractor@1.5.1(jsdom@27.2.0)(typescript@5.9.3)':
     dependencies:
       '@pandacss/shared': 1.5.1
-      ts-evaluator: 1.2.0(jsdom@27.2.0)(typescript@5.9.2)
+      ts-evaluator: 1.2.0(jsdom@27.2.0)(typescript@5.9.3)
       ts-morph: 27.0.2
     transitivePeerDependencies:
       - jsdom
@@ -4289,13 +4172,13 @@ snapshots:
       '@pandacss/types': 1.5.1
       kleur: 4.1.5
 
-  '@pandacss/node@1.5.1(jsdom@27.2.0)(typescript@5.9.2)':
+  '@pandacss/node@1.5.1(jsdom@27.2.0)(typescript@5.9.3)':
     dependencies:
       '@pandacss/config': 1.5.1
       '@pandacss/core': 1.5.1
       '@pandacss/generator': 1.5.1
       '@pandacss/logger': 1.5.1
-      '@pandacss/parser': 1.5.1(jsdom@27.2.0)(typescript@5.9.2)
+      '@pandacss/parser': 1.5.1(jsdom@27.2.0)(typescript@5.9.3)
       '@pandacss/reporter': 1.5.1
       '@pandacss/shared': 1.5.1
       '@pandacss/token-dictionary': 1.5.1
@@ -4318,16 +4201,16 @@ snapshots:
       prettier: 3.2.5
       ts-morph: 27.0.2
       ts-pattern: 5.9.0
-      tsconfck: 3.1.6(typescript@5.9.2)
+      tsconfck: 3.1.6(typescript@5.9.3)
     transitivePeerDependencies:
       - jsdom
       - typescript
 
-  '@pandacss/parser@1.5.1(jsdom@27.2.0)(typescript@5.9.2)':
+  '@pandacss/parser@1.5.1(jsdom@27.2.0)(typescript@5.9.3)':
     dependencies:
       '@pandacss/config': 1.5.1
       '@pandacss/core': 1.5.1
-      '@pandacss/extractor': 1.5.1(jsdom@27.2.0)(typescript@5.9.2)
+      '@pandacss/extractor': 1.5.1(jsdom@27.2.0)(typescript@5.9.3)
       '@pandacss/logger': 1.5.1
       '@pandacss/shared': 1.5.1
       '@pandacss/types': 1.5.1
@@ -4339,9 +4222,9 @@ snapshots:
       - jsdom
       - typescript
 
-  '@pandacss/postcss@1.5.1(jsdom@27.2.0)(typescript@5.9.2)':
+  '@pandacss/postcss@1.5.1(jsdom@27.2.0)(typescript@5.9.3)':
     dependencies:
-      '@pandacss/node': 1.5.1(jsdom@27.2.0)(typescript@5.9.2)
+      '@pandacss/node': 1.5.1(jsdom@27.2.0)(typescript@5.9.3)
       postcss: 8.5.6
     transitivePeerDependencies:
       - jsdom
@@ -6066,6 +5949,16 @@ snapshots:
       typescript: 5.9.2
       yargs-parser: 21.1.1
 
+  openapi-typescript@7.10.1(typescript@5.9.3):
+    dependencies:
+      '@redocly/openapi-core': 1.34.5(supports-color@10.2.2)
+      ansi-colors: 4.1.3
+      change-case: 5.4.4
+      parse-json: 8.3.0
+      supports-color: 10.2.2
+      typescript: 5.9.3
+      yargs-parser: 21.1.1
+
   outdent@0.8.0: {}
 
   package-manager-detector@1.5.0: {}
@@ -6361,12 +6254,12 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  ts-evaluator@1.2.0(jsdom@27.2.0)(typescript@5.9.2):
+  ts-evaluator@1.2.0(jsdom@27.2.0)(typescript@5.9.3):
     dependencies:
       ansi-colors: 4.1.3
       crosspath: 2.0.0
       object-path: 0.11.8
-      typescript: 5.9.2
+      typescript: 5.9.3
     optionalDependencies:
       jsdom: 27.2.0
 
@@ -6377,9 +6270,9 @@ snapshots:
 
   ts-pattern@5.9.0: {}
 
-  tsconfck@3.1.6(typescript@5.9.2):
+  tsconfck@3.1.6(typescript@5.9.3):
     optionalDependencies:
-      typescript: 5.9.2
+      typescript: 5.9.3
 
   tslib@2.8.1: {}
 
@@ -6418,8 +6311,6 @@ snapshots:
       turbo-windows-arm64: 2.6.1
 
   type-fest@4.41.0: {}
-
-  typescript@5.8.3: {}
 
   typescript@5.9.2: {}
 

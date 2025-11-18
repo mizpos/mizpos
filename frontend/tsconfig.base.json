@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    /* 言語とモジュール */
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022"],
+    "jsx": "react-jsx",
+
+    /* モジュール解決 */
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+
+    /* 型チェック */
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}

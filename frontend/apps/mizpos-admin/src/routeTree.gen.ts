@@ -8,230 +8,230 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as UsersRouteImport } from './routes/users'
-import { Route as StockRouteImport } from './routes/stock'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SalesRouteImport } from './routes/sales'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as PublishersRouteImport } from './routes/publishers'
-import { Route as ProductsRouteImport } from './routes/products'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ChangePasswordRouteImport } from './routes/change-password'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as ChangePasswordRouteImport } from "./routes/change-password";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as LoginRouteImport } from "./routes/login";
+import { Route as ProductsRouteImport } from "./routes/products";
+import { Route as PublishersRouteImport } from "./routes/publishers";
+import { Route as ReportsRouteImport } from "./routes/reports";
+import { Route as SalesRouteImport } from "./routes/sales";
+import { Route as SettingsRouteImport } from "./routes/settings";
+import { Route as StockRouteImport } from "./routes/stock";
+import { Route as UsersRouteImport } from "./routes/users";
 
 const UsersRoute = UsersRouteImport.update({
-  id: '/users',
-  path: '/users',
+  id: "/users",
+  path: "/users",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const StockRoute = StockRouteImport.update({
-  id: '/stock',
-  path: '/stock',
+  id: "/stock",
+  path: "/stock",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+  id: "/settings",
+  path: "/settings",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SalesRoute = SalesRouteImport.update({
-  id: '/sales',
-  path: '/sales',
+  id: "/sales",
+  path: "/sales",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
+  id: "/reports",
+  path: "/reports",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const PublishersRoute = PublishersRouteImport.update({
-  id: '/publishers',
-  path: '/publishers',
+  id: "/publishers",
+  path: "/publishers",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ProductsRoute = ProductsRouteImport.update({
-  id: '/products',
-  path: '/products',
+  id: "/products",
+  path: "/products",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+  id: "/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ChangePasswordRoute = ChangePasswordRouteImport.update({
-  id: '/change-password',
-  path: '/change-password',
+  id: "/change-password",
+  path: "/change-password",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/change-password': typeof ChangePasswordRoute
-  '/login': typeof LoginRoute
-  '/products': typeof ProductsRoute
-  '/publishers': typeof PublishersRoute
-  '/reports': typeof ReportsRoute
-  '/sales': typeof SalesRoute
-  '/settings': typeof SettingsRoute
-  '/stock': typeof StockRoute
-  '/users': typeof UsersRoute
+  "/": typeof IndexRoute;
+  "/change-password": typeof ChangePasswordRoute;
+  "/login": typeof LoginRoute;
+  "/products": typeof ProductsRoute;
+  "/publishers": typeof PublishersRoute;
+  "/reports": typeof ReportsRoute;
+  "/sales": typeof SalesRoute;
+  "/settings": typeof SettingsRoute;
+  "/stock": typeof StockRoute;
+  "/users": typeof UsersRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/change-password': typeof ChangePasswordRoute
-  '/login': typeof LoginRoute
-  '/products': typeof ProductsRoute
-  '/publishers': typeof PublishersRoute
-  '/reports': typeof ReportsRoute
-  '/sales': typeof SalesRoute
-  '/settings': typeof SettingsRoute
-  '/stock': typeof StockRoute
-  '/users': typeof UsersRoute
+  "/": typeof IndexRoute;
+  "/change-password": typeof ChangePasswordRoute;
+  "/login": typeof LoginRoute;
+  "/products": typeof ProductsRoute;
+  "/publishers": typeof PublishersRoute;
+  "/reports": typeof ReportsRoute;
+  "/sales": typeof SalesRoute;
+  "/settings": typeof SettingsRoute;
+  "/stock": typeof StockRoute;
+  "/users": typeof UsersRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/change-password': typeof ChangePasswordRoute
-  '/login': typeof LoginRoute
-  '/products': typeof ProductsRoute
-  '/publishers': typeof PublishersRoute
-  '/reports': typeof ReportsRoute
-  '/sales': typeof SalesRoute
-  '/settings': typeof SettingsRoute
-  '/stock': typeof StockRoute
-  '/users': typeof UsersRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/change-password": typeof ChangePasswordRoute;
+  "/login": typeof LoginRoute;
+  "/products": typeof ProductsRoute;
+  "/publishers": typeof PublishersRoute;
+  "/reports": typeof ReportsRoute;
+  "/sales": typeof SalesRoute;
+  "/settings": typeof SettingsRoute;
+  "/stock": typeof StockRoute;
+  "/users": typeof UsersRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/change-password'
-    | '/login'
-    | '/products'
-    | '/publishers'
-    | '/reports'
-    | '/sales'
-    | '/settings'
-    | '/stock'
-    | '/users'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/change-password"
+    | "/login"
+    | "/products"
+    | "/publishers"
+    | "/reports"
+    | "/sales"
+    | "/settings"
+    | "/stock"
+    | "/users";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/change-password'
-    | '/login'
-    | '/products'
-    | '/publishers'
-    | '/reports'
-    | '/sales'
-    | '/settings'
-    | '/stock'
-    | '/users'
+    | "/"
+    | "/change-password"
+    | "/login"
+    | "/products"
+    | "/publishers"
+    | "/reports"
+    | "/sales"
+    | "/settings"
+    | "/stock"
+    | "/users";
   id:
-    | '__root__'
-    | '/'
-    | '/change-password'
-    | '/login'
-    | '/products'
-    | '/publishers'
-    | '/reports'
-    | '/sales'
-    | '/settings'
-    | '/stock'
-    | '/users'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/change-password"
+    | "/login"
+    | "/products"
+    | "/publishers"
+    | "/reports"
+    | "/sales"
+    | "/settings"
+    | "/stock"
+    | "/users";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  ChangePasswordRoute: typeof ChangePasswordRoute
-  LoginRoute: typeof LoginRoute
-  ProductsRoute: typeof ProductsRoute
-  PublishersRoute: typeof PublishersRoute
-  ReportsRoute: typeof ReportsRoute
-  SalesRoute: typeof SalesRoute
-  SettingsRoute: typeof SettingsRoute
-  StockRoute: typeof StockRoute
-  UsersRoute: typeof UsersRoute
+  IndexRoute: typeof IndexRoute;
+  ChangePasswordRoute: typeof ChangePasswordRoute;
+  LoginRoute: typeof LoginRoute;
+  ProductsRoute: typeof ProductsRoute;
+  PublishersRoute: typeof PublishersRoute;
+  ReportsRoute: typeof ReportsRoute;
+  SalesRoute: typeof SalesRoute;
+  SettingsRoute: typeof SettingsRoute;
+  StockRoute: typeof StockRoute;
+  UsersRoute: typeof UsersRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stock': {
-      id: '/stock'
-      path: '/stock'
-      fullPath: '/stock'
-      preLoaderRoute: typeof StockRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sales': {
-      id: '/sales'
-      path: '/sales'
-      fullPath: '/sales'
-      preLoaderRoute: typeof SalesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/publishers': {
-      id: '/publishers'
-      path: '/publishers'
-      fullPath: '/publishers'
-      preLoaderRoute: typeof PublishersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/products': {
-      id: '/products'
-      path: '/products'
-      fullPath: '/products'
-      preLoaderRoute: typeof ProductsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/change-password': {
-      id: '/change-password'
-      path: '/change-password'
-      fullPath: '/change-password'
-      preLoaderRoute: typeof ChangePasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    "/users": {
+      id: "/users";
+      path: "/users";
+      fullPath: "/users";
+      preLoaderRoute: typeof UsersRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/stock": {
+      id: "/stock";
+      path: "/stock";
+      fullPath: "/stock";
+      preLoaderRoute: typeof StockRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/settings": {
+      id: "/settings";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/sales": {
+      id: "/sales";
+      path: "/sales";
+      fullPath: "/sales";
+      preLoaderRoute: typeof SalesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/reports": {
+      id: "/reports";
+      path: "/reports";
+      fullPath: "/reports";
+      preLoaderRoute: typeof ReportsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/publishers": {
+      id: "/publishers";
+      path: "/publishers";
+      fullPath: "/publishers";
+      preLoaderRoute: typeof PublishersRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/products": {
+      id: "/products";
+      path: "/products";
+      fullPath: "/products";
+      preLoaderRoute: typeof ProductsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/login": {
+      id: "/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof LoginRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/change-password": {
+      id: "/change-password";
+      path: "/change-password";
+      fullPath: "/change-password";
+      preLoaderRoute: typeof ChangePasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -246,7 +246,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   StockRoute: StockRoute,
   UsersRoute: UsersRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

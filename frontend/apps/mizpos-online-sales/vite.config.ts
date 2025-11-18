@@ -20,7 +20,7 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       "styled-system": fileURLToPath(
-        new URL("./styled-system", import.meta.url)
+        new URL("./styled-system", import.meta.url),
       ),
     },
   },

@@ -8,210 +8,210 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProductsIndexRouteImport } from './routes/products/index'
-import { Route as OrderCompleteIndexRouteImport } from './routes/order-complete/index'
-import { Route as MyOrdersIndexRouteImport } from './routes/my-orders/index'
-import { Route as LoginIndexRouteImport } from './routes/login/index'
-import { Route as DeliveryIndexRouteImport } from './routes/delivery/index'
-import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
-import { Route as CartIndexRouteImport } from './routes/cart/index'
-import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as CartIndexRouteImport } from "./routes/cart/index";
+import { Route as CheckoutIndexRouteImport } from "./routes/checkout/index";
+import { Route as DeliveryIndexRouteImport } from "./routes/delivery/index";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as LoginIndexRouteImport } from "./routes/login/index";
+import { Route as MyOrdersIndexRouteImport } from "./routes/my-orders/index";
+import { Route as OrderCompleteIndexRouteImport } from "./routes/order-complete/index";
+import { Route as ProductsProductIdRouteImport } from "./routes/products/$productId";
+import { Route as ProductsIndexRouteImport } from "./routes/products/index";
 
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
-  id: '/products/',
-  path: '/products/',
+  id: "/products/",
+  path: "/products/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const OrderCompleteIndexRoute = OrderCompleteIndexRouteImport.update({
-  id: '/order-complete/',
-  path: '/order-complete/',
+  id: "/order-complete/",
+  path: "/order-complete/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const MyOrdersIndexRoute = MyOrdersIndexRouteImport.update({
-  id: '/my-orders/',
-  path: '/my-orders/',
+  id: "/my-orders/",
+  path: "/my-orders/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LoginIndexRoute = LoginIndexRouteImport.update({
-  id: '/login/',
-  path: '/login/',
+  id: "/login/",
+  path: "/login/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const DeliveryIndexRoute = DeliveryIndexRouteImport.update({
-  id: '/delivery/',
-  path: '/delivery/',
+  id: "/delivery/",
+  path: "/delivery/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
-  id: '/checkout/',
-  path: '/checkout/',
+  id: "/checkout/",
+  path: "/checkout/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const CartIndexRoute = CartIndexRouteImport.update({
-  id: '/cart/',
-  path: '/cart/',
+  id: "/cart/",
+  path: "/cart/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
-  id: '/products/$productId',
-  path: '/products/$productId',
+  id: "/products/$productId",
+  path: "/products/$productId",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/products/$productId': typeof ProductsProductIdRoute
-  '/cart': typeof CartIndexRoute
-  '/checkout': typeof CheckoutIndexRoute
-  '/delivery': typeof DeliveryIndexRoute
-  '/login': typeof LoginIndexRoute
-  '/my-orders': typeof MyOrdersIndexRoute
-  '/order-complete': typeof OrderCompleteIndexRoute
-  '/products': typeof ProductsIndexRoute
+  "/": typeof IndexRoute;
+  "/products/$productId": typeof ProductsProductIdRoute;
+  "/cart": typeof CartIndexRoute;
+  "/checkout": typeof CheckoutIndexRoute;
+  "/delivery": typeof DeliveryIndexRoute;
+  "/login": typeof LoginIndexRoute;
+  "/my-orders": typeof MyOrdersIndexRoute;
+  "/order-complete": typeof OrderCompleteIndexRoute;
+  "/products": typeof ProductsIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/products/$productId': typeof ProductsProductIdRoute
-  '/cart': typeof CartIndexRoute
-  '/checkout': typeof CheckoutIndexRoute
-  '/delivery': typeof DeliveryIndexRoute
-  '/login': typeof LoginIndexRoute
-  '/my-orders': typeof MyOrdersIndexRoute
-  '/order-complete': typeof OrderCompleteIndexRoute
-  '/products': typeof ProductsIndexRoute
+  "/": typeof IndexRoute;
+  "/products/$productId": typeof ProductsProductIdRoute;
+  "/cart": typeof CartIndexRoute;
+  "/checkout": typeof CheckoutIndexRoute;
+  "/delivery": typeof DeliveryIndexRoute;
+  "/login": typeof LoginIndexRoute;
+  "/my-orders": typeof MyOrdersIndexRoute;
+  "/order-complete": typeof OrderCompleteIndexRoute;
+  "/products": typeof ProductsIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/products/$productId': typeof ProductsProductIdRoute
-  '/cart/': typeof CartIndexRoute
-  '/checkout/': typeof CheckoutIndexRoute
-  '/delivery/': typeof DeliveryIndexRoute
-  '/login/': typeof LoginIndexRoute
-  '/my-orders/': typeof MyOrdersIndexRoute
-  '/order-complete/': typeof OrderCompleteIndexRoute
-  '/products/': typeof ProductsIndexRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/products/$productId": typeof ProductsProductIdRoute;
+  "/cart/": typeof CartIndexRoute;
+  "/checkout/": typeof CheckoutIndexRoute;
+  "/delivery/": typeof DeliveryIndexRoute;
+  "/login/": typeof LoginIndexRoute;
+  "/my-orders/": typeof MyOrdersIndexRoute;
+  "/order-complete/": typeof OrderCompleteIndexRoute;
+  "/products/": typeof ProductsIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/products/$productId'
-    | '/cart'
-    | '/checkout'
-    | '/delivery'
-    | '/login'
-    | '/my-orders'
-    | '/order-complete'
-    | '/products'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/products/$productId"
+    | "/cart"
+    | "/checkout"
+    | "/delivery"
+    | "/login"
+    | "/my-orders"
+    | "/order-complete"
+    | "/products";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/products/$productId'
-    | '/cart'
-    | '/checkout'
-    | '/delivery'
-    | '/login'
-    | '/my-orders'
-    | '/order-complete'
-    | '/products'
+    | "/"
+    | "/products/$productId"
+    | "/cart"
+    | "/checkout"
+    | "/delivery"
+    | "/login"
+    | "/my-orders"
+    | "/order-complete"
+    | "/products";
   id:
-    | '__root__'
-    | '/'
-    | '/products/$productId'
-    | '/cart/'
-    | '/checkout/'
-    | '/delivery/'
-    | '/login/'
-    | '/my-orders/'
-    | '/order-complete/'
-    | '/products/'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/products/$productId"
+    | "/cart/"
+    | "/checkout/"
+    | "/delivery/"
+    | "/login/"
+    | "/my-orders/"
+    | "/order-complete/"
+    | "/products/";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  ProductsProductIdRoute: typeof ProductsProductIdRoute
-  CartIndexRoute: typeof CartIndexRoute
-  CheckoutIndexRoute: typeof CheckoutIndexRoute
-  DeliveryIndexRoute: typeof DeliveryIndexRoute
-  LoginIndexRoute: typeof LoginIndexRoute
-  MyOrdersIndexRoute: typeof MyOrdersIndexRoute
-  OrderCompleteIndexRoute: typeof OrderCompleteIndexRoute
-  ProductsIndexRoute: typeof ProductsIndexRoute
+  IndexRoute: typeof IndexRoute;
+  ProductsProductIdRoute: typeof ProductsProductIdRoute;
+  CartIndexRoute: typeof CartIndexRoute;
+  CheckoutIndexRoute: typeof CheckoutIndexRoute;
+  DeliveryIndexRoute: typeof DeliveryIndexRoute;
+  LoginIndexRoute: typeof LoginIndexRoute;
+  MyOrdersIndexRoute: typeof MyOrdersIndexRoute;
+  OrderCompleteIndexRoute: typeof OrderCompleteIndexRoute;
+  ProductsIndexRoute: typeof ProductsIndexRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/products/': {
-      id: '/products/'
-      path: '/products'
-      fullPath: '/products'
-      preLoaderRoute: typeof ProductsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/order-complete/': {
-      id: '/order-complete/'
-      path: '/order-complete'
-      fullPath: '/order-complete'
-      preLoaderRoute: typeof OrderCompleteIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/my-orders/': {
-      id: '/my-orders/'
-      path: '/my-orders'
-      fullPath: '/my-orders'
-      preLoaderRoute: typeof MyOrdersIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login/': {
-      id: '/login/'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/delivery/': {
-      id: '/delivery/'
-      path: '/delivery'
-      fullPath: '/delivery'
-      preLoaderRoute: typeof DeliveryIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checkout/': {
-      id: '/checkout/'
-      path: '/checkout'
-      fullPath: '/checkout'
-      preLoaderRoute: typeof CheckoutIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cart/': {
-      id: '/cart/'
-      path: '/cart'
-      fullPath: '/cart'
-      preLoaderRoute: typeof CartIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/products/$productId': {
-      id: '/products/$productId'
-      path: '/products/$productId'
-      fullPath: '/products/$productId'
-      preLoaderRoute: typeof ProductsProductIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/products/": {
+      id: "/products/";
+      path: "/products";
+      fullPath: "/products";
+      preLoaderRoute: typeof ProductsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/order-complete/": {
+      id: "/order-complete/";
+      path: "/order-complete";
+      fullPath: "/order-complete";
+      preLoaderRoute: typeof OrderCompleteIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/my-orders/": {
+      id: "/my-orders/";
+      path: "/my-orders";
+      fullPath: "/my-orders";
+      preLoaderRoute: typeof MyOrdersIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/login/": {
+      id: "/login/";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof LoginIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/delivery/": {
+      id: "/delivery/";
+      path: "/delivery";
+      fullPath: "/delivery";
+      preLoaderRoute: typeof DeliveryIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/checkout/": {
+      id: "/checkout/";
+      path: "/checkout";
+      fullPath: "/checkout";
+      preLoaderRoute: typeof CheckoutIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/cart/": {
+      id: "/cart/";
+      path: "/cart";
+      fullPath: "/cart";
+      preLoaderRoute: typeof CartIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/products/$productId": {
+      id: "/products/$productId";
+      path: "/products/$productId";
+      fullPath: "/products/$productId";
+      preLoaderRoute: typeof ProductsProductIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -225,7 +225,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyOrdersIndexRoute: MyOrdersIndexRoute,
   OrderCompleteIndexRoute: OrderCompleteIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
