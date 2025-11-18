@@ -12,6 +12,7 @@ class PaymentMethod(str, Enum):
 class SaleStatus(str, Enum):
     PENDING = "pending"
     COMPLETED = "completed"
+    SHIPPED = "shipped"
     CANCELLED = "cancelled"
     REFUNDED = "refunded"
 
@@ -179,3 +180,9 @@ class OnlineOrderResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UpdateShippingRequest(BaseModel):
+    tracking_number: str | None = Field(default=None, max_length=200)
+    carrier: str | None = Field(default=None, max_length=100)
+    notes: str | None = Field(default=None, max_length=500)
