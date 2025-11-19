@@ -180,7 +180,7 @@ jobs:
 
       - name: Generate API Types
         working-directory: frontend
-        run: pnpm generate-api-types
+        run: pnpm generate-api-types:prod
 
       - name: Type Check
         working-directory: frontend
