@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { useCart } from "../../contexts/CartContext";
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/products/$productId")({
 function ProductDetailPage() {
   const { productId } = Route.useParams();
   const { addItem } = useCart();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
 
   const {
@@ -49,7 +50,7 @@ function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addItem(product, quantity);
-    alert(`${product.name} を ${quantity}点 カートに追加しました`);
+    navigate({ to: "/cart" });
   };
 
   return (
