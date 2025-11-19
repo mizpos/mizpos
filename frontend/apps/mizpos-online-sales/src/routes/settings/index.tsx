@@ -1,5 +1,5 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchUserAttributes, updatePassword } from "aws-amplify/auth";
 import { useState } from "react";
 import { css } from "styled-system/css";
