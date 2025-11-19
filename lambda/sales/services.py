@@ -435,6 +435,23 @@ def set_stripe_terminal_config(
 
 
 # オンライン販売用のサービス関数
+def find_user_by_email(email: str) -> dict | None:
+    """
+    emailからDynamoDBのユーザーを検索
+    cognito_user_idまたはemailフィールドで一致するユーザーを返す
+    """
+    try:
+        # 全ユーザーをスキャン（小規模テーブルを想定）
+        response = users_table.scan()
+        for item in response.get("Items", []):
+            # cognito_user_id（email）またはemailフィールドで一致
+            if item.get("cognito_user_id") == email or item.get("email") == email:
+                return item
+        return None
+    except ClientError:
+        return None
+
+
 def create_online_order(
     cart_items: list,
     customer_email: str,
@@ -451,12 +468,14 @@ def create_online_order(
     # 住所の取得・検証
     final_shipping_address = None
 
-    if saved_address_id and user_id:
+    if saved_address_id:
         # 登録済み住所を使用
         try:
-            user_response = users_table.get_item(Key={"user_id": user_id})
-            if "Item" in user_response:
-                user = user_response["Item"]
+            # customer_emailからユーザーを検索
+            # user_idはCognito subなのでDynamoDBの検索には使えない
+            user = find_user_by_email(customer_email)
+
+            if user:
                 saved_addresses = user.get("saved_addresses", [])
                 for addr in saved_addresses:
                     if addr.get("address_id") == saved_address_id:
@@ -473,10 +492,20 @@ def create_online_order(
                         break
 
             if not final_shipping_address:
+                # デバッグ情報を追加
+                if user:
+                    user_id_info = user.get("user_id", "unknown")
+                    address_ids = [addr.get("address_id") for addr in saved_addresses]
+                    debug_info = f"User found (user_id={user_id_info}, email={user.get('email')}, cognito_user_id={user.get('cognito_user_id')}), Available addresses: {address_ids}"
+                else:
+                    debug_info = f"User not found with email={customer_email}"
+
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Saved address not found: {saved_address_id}",
+                    detail=f"Saved address not found: {saved_address_id}. Debug: {debug_info}",
                 )
+        except HTTPException:
+            raise
         except ClientError as e:
             raise HTTPException(
                 status_code=500, detail=f"Failed to retrieve saved address: {str(e)}"
