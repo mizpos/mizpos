@@ -376,6 +376,7 @@ function CheckoutPage() {
                     autoComplete="email"
                     id="email"
                     required
+                    readOnly={!!user}
                     value={customerInfo.email}
                     onChange={(e) =>
                       setCustomerInfo({
@@ -389,6 +390,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!user ? "#f5f5f5" : "white",
+                      cursor: !!user ? "not-allowed" : "text",
                     })}
                   />
                 </div>
@@ -408,6 +411,7 @@ function CheckoutPage() {
                     type="text"
                     id="name"
                     required
+                    readOnly={!!selectedAddressId && !useManualAddress}
                     value={customerInfo.name}
                     onChange={(e) =>
                       setCustomerInfo({ ...customerInfo, name: e.target.value })
@@ -418,6 +422,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
+                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
                     })}
                   />
                 </div>
@@ -437,6 +443,7 @@ function CheckoutPage() {
                     type="text"
                     id="postalCode"
                     required
+                    readOnly={!!selectedAddressId && !useManualAddress}
                     placeholder="例: 123-4567"
                     value={customerInfo.postalCode}
                     onChange={(e) =>
@@ -451,6 +458,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
+                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
                     })}
                   />
                 </div>
@@ -470,6 +479,7 @@ function CheckoutPage() {
                     type="text"
                     id="prefecture"
                     required
+                    readOnly={!!selectedAddressId && !useManualAddress}
                     placeholder="例: 東京都"
                     value={customerInfo.prefecture}
                     onChange={(e) =>
@@ -484,6 +494,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
+                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
                     })}
                   />
                 </div>
@@ -503,6 +515,7 @@ function CheckoutPage() {
                     type="text"
                     id="city"
                     required
+                    readOnly={!!selectedAddressId && !useManualAddress}
                     placeholder="例: 渋谷区"
                     value={customerInfo.city}
                     onChange={(e) =>
@@ -514,6 +527,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
+                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
                     })}
                   />
                 </div>
@@ -533,6 +548,7 @@ function CheckoutPage() {
                     type="text"
                     id="address1"
                     required
+                    readOnly={!!selectedAddressId && !useManualAddress}
                     placeholder="例: 道玄坂1-2-3"
                     value={customerInfo.address_line1}
                     onChange={(e) =>
@@ -547,6 +563,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
+                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
                     })}
                   />
                 </div>
@@ -565,6 +583,7 @@ function CheckoutPage() {
                   <input
                     type="text"
                     id="address2"
+                    readOnly={!!selectedAddressId && !useManualAddress}
                     placeholder="例: ○○ビル 101号室"
                     value={customerInfo.address_line2}
                     onChange={(e) =>
@@ -579,6 +598,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
+                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
                     })}
                   />
                 </div>
@@ -598,6 +619,7 @@ function CheckoutPage() {
                     type="tel"
                     id="phone"
                     required
+                    readOnly={!!selectedAddressId && !useManualAddress}
                     placeholder="例: 03-1234-5678"
                     value={customerInfo.phone_number}
                     onChange={(e) =>
@@ -612,6 +634,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
+                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
+                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
                     })}
                   />
                 </div>
