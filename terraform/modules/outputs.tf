@@ -161,3 +161,24 @@ output "frontend_deploy_policy_arn" {
   description = "IAM Policy ARN for frontend deployment"
   value       = aws_iam_policy.frontend_deploy.arn
 }
+
+# CDN Outputs
+output "cdn_bucket_name" {
+  description = "CDN S3 Bucket Name"
+  value       = aws_s3_bucket.cdn_assets.id
+}
+
+output "cdn_bucket_arn" {
+  description = "CDN S3 Bucket ARN"
+  value       = aws_s3_bucket.cdn_assets.arn
+}
+
+output "cdn_cloudfront_distribution_id" {
+  description = "CDN CloudFront Distribution ID"
+  value       = aws_cloudfront_distribution.cdn_assets.id
+}
+
+output "cdn_domain" {
+  description = "CDN CloudFront Domain"
+  value       = var.enable_custom_domain ? "https://cdn.${var.domain_name}" : "https://${aws_cloudfront_distribution.cdn_assets.domain_name}"
+}

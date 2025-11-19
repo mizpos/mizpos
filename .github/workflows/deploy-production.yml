@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_type:
-        description: "デプロイタイプ"
+        description: "デプロイタイプ (初回は必ず'all'または'infrastructure'を選択してください)"
         required: true
         default: "all"
         type: choice
