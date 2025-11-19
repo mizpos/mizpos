@@ -198,6 +198,23 @@ export default function Header({
               })}
             >
               <Link
+                to="/settings"
+                className={css({
+                  fontSize: { base: "12px", md: "14px" },
+                  fontWeight: "bold",
+                  color: "white",
+                  textDecoration: "none",
+                  _hover: {
+                    textDecoration: "underline",
+                  },
+                })}
+              >
+                アカウント設定
+              </Link>
+              <span className={css({ color: "white", fontSize: "12px" })}>
+                |
+              </span>
+              <Link
                 to="/my-orders"
                 className={css({
                   fontSize: { base: "12px", md: "14px" },
@@ -409,6 +426,22 @@ export default function Header({
               >
                 こんにちは、{user.name || user.email.split("@")[0]}さん
               </p>
+              <Link
+                to="/settings"
+                className={css({
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  color: "white",
+                  textDecoration: "none",
+                  padding: "8px 0",
+                  _hover: {
+                    textDecoration: "underline",
+                  },
+                })}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                アカウント設定
+              </Link>
               <Link
                 to="/my-orders"
                 className={css({
