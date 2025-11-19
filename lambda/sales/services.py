@@ -492,9 +492,17 @@ def create_online_order(
                         break
 
             if not final_shipping_address:
+                # デバッグ情報を追加
+                if user:
+                    user_id_info = user.get("user_id", "unknown")
+                    address_ids = [addr.get("address_id") for addr in saved_addresses]
+                    debug_info = f"User found (user_id={user_id_info}, email={user.get('email')}, cognito_user_id={user.get('cognito_user_id')}), Available addresses: {address_ids}"
+                else:
+                    debug_info = f"User not found with email={customer_email}"
+
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Saved address not found: {saved_address_id}",
+                    detail=f"Saved address not found: {saved_address_id}. Debug: {debug_info}",
                 )
         except HTTPException:
             raise
