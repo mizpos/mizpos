@@ -2,6 +2,7 @@ import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { getAuthHeaders } from "../lib/api";
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from "../lib/constants";
 
 const API_GATEWAY_BASE =
   import.meta.env.VITE_API_GATEWAY_BASE ||
@@ -39,9 +40,8 @@ export function ImageUploadField({
     if (!allowedTypes.includes(file.type)) {
       return "画像ファイル (JPEG, PNG, GIF, WebP, SVG) のみアップロード可能です";
     }
-    // 10MBまで
-    if (file.size > 10 * 1024 * 1024) {
-      return "ファイルサイズは10MB以下にしてください";
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return `ファイルサイズは${MAX_FILE_SIZE_MB}MB以下にしてください`;
     }
     return null;
   };
@@ -291,7 +291,7 @@ export function ImageUploadField({
                   marginTop: "1",
                 })}
               >
-                JPEG, PNG, GIF, WebP, SVG (最大10MB)
+                JPEG, PNG, GIF, WebP, SVG (最大{MAX_FILE_SIZE_MB}MB)
               </p>
             </>
           )}

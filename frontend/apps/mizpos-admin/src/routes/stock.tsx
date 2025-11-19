@@ -9,6 +9,7 @@ import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
 import { getAuthenticatedClients } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { STOCK_LOW_THRESHOLD } from "../lib/constants";
 
 export const Route = createFileRoute("/stock")({
   component: StockPage,
@@ -92,11 +93,12 @@ function StockPage() {
         <span
           className={css({
             fontWeight: "semibold",
-            color: item.stock_quantity <= 5 ? "error" : "gray.900",
+            color:
+              item.stock_quantity <= STOCK_LOW_THRESHOLD ? "error" : "gray.900",
           })}
         >
           {item.stock_quantity}
-          {item.stock_quantity <= 5 && (
+          {item.stock_quantity <= STOCK_LOW_THRESHOLD && (
             <span
               className={css({
                 marginLeft: "2",

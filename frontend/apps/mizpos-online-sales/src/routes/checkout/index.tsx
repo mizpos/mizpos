@@ -30,7 +30,7 @@ function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
-    null
+    null,
   );
   const [useManualAddress, setUseManualAddress] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
@@ -223,7 +223,7 @@ function CheckoutPage() {
               </h2>
 
               {/* 登録済み住所の選択（ログイン済みユーザーのみ） */}
-              {user?.sub && savedAddresses.length > 0 && (
+              {!!user?.sub && savedAddresses.length > 0 && (
                 <div className={css({ marginBottom: "24px" })}>
                   <div
                     className={css({

@@ -27,7 +27,7 @@ function MyAddressesPage() {
   );
 
   // ユーザー情報を取得
-  const { data: userAttributes } = useQuery({
+  const { data: _userAttributes } = useQuery({
     queryKey: ["userAttributes"],
     queryFn: fetchUserAttributes,
     enabled: !!user,
@@ -36,14 +36,19 @@ function MyAddressesPage() {
   // 住所一覧を取得
   const { data: addresses = [], isLoading } = useQuery({
     queryKey: ["addresses", user?.sub],
-    queryFn: () => getUserAddresses(user!.sub),
+    queryFn: () => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return getUserAddresses(user.sub);
+    },
     enabled: !!user?.sub,
   });
 
   // 住所追加
   const createMutation = useMutation({
-    mutationFn: (request: CreateAddressRequest) =>
-      createUserAddress(user!.sub, request),
+    mutationFn: (request: CreateAddressRequest) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return createUserAddress(user.sub, request);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
       setIsAddingNew(false);
@@ -58,7 +63,10 @@ function MyAddressesPage() {
     }: {
       addressId: string;
       data: Partial<CreateAddressRequest>;
-    }) => updateUserAddress(user!.sub, addressId, data),
+    }) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return updateUserAddress(user.sub, addressId, data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
       setEditingAddress(null);
@@ -67,7 +75,10 @@ function MyAddressesPage() {
 
   // 住所削除
   const deleteMutation = useMutation({
-    mutationFn: (addressId: string) => deleteUserAddress(user!.sub, addressId),
+    mutationFn: (addressId: string) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return deleteUserAddress(user.sub, addressId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
     },
@@ -75,7 +86,10 @@ function MyAddressesPage() {
 
   // デフォルト設定
   const setDefaultMutation = useMutation({
-    mutationFn: (addressId: string) => setDefaultAddress(user!.sub, addressId),
+    mutationFn: (addressId: string) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return setDefaultAddress(user.sub, addressId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
     },
