@@ -25,9 +25,9 @@ interface Sale {
   event_id: string;
   user_id: string;
   items: SaleItem[];
-  total_amount: number;
-  discount_amount: number;
-  final_amount: number;
+  subtotal: number;
+  discount: number;
+  total: number;
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
   status: "pending" | "completed" | "cancelled";
   created_at: string;
@@ -46,11 +46,15 @@ type ReportType = "sales" | "products" | "categories" | "consignment";
 type DateRange = "today" | "week" | "month" | "all";
 
 // 安全な数値フォーマット関数
-function safeNumber(value: number | undefined | null): number {
-  if (value === undefined || value === null || isNaN(value)) {
+function safeNumber(value: number | string | undefined | null): number {
+  if (value === undefined || value === null) {
     return 0;
   }
-  return value;
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) {
+    return 0;
+  }
+  return num;
 }
 
 function ReportsPage() {
@@ -123,11 +127,11 @@ function ReportsPage() {
 
   const renderSalesReport = () => {
     const totalRevenue = completedSales.reduce(
-      (sum, s) => sum + safeNumber(s.final_amount),
+      (sum, s) => sum + safeNumber(s.total),
       0,
     );
     const totalDiscount = completedSales.reduce(
-      (sum, s) => sum + safeNumber(s.discount_amount),
+      (sum, s) => sum + safeNumber(s.discount),
       0,
     );
     const averageOrder =
@@ -136,7 +140,7 @@ function ReportsPage() {
     const paymentMethodBreakdown = completedSales.reduce(
       (acc, sale) => {
         acc[sale.payment_method] =
-          (acc[sale.payment_method] || 0) + safeNumber(sale.final_amount);
+          (acc[sale.payment_method] || 0) + safeNumber(sale.total);
         return acc;
       },
       {} as Record<string, number>,
