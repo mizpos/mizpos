@@ -279,10 +279,12 @@ export default function Header({
           <div
             className={css({
               display: "inline-flex",
+              width: { base: "32px", md: "36px", lg: "40px" },
+              height: { base: "32px", md: "36px", lg: "40px" },
             })}
           >
             <CartIcon
-              size={{ base: 32, md: 36, lg: 40 }}
+              size={40}
               color="white"
               itemCount={cartItemCount}
             />
