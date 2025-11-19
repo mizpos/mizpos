@@ -6,6 +6,7 @@ import { fetchUserAttributes } from "aws-amplify/auth";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import CheckoutForm from "../../components/CheckoutForm";
+import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext";
 import {
   type CartItem as ApiCartItem,
@@ -24,10 +25,10 @@ export const Route = createFileRoute("/checkout/")({
 
 function CheckoutPage() {
   const { items, subtotal } = useCart();
+  const { user } = useAuth();
   const [step, setStep] = useState<"info" | "payment">("info");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
   );
@@ -49,7 +50,6 @@ function CheckoutPage() {
     queryFn: async () => {
       try {
         const attributes = await fetchUserAttributes();
-        setUserId(attributes.sub || null);
         setCustomerInfo((prev) => ({
           ...prev,
           email: attributes.email || prev.email,
@@ -60,13 +60,14 @@ function CheckoutPage() {
         return null;
       }
     },
+    enabled: !!user,
   });
 
   // 登録済み住所を取得（ログイン済みユーザーのみ）
   const { data: savedAddresses = [] } = useQuery({
-    queryKey: ["addresses", userId],
-    queryFn: () => getUserAddresses(userId!),
-    enabled: !!userId,
+    queryKey: ["addresses", user?.sub],
+    queryFn: () => getUserAddresses(user?.sub || ""),
+    enabled: !!user?.sub,
   });
 
   // 選択された住所を自動入力
@@ -101,10 +102,10 @@ function CheckoutPage() {
         customer_name: customerInfo.name,
       };
 
-      if (selectedAddressId && !useManualAddress && userId) {
+      if (selectedAddressId && !useManualAddress && user?.sub) {
         // 登録済み住所を使用
         orderRequest.saved_address_id = selectedAddressId;
-        orderRequest.user_id = userId;
+        orderRequest.user_id = user.sub;
       } else {
         // 手動入力の住所を使用
         orderRequest.shipping_address = {
@@ -222,7 +223,7 @@ function CheckoutPage() {
               </h2>
 
               {/* 登録済み住所の選択（ログイン済みユーザーのみ） */}
-              {userId && savedAddresses.length > 0 && (
+              {!!user?.sub && savedAddresses.length > 0 && (
                 <div className={css({ marginBottom: "24px" })}>
                   <div
                     className={css({

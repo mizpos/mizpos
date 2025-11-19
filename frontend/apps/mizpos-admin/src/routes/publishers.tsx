@@ -8,6 +8,10 @@ import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
 import { getAuthHeaders } from "../lib/api";
+import {
+  DEFAULT_STRIPE_ONLINE_FEE_RATE,
+  DEFAULT_STRIPE_TERMINAL_FEE_RATE,
+} from "../lib/constants";
 
 export const Route = createFileRoute("/publishers")({
   component: PublishersPage,
@@ -44,8 +48,8 @@ const initialFormState: CreatePublisherForm = {
   description: "",
   contact_email: "",
   commission_rate: 0,
-  stripe_online_fee_rate: 3.6,
-  stripe_terminal_fee_rate: 3.6,
+  stripe_online_fee_rate: DEFAULT_STRIPE_ONLINE_FEE_RATE,
+  stripe_terminal_fee_rate: DEFAULT_STRIPE_TERMINAL_FEE_RATE,
 };
 
 function PublishersPage() {

@@ -719,7 +719,7 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
           id="price"
           type="number"
           required
-          min="0"
+          min="50"
           value={data.price}
           onChange={(e) =>
             onChange({ ...data, price: parseInt(e.target.value, 10) || 0 })

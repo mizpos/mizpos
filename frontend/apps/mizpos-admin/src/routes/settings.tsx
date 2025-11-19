@@ -8,6 +8,11 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { getAuthHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import {
+  DEFAULT_COMMISSION_RATE,
+  DEFAULT_STRIPE_ONLINE_FEE_RATE,
+  DEFAULT_STRIPE_TERMINAL_FEE_RATE,
+} from "../lib/constants";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -93,9 +98,9 @@ function SettingsPage() {
 
   const [consignmentSettings, setConsignmentSettings] =
     useState<ConsignmentSettings>({
-      defaultCommissionRate: 30,
-      stripeOnlineFeeRate: 3.6,
-      stripeTerminalFeeRate: 3.6,
+      defaultCommissionRate: DEFAULT_COMMISSION_RATE,
+      stripeOnlineFeeRate: DEFAULT_STRIPE_ONLINE_FEE_RATE,
+      stripeTerminalFeeRate: DEFAULT_STRIPE_TERMINAL_FEE_RATE,
     });
 
   // パスワード変更用の状態

@@ -109,21 +109,33 @@ def verify_token(token: str) -> dict:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Verify token use (access token)
-        if claims.get("token_use") != "access":
+        # Verify token use (accept both id and access tokens)
+        token_use = claims.get("token_use")
+        if token_use not in ["id", "access"]:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Optionally verify client_id
-        if COGNITO_CLIENT_ID and claims.get("client_id") != COGNITO_CLIENT_ID:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid client ID",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        # Verify client_id/audience based on token type
+        if COGNITO_CLIENT_ID:
+            if token_use == "access":
+                # Access tokens have client_id
+                if claims.get("client_id") != COGNITO_CLIENT_ID:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid client ID",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            elif token_use == "id":
+                # ID tokens have aud (audience)
+                if claims.get("aud") != COGNITO_CLIENT_ID:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid audience",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
 
         return claims
 

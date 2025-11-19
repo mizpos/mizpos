@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { fetchUserAttributes } from "aws-amplify/auth";
 import { useState } from "react";
 import { css } from "styled-system/css";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   type CreateAddressRequest,
   createUserAddress,
@@ -19,35 +20,37 @@ export const Route = createFileRoute("/my-addresses/")({
 
 function MyAddressesPage() {
   const queryClient = useQueryClient();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(
     null,
   );
 
   // ユーザー情報を取得
-  const { data: userAttributes } = useQuery({
+  const { data: _userAttributes } = useQuery({
     queryKey: ["userAttributes"],
-    queryFn: async () => {
-      const attributes = await fetchUserAttributes();
-      setUserId(attributes.sub || null);
-      return attributes;
-    },
+    queryFn: fetchUserAttributes,
+    enabled: !!user,
   });
 
   // 住所一覧を取得
   const { data: addresses = [], isLoading } = useQuery({
-    queryKey: ["addresses", userId],
-    queryFn: () => getUserAddresses(userId!),
-    enabled: !!userId,
+    queryKey: ["addresses", user?.sub],
+    queryFn: () => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return getUserAddresses(user.sub);
+    },
+    enabled: !!user?.sub,
   });
 
   // 住所追加
   const createMutation = useMutation({
-    mutationFn: (request: CreateAddressRequest) =>
-      createUserAddress(userId!, request),
+    mutationFn: (request: CreateAddressRequest) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return createUserAddress(user.sub, request);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["addresses", userId] });
+      queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
       setIsAddingNew(false);
     },
   });
@@ -60,30 +63,39 @@ function MyAddressesPage() {
     }: {
       addressId: string;
       data: Partial<CreateAddressRequest>;
-    }) => updateUserAddress(userId!, addressId, data),
+    }) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return updateUserAddress(user.sub, addressId, data);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["addresses", userId] });
+      queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
       setEditingAddress(null);
     },
   });
 
   // 住所削除
   const deleteMutation = useMutation({
-    mutationFn: (addressId: string) => deleteUserAddress(userId!, addressId),
+    mutationFn: (addressId: string) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return deleteUserAddress(user.sub, addressId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["addresses", userId] });
+      queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
     },
   });
 
   // デフォルト設定
   const setDefaultMutation = useMutation({
-    mutationFn: (addressId: string) => setDefaultAddress(userId!, addressId),
+    mutationFn: (addressId: string) => {
+      if (!user?.sub) throw new Error("User ID is required");
+      return setDefaultAddress(user.sub, addressId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["addresses", userId] });
+      queryClient.invalidateQueries({ queryKey: ["addresses", user?.sub] });
     },
   });
 
-  if (!userAttributes) {
+  if (!user) {
     return (
       <div
         className={css({

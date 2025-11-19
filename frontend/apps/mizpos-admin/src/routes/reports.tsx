@@ -6,6 +6,7 @@ import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { getAuthenticatedClients } from "../lib/api";
+import { ONE_MONTH_MS, ONE_WEEK_MS } from "../lib/constants";
 
 export const Route = createFileRoute("/reports")({
   component: ReportsPage,
@@ -86,11 +87,11 @@ function ReportsPage() {
         return date >= today;
       }
       case "week": {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const weekAgo = new Date(now.getTime() - ONE_WEEK_MS);
         return date >= weekAgo;
       }
       case "month": {
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now.getTime() - ONE_MONTH_MS);
         return date >= monthAgo;
       }
       default:
