@@ -322,7 +322,8 @@ function OrderCompletePage() {
               </p>
               {order.shipped_at && (
                 <p className={css({ fontSize: "12px", color: "#666" })}>
-                  発送日時: {new Date(order.shipped_at).toLocaleString("ja-JP")}
+                  発送登録日:{" "}
+                  {new Date(order.shipped_at).toLocaleString("ja-JP")}
                 </p>
               )}
             </div>

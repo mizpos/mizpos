@@ -52,6 +52,7 @@ export default function Header({
         className={css({
           display: "flex",
           gap: { base: "8px", md: "15px", lg: "25px" },
+          justifyContent: "space-between",
           alignItems: "center",
           padding: { base: "10px", md: "15px", lg: "20px" },
           width: "100%",
@@ -116,14 +117,15 @@ export default function Header({
         {/* 検索バー */}
         <div
           className={css({
-            flex: { base: "0 0 calc(100% - 140px)", lg: "1" },
+            flex: { base: "1 1 100%", lg: "1" },
             order: { base: "3", lg: "2" },
             backgroundColor: "white",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             borderRadius: "5px",
-            paddingX: { base: "8px", md: "10px", lg: "13px" },
+            paddingX: { base: "10px", md: "10px", lg: "13px" },
+            minHeight: { base: "40px", md: "auto" },
           })}
         >
           <input
@@ -133,9 +135,9 @@ export default function Header({
               flex: "1",
               border: "none",
               outline: "none",
-              fontSize: { base: "11px", md: "12px" },
+              fontSize: { base: "14px", md: "12px" },
               fontWeight: "medium",
-              paddingY: { base: "8px", md: "10px" },
+              paddingY: { base: "10px", md: "10px" },
               backgroundColor: "transparent",
             })}
           />
@@ -148,14 +150,15 @@ export default function Header({
               justifyContent: "center",
               padding: "3px",
               borderRadius: "2px",
-              width: { base: "24px", md: "27px" },
-              height: { base: "24px", md: "27px" },
+              width: { base: "30px", md: "27px" },
+              height: { base: "30px", md: "27px" },
               border: "none",
               cursor: "pointer",
+              flexShrink: 0,
             })}
             style={{ backgroundColor: colors.searchButton }}
           >
-            <IconSearch size={12} />
+            <IconSearch size={{ base: 16, md: 12 }} />
           </button>
         </div>
 
@@ -283,11 +286,7 @@ export default function Header({
               height: { base: "32px", md: "36px", lg: "40px" },
             })}
           >
-            <CartIcon
-              size={40}
-              color="white"
-              itemCount={cartItemCount}
-            />
+            <CartIcon size={40} color="white" itemCount={cartItemCount} />
           </div>
           <div
             className={css({
@@ -347,9 +346,9 @@ export default function Header({
         <div
           className={css({
             display: { base: "block", lg: "none" },
-            backgroundColor: colors.navigationBar,
             padding: "15px",
           })}
+          style={{ backgroundColor: colors.navigationBar }}
         >
           {/* ナビゲーションリンク */}
           <nav
@@ -359,7 +358,9 @@ export default function Header({
               gap: "15px",
               marginBottom: user ? "15px" : "0",
               paddingBottom: user ? "15px" : "0",
-              borderBottom: user ? "1px solid rgba(255, 255, 255, 0.2)" : "none",
+              borderBottom: user
+                ? "1px solid rgba(255, 255, 255, 0.2)"
+                : "none",
             })}
           >
             {navigationItems.map((item) => (

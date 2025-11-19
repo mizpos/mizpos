@@ -13,12 +13,15 @@ class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str = Field(default="", max_length=2000)
     category: str = Field(..., min_length=1, max_length=100)
-    price: float = Field(..., ge=0)
+    price: float = Field(..., ge=50, description="商品価格（50円以上）")
     image_url: str = Field(default="", max_length=500)
     author: str = Field(default="", max_length=100)
     publisher: str = Field(default="", max_length=100)  # 後方互換性のため残す
     publisher_id: str | None = Field(default=None, description="出版社/サークルID")
     variant_type: VariantType = Field(default=VariantType.PHYSICAL)
+    shipping_option_id: str | None = Field(
+        default=None, description="送料設定ID（紐付けなし = 送料無料）"
+    )
     isdn: str | None = Field(
         default=None, max_length=50, description="国際標準同人誌番号"
     )
@@ -36,12 +39,13 @@ class UpdateProductRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
     category: str | None = Field(default=None, min_length=1, max_length=100)
-    price: float | None = Field(default=None, ge=0)
+    price: float | None = Field(default=None, ge=50, description="商品価格（50円以上）")
     image_url: str | None = Field(default=None, max_length=500)
     author: str | None = Field(default=None, max_length=100)
     publisher: str | None = Field(default=None, max_length=100)
     publisher_id: str | None = Field(default=None, description="出版社/サークルID")
     variant_type: VariantType | None = None
+    shipping_option_id: str | None = Field(default=None, description="送料設定ID（紐付けなし = 送料無料）")
     isdn: str | None = Field(
         default=None, max_length=50, description="国際標準同人誌番号"
     )
@@ -112,6 +116,7 @@ class ProductResponse(BaseModel):
     publisher: str
     publisher_id: str | None = None
     variant_type: str
+    shipping_option_id: str | None = None
     isdn: str | None = None
     download_url: str | None = None
     stock_quantity: int
