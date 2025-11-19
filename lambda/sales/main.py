@@ -23,24 +23,31 @@ from models import (
     CreateOnlineOrderRequest,
     CreatePaymentIntentRequest,
     CreateSaleRequest,
+    CreateShippingOptionRequest,
     SaleStatus,
     StripeTerminalConfigRequest,
     UpdateConfigRequest,
+    UpdateShippingOptionRequest,
     UpdateShippingRequest,
 )
 from services import (
     calculate_commission_fees,
     calculate_coupon_discount,
+    calculate_shipping_fee,
     config_table,
     create_online_order,
+    create_shipping_option,
     deduct_stock,
+    delete_shipping_option,
     dynamo_to_dict,
     events_table,
+    get_all_shipping_options,
     get_config,
     get_coupon_by_code,
     get_order_by_id,
     get_orders_by_email,
     get_products_info,
+    get_shipping_option_by_id,
     increment_coupon_usage,
     init_stripe,
     restore_stock,
@@ -50,6 +57,7 @@ from services import (
     update_order_payment_intent,
     update_order_status_with_stripe,
     update_shipping_info,
+    update_shipping_option,
     update_stripe_payment_status,
     validate_and_reserve_stock,
     validate_coupon,
@@ -504,7 +512,13 @@ async def create_order(request: CreateOnlineOrderRequest):
             cart_items=[item.model_dump() for item in request.cart_items],
             customer_email=request.customer_email,
             customer_name=request.customer_name,
-            shipping_address=request.shipping_address.model_dump(),
+            shipping_address=(
+                request.shipping_address.model_dump()
+                if request.shipping_address
+                else None
+            ),
+            saved_address_id=request.saved_address_id,
+            user_id=request.user_id,
             coupon_code=request.coupon_code,
             notes=request.notes,
         )
@@ -568,6 +582,8 @@ async def update_order_shipping(
             order_id=order_id,
             tracking_number=request.tracking_number,
             carrier=request.carrier,
+            shipping_method=request.shipping_method,
+            shipping_method_other=request.shipping_method_other,
             notes=request.notes,
         )
 
@@ -758,6 +774,9 @@ async def create_order_payment_intent(order_id: str):
             metadata={
                 "order_id": order_id,
                 "customer_name": order.get("customer_name", ""),
+                "subtotal": str(order.get("subtotal", 0)),
+                "discount": str(order.get("discount", 0)),
+                "shipping_fee": str(order.get("shipping_fee", 0)),
             },
         )
 
@@ -1031,6 +1050,96 @@ async def update_config_endpoint(
         result = set_config(config_key, request.value)
         return {"config": result}
     except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# 送料設定管理エンドポイント
+# ==========================================
+
+@router.get("/shipping-options", response_model=dict)
+async def list_shipping_options():
+    """送料設定一覧を取得（is_active=Trueのみ、認証不要）"""
+    try:
+        options = get_all_shipping_options()
+        # sort_orderでソート
+        options_sorted = sorted(options, key=lambda x: x.get("sort_order", 0))
+        return {"shipping_options": options_sorted}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/shipping-options/{shipping_option_id}", response_model=dict)
+async def get_shipping_option_detail(shipping_option_id: str):
+    """送料設定詳細を取得（認証不要）"""
+    try:
+        option = get_shipping_option_by_id(shipping_option_id)
+        if not option:
+            raise HTTPException(status_code=404, detail="Shipping option not found")
+        return {"shipping_option": option}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/shipping-options", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_shipping_option_endpoint(
+    request: CreateShippingOptionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """送料設定を作成（Admin用）"""
+    try:
+        new_option = create_shipping_option(
+            label=request.label,
+            price=request.price,
+            sort_order=request.sort_order,
+            description=request.description,
+        )
+        return {"shipping_option": new_option}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/shipping-options/{shipping_option_id}", response_model=dict)
+async def update_shipping_option_endpoint(
+    shipping_option_id: str,
+    request: UpdateShippingOptionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """送料設定を更新（Admin用）"""
+    try:
+        updated_option = update_shipping_option(
+            shipping_option_id=shipping_option_id,
+            label=request.label,
+            price=request.price,
+            sort_order=request.sort_order,
+            description=request.description,
+            is_active=request.is_active,
+        )
+        if not updated_option:
+            raise HTTPException(status_code=404, detail="Shipping option not found")
+        return {"shipping_option": updated_option}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/shipping-options/{shipping_option_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_shipping_option_endpoint(
+    shipping_option_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """送料設定を削除（論理削除、Admin用）"""
+    try:
+        deleted = delete_shipping_option(shipping_option_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Shipping option not found")
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

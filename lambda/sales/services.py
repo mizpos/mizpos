@@ -23,6 +23,7 @@ CONFIG_TABLE = os.environ.get("CONFIG_TABLE", f"{ENVIRONMENT}-mizpos-config")
 PUBLISHERS_TABLE = os.environ.get(
     "PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers"
 )
+USERS_TABLE = os.environ.get("USERS_TABLE", f"{ENVIRONMENT}-mizpos-users")
 STRIPE_SECRET_ARN = os.environ.get("STRIPE_SECRET_ARN", "")
 
 # AWS クライアント
@@ -34,6 +35,7 @@ stock_history_table = dynamodb.Table(STOCK_HISTORY_TABLE)
 events_table = dynamodb.Table(EVENTS_TABLE)
 config_table = dynamodb.Table(CONFIG_TABLE)
 publishers_table = dynamodb.Table(PUBLISHERS_TABLE)
+users_table = dynamodb.Table(USERS_TABLE)
 
 
 def init_stripe() -> None:
@@ -437,12 +439,57 @@ def create_online_order(
     cart_items: list,
     customer_email: str,
     customer_name: str,
-    shipping_address: dict,
+    shipping_address: dict | None = None,
+    saved_address_id: str | None = None,
+    user_id: str | None = None,
     coupon_code: str | None = None,
     notes: str | None = None,
 ) -> dict:
     """オンライン注文を作成（顧客向け、認証不要）"""
     import uuid
+
+    # 住所の取得・検証
+    final_shipping_address = None
+
+    if saved_address_id and user_id:
+        # 登録済み住所を使用
+        try:
+            user_response = users_table.get_item(Key={"user_id": user_id})
+            if "Item" in user_response:
+                user = user_response["Item"]
+                saved_addresses = user.get("saved_addresses", [])
+                for addr in saved_addresses:
+                    if addr.get("address_id") == saved_address_id:
+                        # 住所が見つかった
+                        final_shipping_address = {
+                            "name": addr.get("name"),
+                            "postal_code": addr.get("postal_code"),
+                            "prefecture": addr.get("prefecture"),
+                            "city": addr.get("city"),
+                            "address_line1": addr.get("address_line1"),
+                            "address_line2": addr.get("address_line2", ""),
+                            "phone_number": addr.get("phone_number"),
+                        }
+                        break
+
+            if not final_shipping_address:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Saved address not found: {saved_address_id}",
+                )
+        except ClientError as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to retrieve saved address: {str(e)}"
+            ) from e
+    elif shipping_address:
+        # 直接指定された住所を使用
+        final_shipping_address = shipping_address
+    else:
+        # どちらも指定されていない
+        raise HTTPException(
+            status_code=400,
+            detail="Either shipping_address or saved_address_id must be provided",
+        )
 
     # 在庫確認・確保
     from models import CartItem
@@ -467,7 +514,11 @@ def create_online_order(
             )
             increment_coupon_usage(coupon)
 
-    total = subtotal - discount
+    # 送料計算（カート内の商品から最大送料を取得）
+    shipping_fee = calculate_shipping_fee(cart_items_models)
+
+    # 合計 = 小計 - 割引 + 送料
+    total = subtotal - discount + Decimal(str(shipping_fee))
 
     # 手数料情報を計算（オンライン販売はstripe_online）
     commission_info = calculate_commission_fees(
@@ -487,13 +538,14 @@ def create_online_order(
         "items": reserved_items,
         "subtotal": Decimal(str(subtotal)),
         "discount": Decimal(str(discount)),
+        "shipping_fee": Decimal(str(shipping_fee)),
         "total": Decimal(str(total)),
         "payment_method": "stripe_online",
         "status": "pending",
         "coupon_code": coupon_code or "",
         "customer_email": customer_email,
         "customer_name": customer_name,
-        "shipping_address": shipping_address,
+        "shipping_address": final_shipping_address,
         "notes": notes or "",
         "stripe_payment_intent_id": "",
         "stripe_checkout_session_id": "",
@@ -667,6 +719,8 @@ def update_shipping_info(
     order_id: str,
     tracking_number: str | None = None,
     carrier: str | None = None,
+    shipping_method: str | None = None,
+    shipping_method_other: str | None = None,
     notes: str | None = None,
 ) -> dict | None:
     """注文の発送情報を更新し、ステータスをSHIPPEDに変更"""
@@ -695,6 +749,14 @@ def update_shipping_info(
         update_parts.append("carrier = :carrier")
         expression_values[":carrier"] = carrier
 
+    if shipping_method:
+        update_parts.append("shipping_method = :shipping_method")
+        expression_values[":shipping_method"] = shipping_method
+
+    if shipping_method_other:
+        update_parts.append("shipping_method_other = :shipping_method_other")
+        expression_values[":shipping_method_other"] = shipping_method_other
+
     if notes:
         update_parts.append("shipping_notes = :notes")
         expression_values[":notes"] = notes
@@ -707,3 +769,159 @@ def update_shipping_info(
         ReturnValues="ALL_NEW",
     )
     return dynamo_to_dict(response["Attributes"])
+
+
+# ==============================
+# 送料設定管理
+# ==============================
+
+def get_all_shipping_options() -> list[dict]:
+    """全送料設定を取得（is_active=Trueのみ）"""
+    config = get_config("shipping_options")
+    if not config:
+        return []
+
+    options = config.get("value", {}).get("options", [])
+    # is_activeがTrueのもののみ返す
+    return [opt for opt in options if opt.get("is_active", True)]
+
+
+def get_shipping_option_by_id(shipping_option_id: str) -> dict | None:
+    """IDで送料設定を取得"""
+    config = get_config("shipping_options")
+    if not config:
+        return None
+
+    options = config.get("value", {}).get("options", [])
+    for opt in options:
+        if opt.get("shipping_option_id") == shipping_option_id:
+            return opt
+    return None
+
+
+def create_shipping_option(
+    label: str, price: int, sort_order: int = 0, description: str = ""
+) -> dict:
+    """送料設定を作成"""
+    import uuid
+
+    shipping_option_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+
+    new_option = {
+        "shipping_option_id": shipping_option_id,
+        "label": label,
+        "price": price,
+        "sort_order": sort_order,
+        "description": description,
+        "is_active": True,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    # 既存の設定を取得
+    config = get_config("shipping_options")
+    if config:
+        options = config.get("value", {}).get("options", [])
+    else:
+        options = []
+
+    # 新しい設定を追加
+    options.append(new_option)
+
+    # 保存
+    set_config("shipping_options", {"options": options})
+
+    return new_option
+
+
+def update_shipping_option(
+    shipping_option_id: str,
+    label: str | None = None,
+    price: int | None = None,
+    sort_order: int | None = None,
+    description: str | None = None,
+    is_active: bool | None = None,
+) -> dict | None:
+    """送料設定を更新"""
+    config = get_config("shipping_options")
+    if not config:
+        return None
+
+    options = config.get("value", {}).get("options", [])
+    updated_option = None
+
+    for opt in options:
+        if opt.get("shipping_option_id") == shipping_option_id:
+            # 更新
+            if label is not None:
+                opt["label"] = label
+            if price is not None:
+                opt["price"] = price
+            if sort_order is not None:
+                opt["sort_order"] = sort_order
+            if description is not None:
+                opt["description"] = description
+            if is_active is not None:
+                opt["is_active"] = is_active
+
+            opt["updated_at"] = datetime.now(timezone.utc).isoformat()
+            updated_option = opt
+            break
+
+    if updated_option:
+        set_config("shipping_options", {"options": options})
+
+    return updated_option
+
+
+def delete_shipping_option(shipping_option_id: str) -> bool:
+    """送料設定を削除（論理削除: is_active=False）"""
+    config = get_config("shipping_options")
+    if not config:
+        return False
+
+    options = config.get("value", {}).get("options", [])
+    deleted = False
+
+    for opt in options:
+        if opt.get("shipping_option_id") == shipping_option_id:
+            opt["is_active"] = False
+            opt["updated_at"] = datetime.now(timezone.utc).isoformat()
+            deleted = True
+            break
+
+    if deleted:
+        set_config("shipping_options", {"options": options})
+
+    return deleted
+
+
+def calculate_shipping_fee(cart_items: list[CartItem]) -> int:
+    """カート内の商品から最大送料を計算"""
+    max_shipping_fee = 0
+
+    for item in cart_items:
+        # 商品情報を取得
+        product_response = stock_table.get_item(Key={"product_id": item.product_id})
+        if "Item" not in product_response:
+            continue
+
+        product = product_response["Item"]
+        shipping_option_id = product.get("shipping_option_id")
+
+        # 送料設定がない場合はスキップ（送料無料）
+        if not shipping_option_id:
+            continue
+
+        # 送料設定を取得
+        shipping_option = get_shipping_option_by_id(shipping_option_id)
+        if not shipping_option:
+            continue
+
+        # 最大送料を更新
+        shipping_fee = shipping_option.get("price", 0)
+        if shipping_fee > max_shipping_fee:
+            max_shipping_fee = shipping_fee
+
+    return max_shipping_fee
