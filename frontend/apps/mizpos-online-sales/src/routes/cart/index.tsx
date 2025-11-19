@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { css } from "styled-system/css";
+import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext";
 
 export const Route = createFileRoute("/cart/")({
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/cart/")({
 
 function CartPage() {
   const { items, removeItem, updateQuantity, subtotal, totalItems } = useCart();
+  const { user } = useAuth();
 
   if (items.length === 0) {
     return (
@@ -307,27 +309,64 @@ function CartPage() {
             </div>
           </div>
 
-          <Link
-            to="/checkout"
-            className={css({
-              display: "block",
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "#f0c14b",
-              border: "1px solid #a88734",
-              borderRadius: "3px",
-              textAlign: "center",
-              textDecoration: "none",
-              color: "black",
-              fontSize: "16px",
-              fontWeight: "bold",
-              _hover: {
-                backgroundColor: "#ddb347",
-              },
-            })}
-          >
-            レジに進む
-          </Link>
+          {user ? (
+            <Link
+              to="/checkout"
+              className={css({
+                display: "block",
+                width: "100%",
+                padding: "12px",
+                backgroundColor: "#f0c14b",
+                border: "1px solid #a88734",
+                borderRadius: "3px",
+                textAlign: "center",
+                textDecoration: "none",
+                color: "black",
+                fontSize: "16px",
+                fontWeight: "bold",
+                _hover: {
+                  backgroundColor: "#ddb347",
+                },
+              })}
+            >
+              レジに進む
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                search={{ redirect: "/checkout" }}
+                className={css({
+                  display: "block",
+                  width: "100%",
+                  padding: "12px",
+                  backgroundColor: "#f0c14b",
+                  border: "1px solid #a88734",
+                  borderRadius: "3px",
+                  textAlign: "center",
+                  textDecoration: "none",
+                  color: "black",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  _hover: {
+                    backgroundColor: "#ddb347",
+                  },
+                })}
+              >
+                ログインして購入
+              </Link>
+              <p
+                className={css({
+                  fontSize: "12px",
+                  color: "#666",
+                  textAlign: "center",
+                  marginTop: "8px",
+                })}
+              >
+                購入にはログインが必要です
+              </p>
+            </>
+          )}
 
           <Link
             to="/products"

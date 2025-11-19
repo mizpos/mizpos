@@ -1,9 +1,9 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { fetchUserAttributes } from "aws-amplify/auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import CheckoutForm from "../../components/CheckoutForm";
 import { useAuth } from "../../contexts/AuthContext";
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/checkout/")({
 function CheckoutPage() {
   const { items, subtotal } = useCart();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<"info" | "payment">("info");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -43,6 +44,13 @@ function CheckoutPage() {
     address_line2: "",
     phone_number: "",
   });
+
+  // ログインチェック
+  useEffect(() => {
+    if (!user) {
+      navigate({ to: "/login", search: { redirect: "/checkout" } });
+    }
+  }, [user, navigate]);
 
   // ユーザー情報を取得
   useQuery({
@@ -376,7 +384,7 @@ function CheckoutPage() {
                     autoComplete="email"
                     id="email"
                     required
-                    readOnly={!!user}
+                    readOnly
                     value={customerInfo.email}
                     onChange={(e) =>
                       setCustomerInfo({
@@ -390,8 +398,8 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!user ? "#f5f5f5" : "white",
-                      cursor: !!user ? "not-allowed" : "text",
+                      backgroundColor: "#f5f5f5",
+                      cursor: "not-allowed",
                     })}
                   />
                 </div>
