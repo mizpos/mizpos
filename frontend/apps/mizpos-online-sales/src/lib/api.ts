@@ -7,8 +7,8 @@ const STOCK_API_URL =
   import.meta.env.VITE_STOCK_API_URL || "http://localhost:8000/stock";
 const SALES_API_URL =
   import.meta.env.VITE_SALES_API_URL || "http://localhost:8001/sales";
-// const ACCOUNTS_API_URL =
-//   import.meta.env.VITE_ACCOUNTS_API_URL || "http://localhost:8002/accounts";
+const ACCOUNTS_API_URL =
+  import.meta.env.VITE_ACCOUNTS_API_URL || "http://localhost:8002/accounts";
 
 /**
  * 認証トークンを取得する関数（Amplifyから）
@@ -143,7 +143,9 @@ export interface CreateOrderRequest {
   cart_items: CartItem[];
   customer_email: string;
   customer_name: string;
-  shipping_address: ShippingAddress;
+  shipping_address?: ShippingAddress;
+  saved_address_id?: string;
+  user_id?: string;
   coupon_code?: string;
   notes?: string;
 }
@@ -286,4 +288,127 @@ export async function getOrderReceipt(orderId: string): Promise<{
     { method: "GET" },
     false, // 認証不要
   );
+}
+
+// ========== Accounts API ==========
+
+export interface SavedAddress {
+  address_id: string;
+  label: string;
+  name: string;
+  postal_code: string;
+  prefecture: string;
+  city: string;
+  address_line1: string;
+  address_line2?: string;
+  phone_number: string;
+  is_default: boolean;
+}
+
+export interface CreateAddressRequest {
+  label: string;
+  name: string;
+  postal_code: string;
+  prefecture: string;
+  city: string;
+  address_line1: string;
+  address_line2?: string;
+  phone_number: string;
+  is_default?: boolean;
+}
+
+export interface UpdateAddressRequest {
+  label?: string;
+  name?: string;
+  postal_code?: string;
+  prefecture?: string;
+  city?: string;
+  address_line1?: string;
+  address_line2?: string;
+  phone_number?: string;
+  is_default?: boolean;
+}
+
+/**
+ * ユーザーの住所一覧を取得（認証必要）
+ */
+export async function getUserAddresses(
+  userId: string,
+): Promise<SavedAddress[]> {
+  const data = await fetchJSON<{ addresses: SavedAddress[] }>(
+    `${ACCOUNTS_API_URL}/users/${userId}/addresses`,
+    undefined,
+    true, // 認証必要
+  );
+  return data.addresses;
+}
+
+/**
+ * 住所を追加（認証必要）
+ */
+export async function createUserAddress(
+  userId: string,
+  request: CreateAddressRequest,
+): Promise<SavedAddress> {
+  const data = await fetchJSON<{ address: SavedAddress }>(
+    `${ACCOUNTS_API_URL}/users/${userId}/addresses`,
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
+    true, // 認証必要
+  );
+  return data.address;
+}
+
+/**
+ * 住所を更新（認証必要）
+ */
+export async function updateUserAddress(
+  userId: string,
+  addressId: string,
+  request: UpdateAddressRequest,
+): Promise<SavedAddress> {
+  const data = await fetchJSON<{ address: SavedAddress }>(
+    `${ACCOUNTS_API_URL}/users/${userId}/addresses/${addressId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(request),
+    },
+    true, // 認証必要
+  );
+  return data.address;
+}
+
+/**
+ * 住所を削除（認証必要）
+ */
+export async function deleteUserAddress(
+  userId: string,
+  addressId: string,
+): Promise<void> {
+  await fetchJSON(
+    `${ACCOUNTS_API_URL}/users/${userId}/addresses/${addressId}`,
+    {
+      method: "DELETE",
+    },
+    true, // 認証必要
+  );
+}
+
+/**
+ * デフォルト住所を設定（認証必要）
+ */
+export async function setDefaultAddress(
+  userId: string,
+  addressId: string,
+): Promise<SavedAddress> {
+  const data = await fetchJSON<{ address: SavedAddress }>(
+    `${ACCOUNTS_API_URL}/users/${userId}/addresses/${addressId}/default`,
+    {
+      method: "PUT",
+    },
+    true, // 認証必要
+  );
+  return data.address;
 }

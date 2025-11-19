@@ -1,9 +1,9 @@
-import { IconSearch, IconMenu2, IconX } from "@tabler/icons-react";
+import { IconMenu2, IconSearch, IconX } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { css } from "styled-system/css";
 import { useAuth } from "../contexts/AuthContext";
 import { CartIcon } from "./CartIcon";
-import { useState } from "react";
 
 interface NavigationItem {
   label: string;
@@ -158,8 +158,14 @@ export default function Header({
             })}
             style={{ backgroundColor: colors.searchButton }}
           >
-            <IconSearch size={16} className={css({ display: { base: "block", md: "none" } })} />
-            <IconSearch size={12} className={css({ display: { base: "none", md: "block" } })} />
+            <IconSearch
+              size={16}
+              className={css({ display: { base: "block", md: "none" } })}
+            />
+            <IconSearch
+              size={12}
+              className={css({ display: { base: "none", md: "block" } })}
+            />
           </button>
         </div>
 
