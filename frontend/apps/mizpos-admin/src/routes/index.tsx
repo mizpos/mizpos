@@ -132,59 +132,102 @@ function DashboardPage() {
   // 統計を計算
   const stats = useMemo(() => {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const lastMonthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+    );
 
     // 本日の売上
     const todaySales = salesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
       return saleDate >= todayStart && sale.status === "completed";
     });
-    const todayRevenue = todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const todayRevenue = todaySales.reduce(
+      (sum, sale) => sum + (sale.total || 0),
+      0,
+    );
     const todayOrderCount = todaySales.length;
 
     // 昨日の売上
     const yesterdaySales = salesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
-      return saleDate >= yesterdayStart && saleDate < todayStart && sale.status === "completed";
+      return (
+        saleDate >= yesterdayStart &&
+        saleDate < todayStart &&
+        sale.status === "completed"
+      );
     });
-    const yesterdayRevenue = yesterdaySales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const yesterdayRevenue = yesterdaySales.reduce(
+      (sum, sale) => sum + (sale.total || 0),
+      0,
+    );
     const yesterdayOrderCount = yesterdaySales.length;
 
     // 前日比
-    const revenueChange = yesterdayRevenue > 0
-      ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue * 100).toFixed(1)
-      : null;
-    const orderChange = yesterdayOrderCount > 0
-      ? ((todayOrderCount - yesterdayOrderCount) / yesterdayOrderCount * 100).toFixed(1)
-      : null;
+    const revenueChange =
+      yesterdayRevenue > 0
+        ? (
+            ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) *
+            100
+          ).toFixed(1)
+        : null;
+    const orderChange =
+      yesterdayOrderCount > 0
+        ? (
+            ((todayOrderCount - yesterdayOrderCount) / yesterdayOrderCount) *
+            100
+          ).toFixed(1)
+        : null;
 
     // 今月の売上
     const thisMonthSales = salesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
       return saleDate >= monthStart && sale.status === "completed";
     });
-    const thisMonthRevenue = thisMonthSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const thisMonthRevenue = thisMonthSales.reduce(
+      (sum, sale) => sum + (sale.total || 0),
+      0,
+    );
 
     // 先月の売上
     const lastMonthSales = salesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
-      return saleDate >= lastMonthStart && saleDate <= lastMonthEnd && sale.status === "completed";
+      return (
+        saleDate >= lastMonthStart &&
+        saleDate <= lastMonthEnd &&
+        sale.status === "completed"
+      );
     });
-    const lastMonthRevenue = lastMonthSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const lastMonthRevenue = lastMonthSales.reduce(
+      (sum, sale) => sum + (sale.total || 0),
+      0,
+    );
 
     // 月間成長率
-    const monthlyGrowth = lastMonthRevenue > 0
-      ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1)
-      : null;
+    const monthlyGrowth =
+      lastMonthRevenue > 0
+        ? (
+            ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) *
+            100
+          ).toFixed(1)
+        : null;
 
     // 在庫アラート
     const lowStockProducts = productsData.filter(
-      (product) => product.stock_quantity <= STOCK_LOW_THRESHOLD
+      (product) => product.stock_quantity <= STOCK_LOW_THRESHOLD,
     );
 
     return {
