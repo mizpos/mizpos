@@ -25,7 +25,8 @@
     "check-types": "tsc --noEmit",
     "lint": "biome check .",
     "fix": "biome check --write .",
-    "generate": "openapi-typescript --redocly ./redocly.yaml"
+    "generate": "openapi-typescript --redocly ./redocly.yaml",
+    "generate:prod": "openapi-typescript --redocly ./redocly.prod.yaml"
   },
   "dependencies": {
     "openapi-fetch": "^0.15.0"
