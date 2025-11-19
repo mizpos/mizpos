@@ -56,3 +56,46 @@ class RoleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# 住所管理用モデル
+class SavedAddress(BaseModel):
+    address_id: str
+    label: str = Field(
+        ..., min_length=1, max_length=50, description="住所のラベル（例: 自宅、会社）"
+    )
+    name: str = Field(..., min_length=1, max_length=200)
+    postal_code: str = Field(..., min_length=1, max_length=20)
+    prefecture: str = Field(..., min_length=1, max_length=100)
+    city: str = Field(..., min_length=1, max_length=200)
+    address_line1: str = Field(..., min_length=1, max_length=300)
+    address_line2: str | None = None
+    phone_number: str = Field(..., min_length=1, max_length=50)
+    is_default: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class CreateAddressRequest(BaseModel):
+    label: str = Field(..., min_length=1, max_length=50)
+    name: str = Field(..., min_length=1, max_length=200)
+    postal_code: str = Field(..., min_length=1, max_length=20)
+    prefecture: str = Field(..., min_length=1, max_length=100)
+    city: str = Field(..., min_length=1, max_length=200)
+    address_line1: str = Field(..., min_length=1, max_length=300)
+    address_line2: str | None = None
+    phone_number: str = Field(..., min_length=1, max_length=50)
+    is_default: bool = False
+
+
+class UpdateAddressRequest(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=50)
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    postal_code: str | None = Field(default=None, min_length=1, max_length=20)
+    prefecture: str | None = Field(default=None, min_length=1, max_length=100)
+    city: str | None = Field(default=None, min_length=1, max_length=200)
+    address_line1: str | None = Field(default=None, min_length=1, max_length=300)
+    address_line2: str | None = None
+    phone_number: str | None = Field(default=None, min_length=1, max_length=50)
+    is_default: bool | None = None

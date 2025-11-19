@@ -1,5 +1,6 @@
-import { IconSearch } from "@tabler/icons-react";
+import { IconMenu2, IconSearch, IconX } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { css } from "styled-system/css";
 import { useAuth } from "../contexts/AuthContext";
 import { CartIcon } from "./CartIcon";
@@ -34,6 +35,7 @@ export default function Header({
   cartItemCount = 0,
 }: HeaderProps) {
   const { user, signOut } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -49,45 +51,81 @@ export default function Header({
       <div
         className={css({
           display: "flex",
-          gap: "25px",
+          gap: { base: "8px", md: "15px", lg: "25px" },
+          justifyContent: "space-between",
           alignItems: "center",
-          padding: "20px",
+          padding: { base: "10px", md: "15px", lg: "20px" },
           width: "100%",
+          flexWrap: { base: "wrap", lg: "nowrap" },
         })}
         style={{ backgroundColor: colors.topBar }}
       >
-        <Link
-          to="/"
-          className={css({
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            height: "45px",
-            alignItems: "center",
-            justifyContent: "center",
-            paddingX: "15px",
-            paddingY: "13px",
-            width: "138px",
-          })}
-        >
-          <img
-            src="/logo.png"
-            alt="mizpos Online Sales"
-            className={css({
-              height: "32px",
-            })}
-          />
-        </Link>
-
+        {/* ロゴとハンバーガーメニュー */}
         <div
           className={css({
-            flex: "1",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            order: { base: "1", lg: "1" },
+          })}
+        >
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className={css({
+              display: { base: "flex", lg: "none" },
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "5px",
+              _hover: {
+                opacity: 0.8,
+              },
+            })}
+            aria-label="メニュー"
+          >
+            {isMobileMenuOpen ? <IconX size={24} /> : <IconMenu2 size={24} />}
+          </button>
+          <Link
+            to="/"
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              height: { base: "30px", md: "40px", lg: "45px" },
+              alignItems: "center",
+              justifyContent: "center",
+              paddingX: { base: "8px", md: "12px", lg: "15px" },
+              paddingY: { base: "8px", md: "10px", lg: "13px" },
+              width: { base: "80px", md: "110px", lg: "138px" },
+            })}
+          >
+            <img
+              src="/logo.png"
+              alt="mizpos Online Sales"
+              className={css({
+                height: { base: "20px", md: "26px", lg: "32px" },
+                width: "auto",
+              })}
+            />
+          </Link>
+        </div>
+
+        {/* 検索バー */}
+        <div
+          className={css({
+            flex: { base: "1 1 100%", lg: "1" },
+            order: { base: "3", lg: "2" },
             backgroundColor: "white",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             borderRadius: "5px",
-            paddingX: "13px",
+            paddingX: { base: "10px", md: "10px", lg: "13px" },
+            minHeight: { base: "40px", md: "auto" },
           })}
         >
           <input
@@ -97,9 +135,9 @@ export default function Header({
               flex: "1",
               border: "none",
               outline: "none",
-              fontSize: "12px",
+              fontSize: { base: "14px", md: "12px" },
               fontWeight: "medium",
-              paddingY: "10px",
+              paddingY: { base: "10px", md: "10px" },
               backgroundColor: "transparent",
             })}
           />
@@ -112,14 +150,22 @@ export default function Header({
               justifyContent: "center",
               padding: "3px",
               borderRadius: "2px",
-              width: "27px",
-              height: "27px",
+              width: { base: "30px", md: "27px" },
+              height: { base: "30px", md: "27px" },
               border: "none",
               cursor: "pointer",
+              flexShrink: 0,
             })}
             style={{ backgroundColor: colors.searchButton }}
           >
-            <IconSearch size={12} />
+            <IconSearch
+              size={16}
+              className={css({ display: { base: "block", md: "none" } })}
+            />
+            <IconSearch
+              size={12}
+              className={css({ display: { base: "none", md: "block" } })}
+            />
           </button>
         </div>
 
@@ -127,17 +173,18 @@ export default function Header({
         {user ? (
           <div
             className={css({
-              display: "flex",
+              display: { base: "none", md: "flex" },
               flexDirection: "column",
               alignItems: "flex-start",
               color: "white",
               lineHeight: "1",
               position: "relative",
+              order: { base: "4", lg: "3" },
             })}
           >
             <p
               className={css({
-                fontSize: "12px",
+                fontSize: { base: "11px", md: "12px" },
                 fontWeight: "medium",
               })}
             >
@@ -151,9 +198,26 @@ export default function Header({
               })}
             >
               <Link
+                to="/settings"
+                className={css({
+                  fontSize: { base: "12px", md: "14px" },
+                  fontWeight: "bold",
+                  color: "white",
+                  textDecoration: "none",
+                  _hover: {
+                    textDecoration: "underline",
+                  },
+                })}
+              >
+                アカウント設定
+              </Link>
+              <span className={css({ color: "white", fontSize: "12px" })}>
+                |
+              </span>
+              <Link
                 to="/my-orders"
                 className={css({
-                  fontSize: "14px",
+                  fontSize: { base: "12px", md: "14px" },
                   fontWeight: "bold",
                   color: "white",
                   textDecoration: "none",
@@ -171,7 +235,7 @@ export default function Header({
                 type="button"
                 onClick={handleSignOut}
                 className={css({
-                  fontSize: "14px",
+                  fontSize: { base: "12px", md: "14px" },
                   fontWeight: "bold",
                   color: "white",
                   background: "none",
@@ -191,11 +255,12 @@ export default function Header({
           <Link
             to="/login"
             className={css({
-              display: "flex",
+              display: { base: "none", md: "flex" },
               flexDirection: "column",
               alignItems: "flex-start",
               color: "white",
               lineHeight: "1",
+              order: { base: "4", lg: "3" },
               _hover: {
                 opacity: 0.8,
               },
@@ -203,7 +268,7 @@ export default function Header({
           >
             <p
               className={css({
-                fontSize: "12px",
+                fontSize: { base: "11px", md: "12px" },
                 fontWeight: "medium",
               })}
             >
@@ -211,7 +276,7 @@ export default function Header({
             </p>
             <p
               className={css({
-                fontSize: "14px",
+                fontSize: { base: "12px", md: "14px" },
                 fontWeight: "bold",
               })}
             >
@@ -232,6 +297,7 @@ export default function Header({
             padding: "3px",
             cursor: "pointer",
             textDecoration: "none",
+            order: { base: "2", lg: "4" },
             _hover: {
               background: "#ffffff1a",
             },
@@ -240,13 +306,15 @@ export default function Header({
           <div
             className={css({
               display: "inline-flex",
+              width: { base: "32px", md: "36px", lg: "40px" },
+              height: { base: "32px", md: "36px", lg: "40px" },
             })}
           >
             <CartIcon size={40} color="white" itemCount={cartItemCount} />
           </div>
           <div
             className={css({
-              display: "flex",
+              display: { base: "none", sm: "flex" },
               flexDirection: "column",
               alignItems: "flex-start",
               justifyContent: "center",
@@ -254,7 +322,7 @@ export default function Header({
           >
             <p
               className={css({
-                fontSize: "12px",
+                fontSize: { base: "11px", md: "12px" },
                 fontWeight: "bold",
                 color: "white",
               })}
@@ -265,10 +333,10 @@ export default function Header({
         </Link>
       </div>
 
-      {/* ナビゲーションバー */}
+      {/* ナビゲーションバー（デスクトップ） */}
       <div
         className={css({
-          display: "flex",
+          display: { base: "none", lg: "flex" },
           gap: "10px",
           alignItems: "center",
           paddingX: "15px",
@@ -296,6 +364,159 @@ export default function Header({
           </a>
         ))}
       </div>
+
+      {/* モバイルメニュー */}
+      {isMobileMenuOpen && (
+        <div
+          className={css({
+            display: { base: "block", lg: "none" },
+            padding: "15px",
+          })}
+          style={{ backgroundColor: colors.navigationBar }}
+        >
+          {/* ナビゲーションリンク */}
+          <nav
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "15px",
+              marginBottom: user ? "15px" : "0",
+              paddingBottom: user ? "15px" : "0",
+              borderBottom: user
+                ? "1px solid rgba(255, 255, 255, 0.2)"
+                : "none",
+            })}
+          >
+            {navigationItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={css({
+                  color: "white",
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                  fontSize: "16px",
+                  padding: "8px 0",
+                  _hover: {
+                    textDecoration: "underline",
+                  },
+                })}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+
+          {/* アカウント情報（モバイル） */}
+          {user ? (
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                color: "white",
+              })}
+            >
+              <p
+                className={css({
+                  fontSize: "14px",
+                  fontWeight: "medium",
+                })}
+              >
+                こんにちは、{user.name || user.email.split("@")[0]}さん
+              </p>
+              <Link
+                to="/settings"
+                className={css({
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  color: "white",
+                  textDecoration: "none",
+                  padding: "8px 0",
+                  _hover: {
+                    textDecoration: "underline",
+                  },
+                })}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                アカウント設定
+              </Link>
+              <Link
+                to="/my-orders"
+                className={css({
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  color: "white",
+                  textDecoration: "none",
+                  padding: "8px 0",
+                  _hover: {
+                    textDecoration: "underline",
+                  },
+                })}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                注文履歴
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  handleSignOut();
+                  setIsMobileMenuOpen(false);
+                }}
+                className={css({
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  color: "white",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "8px 0",
+                  textAlign: "left",
+                  _hover: {
+                    textDecoration: "underline",
+                  },
+                })}
+              >
+                ログアウト
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                color: "white",
+                textDecoration: "none",
+                padding: "8px 0",
+                _hover: {
+                  opacity: 0.8,
+                },
+              })}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <p
+                className={css({
+                  fontSize: "14px",
+                  fontWeight: "medium",
+                })}
+              >
+                こんにちは、ゲストさん
+              </p>
+              <p
+                className={css({
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                })}
+              >
+                ログインして注文履歴を見る
+              </p>
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   );
 }

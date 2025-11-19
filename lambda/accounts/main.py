@@ -16,24 +16,32 @@ from models import (
     AssignRoleRequest,
     ChangePasswordRequest,
     ConfirmEmailRequest,
+    CreateAddressRequest,
     CreateUserRequest,
     ResendConfirmationRequest,
+    UpdateAddressRequest,
     UpdateUserRequest,
 )
 from services import (
     DynamoDBClientError,
     UsernameExistsException,
+    add_user_address,
     admin_confirm_user,
     admin_reset_user_password,
     change_user_password,
     confirm_user_email,
     create_cognito_user,
     delete_cognito_user,
+    delete_user_address,
     delete_user_roles,
     dynamo_to_dict,
+    get_user_address_by_id,
+    get_user_addresses,
     get_user_status,
     resend_confirmation_code,
     roles_table,
+    set_default_address,
+    update_user_address,
     users_table,
 )
 
@@ -381,6 +389,123 @@ async def get_event_roles(
         )
         roles = [dynamo_to_dict(item) for item in response.get("Items", [])]
         return {"roles": roles}
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# 住所管理エンドポイント
+# ==========================================
+
+
+@router.get("/users/{user_id}/addresses", response_model=dict)
+async def get_addresses(user_id: str, current_user: dict = Depends(get_current_user)):
+    """ユーザーの登録済み住所一覧を取得"""
+    try:
+        # ユーザーの存在確認
+        user_response = users_table.get_item(Key={"user_id": user_id})
+        if "Item" not in user_response:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        addresses = get_user_addresses(user_id)
+        return {"addresses": addresses}
+    except HTTPException:
+        raise
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post(
+    "/users/{user_id}/addresses",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_address(
+    user_id: str,
+    request: CreateAddressRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """ユーザーに新しい住所を追加"""
+    try:
+        # ユーザーの存在確認
+        user_response = users_table.get_item(Key={"user_id": user_id})
+        if "Item" not in user_response:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        address_data = request.model_dump()
+        new_address = add_user_address(user_id, address_data)
+        return {"address": new_address}
+    except HTTPException:
+        raise
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/users/{user_id}/addresses/{address_id}", response_model=dict)
+async def get_address(
+    user_id: str, address_id: str, current_user: dict = Depends(get_current_user)
+):
+    """特定の住所詳細を取得"""
+    try:
+        address = get_user_address_by_id(user_id, address_id)
+        if not address:
+            raise HTTPException(status_code=404, detail="Address not found")
+        return {"address": address}
+    except HTTPException:
+        raise
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/users/{user_id}/addresses/{address_id}", response_model=dict)
+async def update_address(
+    user_id: str,
+    address_id: str,
+    request: UpdateAddressRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """住所情報を更新"""
+    try:
+        address_data = request.model_dump(exclude_none=True)
+        updated_address = update_user_address(user_id, address_id, address_data)
+        if not updated_address:
+            raise HTTPException(status_code=404, detail="Address not found")
+        return {"address": updated_address}
+    except HTTPException:
+        raise
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete(
+    "/users/{user_id}/addresses/{address_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_address(
+    user_id: str, address_id: str, current_user: dict = Depends(get_current_user)
+):
+    """住所を削除"""
+    try:
+        deleted = delete_user_address(user_id, address_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Address not found")
+    except HTTPException:
+        raise
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/users/{user_id}/addresses/{address_id}/default", response_model=dict)
+async def set_address_as_default(
+    user_id: str, address_id: str, current_user: dict = Depends(get_current_user)
+):
+    """住所をデフォルトに設定"""
+    try:
+        updated_address = set_default_address(user_id, address_id)
+        if not updated_address:
+            raise HTTPException(status_code=404, detail="Address not found")
+        return {"address": updated_address}
+    except HTTPException:
+        raise
     except DynamoDBClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

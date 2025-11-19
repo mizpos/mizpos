@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as OrderCompleteIndexRouteImport } from './routes/order-complete/index'
 import { Route as MyOrdersIndexRouteImport } from './routes/my-orders/index'
+import { Route as MyAddressesIndexRouteImport } from './routes/my-addresses/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as DeliveryIndexRouteImport } from './routes/delivery/index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
@@ -22,6 +24,11 @@ import { Route as ProductsProductIdRouteImport } from './routes/products/$produc
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
@@ -37,6 +44,11 @@ const OrderCompleteIndexRoute = OrderCompleteIndexRouteImport.update({
 const MyOrdersIndexRoute = MyOrdersIndexRouteImport.update({
   id: '/my-orders/',
   path: '/my-orders/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyAddressesIndexRoute = MyAddressesIndexRouteImport.update({
+  id: '/my-addresses/',
+  path: '/my-addresses/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginIndexRoute = LoginIndexRouteImport.update({
@@ -72,9 +84,11 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutIndexRoute
   '/delivery': typeof DeliveryIndexRoute
   '/login': typeof LoginIndexRoute
+  '/my-addresses': typeof MyAddressesIndexRoute
   '/my-orders': typeof MyOrdersIndexRoute
   '/order-complete': typeof OrderCompleteIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,9 +97,11 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutIndexRoute
   '/delivery': typeof DeliveryIndexRoute
   '/login': typeof LoginIndexRoute
+  '/my-addresses': typeof MyAddressesIndexRoute
   '/my-orders': typeof MyOrdersIndexRoute
   '/order-complete': typeof OrderCompleteIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,9 +111,11 @@ export interface FileRoutesById {
   '/checkout/': typeof CheckoutIndexRoute
   '/delivery/': typeof DeliveryIndexRoute
   '/login/': typeof LoginIndexRoute
+  '/my-addresses/': typeof MyAddressesIndexRoute
   '/my-orders/': typeof MyOrdersIndexRoute
   '/order-complete/': typeof OrderCompleteIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,9 +126,11 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/delivery'
     | '/login'
+    | '/my-addresses'
     | '/my-orders'
     | '/order-complete'
     | '/products'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,9 +139,11 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/delivery'
     | '/login'
+    | '/my-addresses'
     | '/my-orders'
     | '/order-complete'
     | '/products'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -130,9 +152,11 @@ export interface FileRouteTypes {
     | '/checkout/'
     | '/delivery/'
     | '/login/'
+    | '/my-addresses/'
     | '/my-orders/'
     | '/order-complete/'
     | '/products/'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -142,9 +166,11 @@ export interface RootRouteChildren {
   CheckoutIndexRoute: typeof CheckoutIndexRoute
   DeliveryIndexRoute: typeof DeliveryIndexRoute
   LoginIndexRoute: typeof LoginIndexRoute
+  MyAddressesIndexRoute: typeof MyAddressesIndexRoute
   MyOrdersIndexRoute: typeof MyOrdersIndexRoute
   OrderCompleteIndexRoute: typeof OrderCompleteIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -154,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products/': {
@@ -175,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/my-orders'
       fullPath: '/my-orders'
       preLoaderRoute: typeof MyOrdersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-addresses/': {
+      id: '/my-addresses/'
+      path: '/my-addresses'
+      fullPath: '/my-addresses'
+      preLoaderRoute: typeof MyAddressesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login/': {
@@ -222,9 +262,11 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutIndexRoute: CheckoutIndexRoute,
   DeliveryIndexRoute: DeliveryIndexRoute,
   LoginIndexRoute: LoginIndexRoute,
+  MyAddressesIndexRoute: MyAddressesIndexRoute,
   MyOrdersIndexRoute: MyOrdersIndexRoute,
   OrderCompleteIndexRoute: OrderCompleteIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

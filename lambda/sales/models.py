@@ -109,6 +109,7 @@ class SaleResponse(BaseModel):
     items: list[dict]
     subtotal: float
     discount: float
+    shipping_fee: float | None = None
     total: float
     payment_method: str
     status: str
@@ -151,7 +152,14 @@ class CreateOnlineOrderRequest(BaseModel):
     cart_items: list[CartItem]
     customer_email: str = Field(..., min_length=1)
     customer_name: str = Field(..., min_length=1, max_length=200)
-    shipping_address: ShippingAddress
+    shipping_address: ShippingAddress | None = None
+    saved_address_id: str | None = Field(
+        default=None,
+        description="登録済み住所ID（指定された場合はshipping_addressより優先）",
+    )
+    user_id: str | None = Field(
+        default=None, description="ユーザーID（saved_address_id使用時に必要）"
+    )
     coupon_code: str | None = None
     notes: str | None = None
 
@@ -171,6 +179,7 @@ class OnlineOrderResponse(BaseModel):
     items: list[dict]
     subtotal: float
     discount: float
+    shipping_fee: float
     total: float
     status: str
     shipping_address: dict
@@ -185,4 +194,49 @@ class OnlineOrderResponse(BaseModel):
 class UpdateShippingRequest(BaseModel):
     tracking_number: str | None = Field(default=None, max_length=200)
     carrier: str | None = Field(default=None, max_length=100)
+    shipping_method: str | None = Field(
+        default=None, max_length=200, description="配送方法（レターパック、宅配便など）"
+    )
+    shipping_method_other: str | None = Field(
+        default=None, max_length=200, description="配送方法（その他・手打ち）"
+    )
     notes: str | None = Field(default=None, max_length=500)
+
+
+# 送料設定管理用モデル
+class ShippingOptionBase(BaseModel):
+    label: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="送料の表示名（例: レターパック）",
+    )
+    price: int = Field(..., ge=0, description="送料金額（円）")
+    sort_order: int = Field(default=0, description="表示順序")
+    description: str = Field(default="", max_length=500, description="説明")
+
+
+class CreateShippingOptionRequest(ShippingOptionBase):
+    pass
+
+
+class UpdateShippingOptionRequest(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=100)
+    price: int | None = Field(default=None, ge=0)
+    sort_order: int | None = Field(default=None)
+    description: str | None = Field(default=None, max_length=500)
+    is_active: bool | None = None
+
+
+class ShippingOptionResponse(BaseModel):
+    shipping_option_id: str
+    label: str
+    price: int
+    sort_order: int
+    description: str
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True

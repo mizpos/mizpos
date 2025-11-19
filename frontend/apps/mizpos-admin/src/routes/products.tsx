@@ -12,6 +12,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
+import { ImageUploadField } from "../components/ImageUploadField";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
 import { getAuthenticatedClients, getAuthHeaders } from "../lib/api";
@@ -861,15 +862,11 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
       </div>
 
       <div className={css({ gridColumn: "span 2" })}>
-        <label htmlFor="image_url" className={labelClass}>
-          画像URL
-        </label>
-        <input
-          id="image_url"
-          type="url"
+        <ImageUploadField
           value={data.image_url}
-          onChange={(e) => onChange({ ...data, image_url: e.target.value })}
-          className={inputClass}
+          onChange={(url) => onChange({ ...data, image_url: url })}
+          uploadType="book_cover"
+          label="商品画像"
         />
       </div>
     </div>
