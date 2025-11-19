@@ -2,6 +2,7 @@
 Accounts Lambda Function
 住所管理エンドポイントを含むユーザーアカウント管理API
 """
+
 import json
 import logging
 import os
@@ -402,16 +403,44 @@ async def get_event_roles(
 # ==========================================
 
 
+def resolve_user_id(user_id: str, current_user: dict) -> str:
+    """
+    URLのuser_idをDynamoDBのuser_idに解決する
+    user_idがCognito subの場合、認証トークンと一致を確認してDynamoDB user_idを取得
+    """
+    # セキュリティ: URLのuser_idがCognito subの場合、認証トークンと一致することを確認
+    if user_id == current_user.get("sub"):
+        # Cognito subからDynamoDBのユーザーを検索
+        response = users_table.scan(
+            FilterExpression="attribute_exists(cognito_user_id)"
+        )
+
+        # current_userのemailまたはusernameでユーザーを検索
+        user_email = current_user.get("email") or current_user.get("username")
+        user_item = None
+        for item in response.get("Items", []):
+            if item.get("cognito_user_id") == user_email:
+                user_item = item
+                break
+
+        if not user_item:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return user_item["user_id"]
+    else:
+        # URLのuser_idをDynamoDB user_idとして扱う（後方互換性）
+        user_response = users_table.get_item(Key={"user_id": user_id})
+        if "Item" not in user_response:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user_id
+
+
 @router.get("/users/{user_id}/addresses", response_model=dict)
 async def get_addresses(user_id: str, current_user: dict = Depends(get_current_user)):
     """ユーザーの登録済み住所一覧を取得"""
     try:
-        # ユーザーの存在確認
-        user_response = users_table.get_item(Key={"user_id": user_id})
-        if "Item" not in user_response:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        addresses = get_user_addresses(user_id)
+        actual_user_id = resolve_user_id(user_id, current_user)
+        addresses = get_user_addresses(actual_user_id)
         return {"addresses": addresses}
     except HTTPException:
         raise
@@ -431,13 +460,9 @@ async def create_address(
 ):
     """ユーザーに新しい住所を追加"""
     try:
-        # ユーザーの存在確認
-        user_response = users_table.get_item(Key={"user_id": user_id})
-        if "Item" not in user_response:
-            raise HTTPException(status_code=404, detail="User not found")
-
+        actual_user_id = resolve_user_id(user_id, current_user)
         address_data = request.model_dump()
-        new_address = add_user_address(user_id, address_data)
+        new_address = add_user_address(actual_user_id, address_data)
         return {"address": new_address}
     except HTTPException:
         raise
@@ -451,7 +476,8 @@ async def get_address(
 ):
     """特定の住所詳細を取得"""
     try:
-        address = get_user_address_by_id(user_id, address_id)
+        actual_user_id = resolve_user_id(user_id, current_user)
+        address = get_user_address_by_id(actual_user_id, address_id)
         if not address:
             raise HTTPException(status_code=404, detail="Address not found")
         return {"address": address}
@@ -470,8 +496,9 @@ async def update_address(
 ):
     """住所情報を更新"""
     try:
+        actual_user_id = resolve_user_id(user_id, current_user)
         address_data = request.model_dump(exclude_none=True)
-        updated_address = update_user_address(user_id, address_id, address_data)
+        updated_address = update_user_address(actual_user_id, address_id, address_data)
         if not updated_address:
             raise HTTPException(status_code=404, detail="Address not found")
         return {"address": updated_address}
@@ -489,7 +516,8 @@ async def delete_address(
 ):
     """住所を削除"""
     try:
-        deleted = delete_user_address(user_id, address_id)
+        actual_user_id = resolve_user_id(user_id, current_user)
+        deleted = delete_user_address(actual_user_id, address_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Address not found")
     except HTTPException:
@@ -504,7 +532,8 @@ async def set_address_as_default(
 ):
     """住所をデフォルトに設定"""
     try:
-        updated_address = set_default_address(user_id, address_id)
+        actual_user_id = resolve_user_id(user_id, current_user)
+        updated_address = set_default_address(actual_user_id, address_id)
         if not updated_address:
             raise HTTPException(status_code=404, detail="Address not found")
         return {"address": updated_address}
