@@ -53,7 +53,7 @@ export function Header({ title }: HeaderProps) {
           })}
           aria-label="通知"
         >
-          <IconBell size={{ base: 18, md: 20 }} />
+          <IconBell size={20} />
         </button>
 
         <button
@@ -73,7 +73,7 @@ export function Header({ title }: HeaderProps) {
           })}
           aria-label="ユーザー"
         >
-          <IconUser size={{ base: 18, md: 20 }} />
+          <IconUser size={20} />
         </button>
       </div>
     </header>

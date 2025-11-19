@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as OrderCompleteIndexRouteImport } from './routes/order-complete/index'
 import { Route as MyOrdersIndexRouteImport } from './routes/my-orders/index'
@@ -23,6 +24,11 @@ import { Route as ProductsProductIdRouteImport } from './routes/products/$produc
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsIndexRoute = ProductsIndexRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/my-orders': typeof MyOrdersIndexRoute
   '/order-complete': typeof OrderCompleteIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/my-orders': typeof MyOrdersIndexRoute
   '/order-complete': typeof OrderCompleteIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/my-orders/': typeof MyOrdersIndexRoute
   '/order-complete/': typeof OrderCompleteIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/my-orders'
     | '/order-complete'
     | '/products'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/my-orders'
     | '/order-complete'
     | '/products'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/my-orders/'
     | '/order-complete/'
     | '/products/'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   MyOrdersIndexRoute: typeof MyOrdersIndexRoute
   OrderCompleteIndexRoute: typeof OrderCompleteIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products/': {
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyOrdersIndexRoute: MyOrdersIndexRoute,
   OrderCompleteIndexRoute: OrderCompleteIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -137,9 +137,7 @@ function MyAddressesPage() {
             alignItems: "center",
           })}
         >
-          <h1
-            className={css({ fontSize: "24px", fontWeight: "bold" })}
-          >
+          <h1 className={css({ fontSize: "24px", fontWeight: "bold" })}>
             登録住所管理
           </h1>
           <div className={css({ display: "flex", gap: "16px" })}>
@@ -272,30 +270,40 @@ function AddressCard({
   isSettingDefault: boolean;
 }) {
   return (
-    <Box
-      p={4}
-      borderWidth="1px"
-      borderRadius="md"
-      bg={address.is_default ? "blue.50" : "white"}
-      position="relative"
+    <div
+      className={css({
+        padding: "16px",
+        borderWidth: "1px",
+        borderRadius: "8px",
+        backgroundColor: address.is_default ? "#e7f3ff" : "white",
+        position: "relative",
+      })}
     >
       {address.is_default && (
-        <Box
-          position="absolute"
-          top={2}
-          right={2}
-          px={2}
-          py={1}
-          bg="blue.500"
-          color="white"
-          borderRadius="md"
-          fontSize="sm"
+        <div
+          className={css({
+            position: "absolute",
+            top: "8px",
+            right: "8px",
+            paddingX: "8px",
+            paddingY: "4px",
+            backgroundColor: "#007bff",
+            color: "white",
+            borderRadius: "8px",
+            fontSize: "14px",
+          })}
         >
           デフォルト
-        </Box>
+        </div>
       )}
-      <VStack gap={2} alignItems="stretch">
-        <h3 style={{ fontSize: "18px", fontWeight: "bold" }}>
+      <div
+        className={css({
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        })}
+      >
+        <h3 className={css({ fontSize: "18px", fontWeight: "bold" })}>
           {address.label}
         </h3>
         <p>{address.name} 様</p>
@@ -308,11 +316,17 @@ function AddressCard({
         {address.address_line2 && <p>{address.address_line2}</p>}
         <p>電話番号: {address.phone_number}</p>
 
-        <HStack gap={2} mt={2}>
+        <div
+          className={css({
+            display: "flex",
+            gap: "8px",
+            marginTop: "8px",
+          })}
+        >
           <button
             type="button"
             onClick={onEdit}
-            style={{
+            className={css({
               padding: "6px 12px",
               backgroundColor: "#ffc107",
               color: "black",
@@ -320,7 +334,7 @@ function AddressCard({
               border: "none",
               cursor: "pointer",
               fontSize: "14px",
-            }}
+            })}
           >
             編集
           </button>
@@ -329,7 +343,7 @@ function AddressCard({
               type="button"
               onClick={onSetDefault}
               disabled={isSettingDefault}
-              style={{
+              className={css({
                 padding: "6px 12px",
                 backgroundColor: "#17a2b8",
                 color: "white",
@@ -338,7 +352,7 @@ function AddressCard({
                 cursor: isSettingDefault ? "not-allowed" : "pointer",
                 fontSize: "14px",
                 opacity: isSettingDefault ? 0.6 : 1,
-              }}
+              })}
             >
               {isSettingDefault ? "設定中..." : "デフォルトに設定"}
             </button>
@@ -347,7 +361,7 @@ function AddressCard({
             type="button"
             onClick={onDelete}
             disabled={isDeleting}
-            style={{
+            className={css({
               padding: "6px 12px",
               backgroundColor: "#dc3545",
               color: "white",
@@ -356,13 +370,13 @@ function AddressCard({
               cursor: isDeleting ? "not-allowed" : "pointer",
               fontSize: "14px",
               opacity: isDeleting ? 0.6 : 1,
-            }}
+            })}
           >
             {isDeleting ? "削除中..." : "削除"}
           </button>
-        </HStack>
-      </VStack>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -396,9 +410,22 @@ function AddressForm({
   };
 
   return (
-    <Box p={4} borderWidth="1px" borderRadius="md" bg="gray.50">
+    <div
+      className={css({
+        padding: "16px",
+        borderWidth: "1px",
+        borderRadius: "8px",
+        backgroundColor: "#f8f9fa",
+      })}
+    >
       <form onSubmit={handleSubmit}>
-        <VStack gap={4} alignItems="stretch">
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          })}
+        >
           <h3 style={{ fontSize: "18px", fontWeight: "bold" }}>
             {initialData ? "住所を編集" : "新しい住所を追加"}
           </h3>
@@ -598,7 +625,11 @@ function AddressForm({
 
           <div>
             <label
-              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              className={css({
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              })}
             >
               <input
                 type="checkbox"
@@ -611,11 +642,11 @@ function AddressForm({
             </label>
           </div>
 
-          <HStack gap={2}>
+          <div className={css({ display: "flex", gap: "8px" })}>
             <button
               type="submit"
               disabled={isLoading}
-              style={{
+              className={css({
                 padding: "8px 16px",
                 backgroundColor: "#007bff",
                 color: "white",
@@ -623,7 +654,7 @@ function AddressForm({
                 border: "none",
                 cursor: isLoading ? "not-allowed" : "pointer",
                 opacity: isLoading ? 0.6 : 1,
-              }}
+              })}
             >
               {isLoading ? "保存中..." : "保存"}
             </button>
@@ -631,7 +662,7 @@ function AddressForm({
               type="button"
               onClick={onCancel}
               disabled={isLoading}
-              style={{
+              className={css({
                 padding: "8px 16px",
                 backgroundColor: "#6c757d",
                 color: "white",
@@ -639,13 +670,13 @@ function AddressForm({
                 border: "none",
                 cursor: isLoading ? "not-allowed" : "pointer",
                 opacity: isLoading ? 0.6 : 1,
-              }}
+              })}
             >
               キャンセル
             </button>
-          </HStack>
-        </VStack>
+          </div>
+        </div>
       </form>
-    </Box>
+    </div>
   );
 }
