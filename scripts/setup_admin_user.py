@@ -119,7 +119,7 @@ def main():
         "--environment",
         "-e",
         default="dev",
-        choices=["dev", "prod"],
+        choices=["dev", "prod", "training"],
         help="環境 (default: dev)",
     )
     parser.add_argument(
