@@ -54,3 +54,9 @@ variable "frontend_apps" {
     }
   ]
 }
+
+variable "ses_sender_email" {
+  description = "SES verified sender email address"
+  type        = string
+  default     = "noreply@miz.cab"
+}

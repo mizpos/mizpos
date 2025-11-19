@@ -430,8 +430,14 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
-                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
+                      backgroundColor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "#f5f5f5"
+                          : "white",
+                      cursor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "not-allowed"
+                          : "text",
                     })}
                   />
                 </div>
@@ -466,8 +472,14 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
-                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
+                      backgroundColor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "#f5f5f5"
+                          : "white",
+                      cursor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "not-allowed"
+                          : "text",
                     })}
                   />
                 </div>
@@ -502,8 +514,14 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
-                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
+                      backgroundColor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "#f5f5f5"
+                          : "white",
+                      cursor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "not-allowed"
+                          : "text",
                     })}
                   />
                 </div>
@@ -535,8 +553,14 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
-                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
+                      backgroundColor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "#f5f5f5"
+                          : "white",
+                      cursor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "not-allowed"
+                          : "text",
                     })}
                   />
                 </div>
@@ -571,8 +595,14 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
-                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
+                      backgroundColor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "#f5f5f5"
+                          : "white",
+                      cursor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "not-allowed"
+                          : "text",
                     })}
                   />
                 </div>
@@ -606,8 +636,14 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
-                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
+                      backgroundColor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "#f5f5f5"
+                          : "white",
+                      cursor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "not-allowed"
+                          : "text",
                     })}
                   />
                 </div>
@@ -642,8 +678,14 @@ function CheckoutPage() {
                       border: "1px solid #ddd",
                       borderRadius: "4px",
                       fontSize: "14px",
-                      backgroundColor: !!selectedAddressId && !useManualAddress ? "#f5f5f5" : "white",
-                      cursor: !!selectedAddressId && !useManualAddress ? "not-allowed" : "text",
+                      backgroundColor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "#f5f5f5"
+                          : "white",
+                      cursor:
+                        !!selectedAddressId && !useManualAddress
+                          ? "not-allowed"
+                          : "text",
                     })}
                   />
                 </div>

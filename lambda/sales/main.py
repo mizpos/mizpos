@@ -15,6 +15,10 @@ from fastapi.responses import JSONResponse
 from mangum import Mangum
 
 from auth import get_current_user
+from email_service import (
+    send_order_confirmation_email,
+    send_shipping_notification_email,
+)
 from models import (
     ApplyCouponRequest,
     CreateCheckoutSessionRequest,
@@ -591,6 +595,13 @@ async def update_order_shipping(
                 status_code=500, detail="Failed to update shipping info"
             )
 
+        # 発送通知メールを送信
+        try:
+            send_shipping_notification_email(updated_order, request.tracking_number)
+        except Exception as email_error:
+            # メール送信失敗してもエラーにはしない
+            logger.error(f"Failed to send shipping notification email: {email_error}")
+
         return {"order": updated_order}
     except HTTPException:
         raise
@@ -906,6 +917,17 @@ async def stripe_webhook(request: Request):
                 update_order_status_with_stripe(
                     order_id, SaleStatus.COMPLETED.value, payment_status
                 )
+
+                # 購入完了メールを送信
+                try:
+                    order = get_order_by_id(order_id)
+                    if order:
+                        send_order_confirmation_email(order)
+                except Exception as email_error:
+                    # メール送信失敗してもエラーにはしない
+                    logger.error(
+                        f"Failed to send order confirmation email: {email_error}"
+                    )
 
         elif event["type"] == "payment_intent.payment_failed":
             payment_intent = event["data"]["object"]
