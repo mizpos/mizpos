@@ -45,9 +45,22 @@ interface Product {
 type ReportType = "sales" | "products" | "categories" | "consignment";
 type DateRange = "today" | "week" | "month" | "all";
 
+// 安全な数値フォーマット関数
+function safeNumber(value: number | undefined | null): number {
+  if (value === undefined || value === null || isNaN(value)) {
+    return 0;
+  }
+  return value;
+}
+
 function ReportsPage() {
   const [reportType, setReportType] = useState<ReportType>("sales");
   const [dateRange, setDateRange] = useState<DateRange>("month");
+  const [selectedPublisher, setSelectedPublisher] = useState<string>("all");
+
+  const handleExportPDF = () => {
+    window.print();
+  };
 
   const { data: salesData = [] } = useQuery({
     queryKey: ["sales"],
@@ -103,13 +116,18 @@ function ReportsPage() {
     (s) => s.status === "completed" && filterByDateRange(s.created_at),
   );
 
+  // 委託元リストを取得（重複なし）
+  const publishersList = Array.from(
+    new Set(productsData.map((p) => p.publisher || "自社").filter(Boolean)),
+  ).sort();
+
   const renderSalesReport = () => {
     const totalRevenue = completedSales.reduce(
-      (sum, s) => sum + s.final_amount,
+      (sum, s) => sum + safeNumber(s.final_amount),
       0,
     );
     const totalDiscount = completedSales.reduce(
-      (sum, s) => sum + s.discount_amount,
+      (sum, s) => sum + safeNumber(s.discount_amount),
       0,
     );
     const averageOrder =
@@ -118,7 +136,7 @@ function ReportsPage() {
     const paymentMethodBreakdown = completedSales.reduce(
       (acc, sale) => {
         acc[sale.payment_method] =
-          (acc[sale.payment_method] || 0) + sale.final_amount;
+          (acc[sale.payment_method] || 0) + safeNumber(sale.final_amount);
         return acc;
       },
       {} as Record<string, number>,
@@ -216,8 +234,8 @@ function ReportsPage() {
             revenue: 0,
           };
         }
-        productSales[item.product_id].quantity += item.quantity;
-        productSales[item.product_id].revenue += item.subtotal;
+        productSales[item.product_id].quantity += safeNumber(item.quantity);
+        productSales[item.product_id].revenue += safeNumber(item.subtotal);
       });
     });
 
@@ -320,8 +338,8 @@ function ReportsPage() {
         if (!categorySales[category]) {
           categorySales[category] = { quantity: 0, revenue: 0 };
         }
-        categorySales[category].quantity += item.quantity;
-        categorySales[category].revenue += item.subtotal;
+        categorySales[category].quantity += safeNumber(item.quantity);
+        categorySales[category].revenue += safeNumber(item.subtotal);
       });
     });
 
@@ -415,11 +433,15 @@ function ReportsPage() {
     completedSales.forEach((sale) => {
       sale.items.forEach((item) => {
         const publisher = productPublisherMap[item.product_id] || "不明";
+        // 委託元フィルター適用
+        if (selectedPublisher !== "all" && publisher !== selectedPublisher) {
+          return;
+        }
         if (!publisherSales[publisher]) {
           publisherSales[publisher] = { quantity: 0, revenue: 0 };
         }
-        publisherSales[publisher].quantity += item.quantity;
-        publisherSales[publisher].revenue += item.subtotal;
+        publisherSales[publisher].quantity += safeNumber(item.quantity);
+        publisherSales[publisher].revenue += safeNumber(item.subtotal);
       });
     });
 
@@ -437,24 +459,55 @@ function ReportsPage() {
           borderColor: "gray.200",
         })}
       >
-        <h3
+        <div
           className={css({
-            fontSize: "lg",
-            fontWeight: "semibold",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: "4",
           })}
         >
-          出版社/委託元別売上
-        </h3>
-        <p
-          className={css({
-            fontSize: "sm",
-            color: "gray.500",
-            marginBottom: "4",
-          })}
-        >
-          委託販売レポート - 出版社ごとの売上集計
-        </p>
+          <div>
+            <h3
+              className={css({
+                fontSize: "lg",
+                fontWeight: "semibold",
+              })}
+            >
+              出版社/委託元別売上
+            </h3>
+            <p
+              className={css({
+                fontSize: "sm",
+                color: "gray.500",
+              })}
+            >
+              委託販売レポート - 出版社ごとの売上集計
+            </p>
+          </div>
+          <select
+            value={selectedPublisher}
+            onChange={(e) => setSelectedPublisher(e.target.value)}
+            className={`${css({
+              padding: "2",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.300",
+              fontSize: "sm",
+              _focus: {
+                outline: "none",
+                borderColor: "primary.500",
+              },
+            })} no-print`}
+          >
+            <option value="all">すべての委託元</option>
+            {publishersList.map((publisher) => (
+              <option key={publisher} value={publisher}>
+                {publisher}
+              </option>
+            ))}
+          </select>
+        </div>
         <div
           className={css({
             display: "flex",
@@ -511,8 +564,52 @@ function ReportsPage() {
     );
   };
 
+  const getReportTitle = () => {
+    const titles: Record<ReportType, string> = {
+      sales: "売上概要レポート",
+      products: "商品別売上レポート",
+      categories: "カテゴリ別売上レポート",
+      consignment: "委託元別売上レポート",
+    };
+    return titles[reportType];
+  };
+
+  const getDateRangeLabel = () => {
+    const labels: Record<DateRange, string> = {
+      today: "今日",
+      week: "過去7日間",
+      month: "過去30日間",
+      all: "全期間",
+    };
+    return labels[dateRange];
+  };
+
   return (
     <>
+      <style>
+        {`
+          @media print {
+            header,
+            .no-print {
+              display: none !important;
+            }
+            .print-only {
+              display: block !important;
+            }
+            body {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            @page {
+              margin: 2cm;
+              size: A4;
+            }
+          }
+          .print-only {
+            display: none;
+          }
+        `}
+      </style>
       <Header title="レポート" />
       <div
         className={css({
@@ -521,14 +618,25 @@ function ReportsPage() {
           overflowY: "auto",
         })}
       >
+        {/* Print Header */}
+        <div className="print-only" style={{ marginBottom: "24px" }}>
+          <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
+            {getReportTitle()}
+          </h1>
+          <p style={{ color: "#666", fontSize: "14px" }}>
+            期間: {getDateRangeLabel()} | 出力日時: {new Date().toLocaleString("ja-JP")}
+            {selectedPublisher !== "all" && ` | 委託元: ${selectedPublisher}`}
+          </p>
+        </div>
+
         {/* Filters */}
         <div
-          className={css({
+          className={`${css({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: "6",
-          })}
+          })} no-print`}
         >
           <div
             className={css({ display: "flex", gap: "4", alignItems: "center" })}
@@ -585,9 +693,9 @@ function ReportsPage() {
             </select>
           </div>
 
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={handleExportPDF}>
             <IconDownload size={18} />
-            エクスポート
+            PDF出力
           </Button>
         </div>
 
