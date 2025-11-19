@@ -1,7 +1,8 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { useMutation } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { fetchUserAttributes } from "aws-amplify/auth";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import CheckoutForm from "../../components/CheckoutForm";
@@ -10,6 +11,8 @@ import {
   type CartItem as ApiCartItem,
   createOrder,
   createOrderPaymentIntent,
+  getUserAddresses,
+  type SavedAddress,
 } from "../../lib/api";
 
 // Stripe公開可能キーを読み込み
@@ -24,6 +27,11 @@ function CheckoutPage() {
   const [step, setStep] = useState<"info" | "payment">("info");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
+  const [useManualAddress, setUseManualAddress] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     email: "",
     name: "",
@@ -35,6 +43,48 @@ function CheckoutPage() {
     phone_number: "",
   });
 
+  // ユーザー情報を取得
+  const { data: userAttributes } = useQuery({
+    queryKey: ["userAttributes"],
+    queryFn: async () => {
+      try {
+        const attributes = await fetchUserAttributes();
+        setUserId(attributes.sub || null);
+        setCustomerInfo((prev) => ({
+          ...prev,
+          email: attributes.email || prev.email,
+          name: attributes.name || prev.name,
+        }));
+        return attributes;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  // 登録済み住所を取得（ログイン済みユーザーのみ）
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ["addresses", userId],
+    queryFn: () => getUserAddresses(userId!),
+    enabled: !!userId,
+  });
+
+  // 選択された住所を自動入力
+  const handleAddressSelect = (address: SavedAddress) => {
+    setSelectedAddressId(address.address_id);
+    setUseManualAddress(false);
+    setCustomerInfo({
+      ...customerInfo,
+      name: address.name,
+      postalCode: address.postal_code,
+      prefecture: address.prefecture,
+      city: address.city,
+      address_line1: address.address_line1,
+      address_line2: address.address_line2 || "",
+      phone_number: address.phone_number,
+    });
+  };
+
   // 注文作成mutation
   const createOrderMutation = useMutation({
     mutationFn: async () => {
@@ -44,11 +94,20 @@ function CheckoutPage() {
         unit_price: item.product.price,
       }));
 
-      const order = await createOrder({
+      // 登録済み住所を使用する場合と手動入力の場合で分岐
+      const orderRequest: Parameters<typeof createOrder>[0] = {
         cart_items: cartItems,
         customer_email: customerInfo.email,
         customer_name: customerInfo.name,
-        shipping_address: {
+      };
+
+      if (selectedAddressId && !useManualAddress && userId) {
+        // 登録済み住所を使用
+        orderRequest.saved_address_id = selectedAddressId;
+        orderRequest.user_id = userId;
+      } else {
+        // 手動入力の住所を使用
+        orderRequest.shipping_address = {
           name: customerInfo.name,
           postal_code: customerInfo.postalCode,
           prefecture: customerInfo.prefecture,
@@ -56,9 +115,10 @@ function CheckoutPage() {
           address_line1: customerInfo.address_line1,
           address_line2: customerInfo.address_line2,
           phone_number: customerInfo.phone_number,
-        },
-      });
+        };
+      }
 
+      const order = await createOrder(orderRequest);
       return order;
     },
     onSuccess: async (order) => {
@@ -160,6 +220,144 @@ function CheckoutPage() {
               >
                 配送先情報
               </h2>
+
+              {/* 登録済み住所の選択（ログイン済みユーザーのみ） */}
+              {userId && savedAddresses.length > 0 && (
+                <div className={css({ marginBottom: "24px" })}>
+                  <div
+                    className={css({
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "12px",
+                    })}
+                  >
+                    <h3
+                      className={css({
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                      })}
+                    >
+                      登録済みの住所から選択
+                    </h3>
+                    <Link to="/my-addresses">
+                      <button
+                        type="button"
+                        className={css({
+                          fontSize: "14px",
+                          color: "#007185",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          _hover: {
+                            color: "#c7511f",
+                          },
+                        })}
+                      >
+                        住所を管理
+                      </button>
+                    </Link>
+                  </div>
+
+                  <div
+                    className={css({
+                      display: "grid",
+                      gridTemplateColumns: { base: "1fr", md: "1fr 1fr" },
+                      gap: "12px",
+                      marginBottom: "12px",
+                    })}
+                  >
+                    {savedAddresses.map((address) => (
+                      <button
+                        key={address.address_id}
+                        type="button"
+                        onClick={() => handleAddressSelect(address)}
+                        className={css({
+                          padding: "12px",
+                          textAlign: "left",
+                          border:
+                            selectedAddressId === address.address_id &&
+                            !useManualAddress
+                              ? "2px solid #007bff"
+                              : "1px solid #ddd",
+                          borderRadius: "4px",
+                          backgroundColor:
+                            selectedAddressId === address.address_id &&
+                            !useManualAddress
+                              ? "#e7f3ff"
+                              : "white",
+                          cursor: "pointer",
+                          position: "relative",
+                          _hover: {
+                            borderColor: "#007bff",
+                          },
+                        })}
+                      >
+                        {address.is_default && (
+                          <span
+                            className={css({
+                              position: "absolute",
+                              top: "4px",
+                              right: "4px",
+                              fontSize: "10px",
+                              backgroundColor: "#007bff",
+                              color: "white",
+                              padding: "2px 6px",
+                              borderRadius: "3px",
+                            })}
+                          >
+                            デフォルト
+                          </span>
+                        )}
+                        <div
+                          className={css({
+                            fontSize: "14px",
+                            fontWeight: "bold",
+                            marginBottom: "4px",
+                          })}
+                        >
+                          {address.label}
+                        </div>
+                        <div className={css({ fontSize: "12px" })}>
+                          {address.name}
+                        </div>
+                        <div className={css({ fontSize: "12px" })}>
+                          〒{address.postal_code}
+                        </div>
+                        <div className={css({ fontSize: "12px" })}>
+                          {address.prefecture}
+                          {address.city}
+                          {address.address_line1}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseManualAddress(true);
+                      setSelectedAddressId(null);
+                    }}
+                    className={css({
+                      fontSize: "14px",
+                      color: "#007185",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      marginBottom: "16px",
+                      _hover: {
+                        color: "#c7511f",
+                      },
+                    })}
+                  >
+                    {useManualAddress ? "手動入力中" : "新しい住所を手動で入力"}
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={handleInfoSubmit}>
                 <div className={css({ marginBottom: "16px" })}>
                   <label
