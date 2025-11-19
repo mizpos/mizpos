@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment (dev/prod)"
+        description: "Environment (dev/prod/training)"
         required: true
         default: "dev"
         type: choice
         options:
           - dev
           - prod
+          - training
       email:
         description: "Admin email address"
         required: true
@@ -43,7 +44,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ inputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          role-to-assume: ${{ inputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || (inputs.environment == 'training' && secrets.AWS_ROLE_ARN_TRAINING || secrets.AWS_ROLE_ARN_DEV) }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Python
