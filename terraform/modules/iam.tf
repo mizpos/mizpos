@@ -117,6 +117,14 @@ resource "aws_iam_role_policy" "lambda_accounts" {
           "cognito-idp:ListUsers"
         ]
         Resource = aws_cognito_user_pool.main.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -259,6 +267,14 @@ resource "aws_iam_role_policy" "lambda_sales" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = aws_secretsmanager_secret.stripe_api_key.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = "*"
       }
     ]
   })

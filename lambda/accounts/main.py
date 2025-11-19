@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from mangum import Mangum
 
 from auth import get_current_user
+from email_service import send_welcome_email
 from models import (
     AdminResetPasswordRequest,
     AssignRoleRequest,
@@ -201,6 +202,23 @@ async def confirm_email(request: ConfirmEmailRequest):
     """メールアドレスの確認コードを検証（認証不要）"""
     try:
         confirm_user_email(request.email, request.confirmation_code)
+
+        # ユーザー情報を取得してウェルカムメールを送信
+        try:
+            response = users_table.query(
+                IndexName="EmailIndex",
+                KeyConditionExpression="email = :email",
+                ExpressionAttributeValues={":email": request.email}
+            )
+            users = response.get("Items", [])
+            if users:
+                user = users[0]
+                display_name = user.get("display_name", "")
+                send_welcome_email(request.email, display_name)
+        except Exception as email_error:
+            # ウェルカムメール送信失敗してもエラーにはしない
+            logger.error(f"Failed to send welcome email: {email_error}")
+
         return {"message": "Email confirmed successfully"}
     except Exception as e:
         error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
@@ -265,6 +283,15 @@ async def admin_confirm_user_endpoint(
             raise HTTPException(status_code=404, detail="User not found")
 
         admin_confirm_user(user["email"])
+
+        # ウェルカムメールを送信
+        try:
+            display_name = user.get("display_name", "")
+            send_welcome_email(user["email"], display_name)
+        except Exception as email_error:
+            # ウェルカムメール送信失敗してもエラーにはしない
+            logger.error(f"Failed to send welcome email: {email_error}")
+
         return {"message": "User confirmed successfully"}
     except HTTPException:
         raise
