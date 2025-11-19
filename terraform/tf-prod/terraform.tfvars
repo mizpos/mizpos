@@ -4,4 +4,4 @@
 
 domain_name          = "pos.miz.cab"
 frontend_url         = "https://app.pos.miz.cab"
-enable_custom_domain = false
+enable_custom_domain = true
