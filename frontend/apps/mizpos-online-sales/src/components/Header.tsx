@@ -158,7 +158,8 @@ export default function Header({
             })}
             style={{ backgroundColor: colors.searchButton }}
           >
-            <IconSearch size={{ base: 16, md: 12 }} />
+            <IconSearch size={16} className={css({ display: { base: "block", md: "none" } })} />
+            <IconSearch size={12} className={css({ display: { base: "none", md: "block" } })} />
           </button>
         </div>
 
