@@ -770,6 +770,7 @@ async def create_order_payment_intent(order_id: str):
             amount=amount_jpy,
             currency="jpy",
             receipt_email=order.get("customer_email"),
+            automatic_payment_methods={"enabled": True},
             metadata={
                 "order_id": order_id,
                 "customer_name": order.get("customer_name", ""),
