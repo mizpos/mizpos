@@ -152,10 +152,10 @@ export function ImageUploadField({
 
   return (
     <div>
+      {/* biome-ignore lint/a11y/noLabelWithoutControl: ちょっと実装上厳しいので */}
       <label className={labelClass}>
         {label} {required && "*"}
       </label>
-
       {value && !isUploading ? (
         <div
           className={css({
@@ -197,6 +197,7 @@ export function ImageUploadField({
           </button>
         </div>
       ) : (
+        // biome-ignore lint/a11y/noStaticElementInteractions: ちょっと実装上厳しいので
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -272,7 +273,10 @@ export function ImageUploadField({
                 })}
               >
                 {isDragging ? (
-                  <IconUpload size={32} className={css({ color: "primary.500" })} />
+                  <IconUpload
+                    size={32}
+                    className={css({ color: "primary.500" })}
+                  />
                 ) : (
                   <IconPhoto size={32} className={css({ color: "gray.400" })} />
                 )}
@@ -293,7 +297,6 @@ export function ImageUploadField({
           )}
         </div>
       )}
-
       {error && (
         <p
           className={css({

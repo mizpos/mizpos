@@ -775,6 +775,7 @@ def update_shipping_info(
 # 送料設定管理
 # ==============================
 
+
 def get_all_shipping_options() -> list[dict]:
     """全送料設定を取得（is_active=Trueのみ）"""
     config = get_config("shipping_options")

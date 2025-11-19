@@ -61,7 +61,9 @@ class RoleResponse(BaseModel):
 # 住所管理用モデル
 class SavedAddress(BaseModel):
     address_id: str
-    label: str = Field(..., min_length=1, max_length=50, description="住所のラベル（例: 自宅、会社）")
+    label: str = Field(
+        ..., min_length=1, max_length=50, description="住所のラベル（例: 自宅、会社）"
+    )
     name: str = Field(..., min_length=1, max_length=200)
     postal_code: str = Field(..., min_length=1, max_length=20)
     prefecture: str = Field(..., min_length=1, max_length=100)

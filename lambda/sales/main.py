@@ -33,7 +33,6 @@ from models import (
 from services import (
     calculate_commission_fees,
     calculate_coupon_discount,
-    calculate_shipping_fee,
     config_table,
     create_online_order,
     create_shipping_option,
@@ -1057,6 +1056,7 @@ async def update_config_endpoint(
 # 送料設定管理エンドポイント
 # ==========================================
 
+
 @router.get("/shipping-options", response_model=dict)
 async def list_shipping_options():
     """送料設定一覧を取得（is_active=Trueのみ、認証不要）"""
@@ -1083,7 +1083,9 @@ async def get_shipping_option_detail(shipping_option_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/shipping-options", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/shipping-options", response_model=dict, status_code=status.HTTP_201_CREATED
+)
 async def create_shipping_option_endpoint(
     request: CreateShippingOptionRequest,
     current_user: dict = Depends(get_current_user),
@@ -1126,7 +1128,9 @@ async def update_shipping_option_endpoint(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/shipping-options/{shipping_option_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/shipping-options/{shipping_option_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_shipping_option_endpoint(
     shipping_option_id: str,
     current_user: dict = Depends(get_current_user),

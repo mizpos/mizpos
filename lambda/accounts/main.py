@@ -416,7 +416,9 @@ async def get_addresses(user_id: str, current_user: dict = Depends(get_current_u
 
 
 @router.post(
-    "/users/{user_id}/addresses", response_model=dict, status_code=status.HTTP_201_CREATED
+    "/users/{user_id}/addresses",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
 )
 async def create_address(
     user_id: str,

@@ -236,7 +236,10 @@ def update_user_address(
                 addr["label"] = address_data["label"]
             if "name" in address_data and address_data["name"] is not None:
                 addr["name"] = address_data["name"]
-            if "postal_code" in address_data and address_data["postal_code"] is not None:
+            if (
+                "postal_code" in address_data
+                and address_data["postal_code"] is not None
+            ):
                 addr["postal_code"] = address_data["postal_code"]
             if "prefecture" in address_data and address_data["prefecture"] is not None:
                 addr["prefecture"] = address_data["prefecture"]

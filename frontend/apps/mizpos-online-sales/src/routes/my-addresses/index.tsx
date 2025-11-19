@@ -1,24 +1,23 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { fetchUserAttributes } from "aws-amplify/auth";
-import {
-  getUserAddresses,
-  createUserAddress,
-  updateUserAddress,
-  deleteUserAddress,
-  setDefaultAddress,
-  type SavedAddress,
-  type CreateAddressRequest,
-} from "~/lib/api";
 import { useState } from "react";
-import { Box, Container, Flex, HStack, VStack } from "styled-system/jsx";
+import { css } from "styled-system/css";
+import {
+  type CreateAddressRequest,
+  createUserAddress,
+  deleteUserAddress,
+  getUserAddresses,
+  type SavedAddress,
+  setDefaultAddress,
+  updateUserAddress,
+} from "../../lib/api";
 
 export const Route = createFileRoute("/my-addresses/")({
   component: MyAddressesPage,
 });
 
 function MyAddressesPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -86,13 +85,19 @@ function MyAddressesPage() {
 
   if (!userAttributes) {
     return (
-      <Container maxW="6xl" py={8}>
-        <Box textAlign="center">
+      <div
+        className={css({
+          maxWidth: "1280px",
+          margin: "0 auto",
+          padding: "32px 20px",
+        })}
+      >
+        <div className={css({ textAlign: "center" })}>
           <p>ログインが必要です</p>
           <Link to="/login">
             <button
               type="button"
-              style={{
+              className={css({
                 marginTop: "16px",
                 padding: "8px 16px",
                 backgroundColor: "#007bff",
@@ -100,33 +105,55 @@ function MyAddressesPage() {
                 borderRadius: "4px",
                 border: "none",
                 cursor: "pointer",
-              }}
+              })}
             >
               ログイン
             </button>
           </Link>
-        </Box>
-      </Container>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container maxW="6xl" py={8}>
-      <VStack gap={6} alignItems="stretch">
-        <Flex justify="space-between" align="center">
-          <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>登録住所管理</h1>
-          <HStack gap={4}>
+    <div
+      className={css({
+        maxWidth: "1280px",
+        margin: "0 auto",
+        padding: "32px 20px",
+      })}
+    >
+      <div
+        className={css({
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px",
+        })}
+      >
+        <div
+          className={css({
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          })}
+        >
+          <h1
+            className={css({ fontSize: "24px", fontWeight: "bold" })}
+          >
+            登録住所管理
+          </h1>
+          <div className={css({ display: "flex", gap: "16px" })}>
             <Link to="/">
               <button
                 type="button"
-                style={{
+                className={css({
                   padding: "8px 16px",
                   backgroundColor: "#6c757d",
                   color: "white",
                   borderRadius: "4px",
                   border: "none",
                   cursor: "pointer",
-                }}
+                })}
               >
                 商品一覧へ
               </button>
@@ -134,19 +161,19 @@ function MyAddressesPage() {
             <button
               type="button"
               onClick={() => setIsAddingNew(true)}
-              style={{
+              className={css({
                 padding: "8px 16px",
                 backgroundColor: "#007bff",
                 color: "white",
                 borderRadius: "4px",
                 border: "none",
                 cursor: "pointer",
-              }}
+              })}
             >
               新しい住所を追加
             </button>
-          </HStack>
-        </Flex>
+          </div>
+        </div>
 
         {isLoading && <p>読み込み中...</p>}
 
@@ -175,7 +202,13 @@ function MyAddressesPage() {
         )}
 
         {/* 住所一覧 */}
-        <VStack gap={4} alignItems="stretch">
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          })}
+        >
           {addresses.map((address) => (
             <AddressCard
               key={address.address_id}
@@ -187,21 +220,23 @@ function MyAddressesPage() {
               isSettingDefault={setDefaultMutation.isPending}
             />
           ))}
-        </VStack>
+        </div>
 
         {addresses.length === 0 && !isLoading && !isAddingNew && (
-          <Box
-            p={8}
-            textAlign="center"
-            borderWidth="1px"
-            borderRadius="md"
-            borderStyle="dashed"
+          <div
+            className={css({
+              padding: "32px",
+              textAlign: "center",
+              borderWidth: "1px",
+              borderRadius: "8px",
+              borderStyle: "dashed",
+            })}
           >
             <p>登録されている住所がありません</p>
             <button
               type="button"
               onClick={() => setIsAddingNew(true)}
-              style={{
+              className={css({
                 marginTop: "16px",
                 padding: "8px 16px",
                 backgroundColor: "#007bff",
@@ -209,14 +244,14 @@ function MyAddressesPage() {
                 borderRadius: "4px",
                 border: "none",
                 cursor: "pointer",
-              }}
+              })}
             >
               最初の住所を追加
             </button>
-          </Box>
+          </div>
         )}
-      </VStack>
-    </Container>
+      </div>
+    </div>
   );
 }
 
@@ -263,12 +298,8 @@ function AddressCard({
         <h3 style={{ fontSize: "18px", fontWeight: "bold" }}>
           {address.label}
         </h3>
-        <p>
-          {address.name} 様
-        </p>
-        <p>
-          〒{address.postal_code}
-        </p>
+        <p>{address.name} 様</p>
+        <p>〒{address.postal_code}</p>
         <p>
           {address.prefecture}
           {address.city}
@@ -566,7 +597,9 @@ function AddressForm({
           </div>
 
           <div>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            >
               <input
                 type="checkbox"
                 checked={formData.is_default}

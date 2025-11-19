@@ -45,7 +45,9 @@ class UpdateProductRequest(BaseModel):
     publisher: str | None = Field(default=None, max_length=100)
     publisher_id: str | None = Field(default=None, description="出版社/サークルID")
     variant_type: VariantType | None = None
-    shipping_option_id: str | None = Field(default=None, description="送料設定ID（紐付けなし = 送料無料）")
+    shipping_option_id: str | None = Field(
+        default=None, description="送料設定ID（紐付けなし = 送料無料）"
+    )
     isdn: str | None = Field(
         default=None, max_length=50, description="国際標準同人誌番号"
     )

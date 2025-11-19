@@ -44,7 +44,7 @@ function CheckoutPage() {
   });
 
   // ユーザー情報を取得
-  const { data: userAttributes } = useQuery({
+  useQuery({
     queryKey: ["userAttributes"],
     queryFn: async () => {
       try {

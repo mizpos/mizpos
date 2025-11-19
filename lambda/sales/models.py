@@ -154,7 +154,8 @@ class CreateOnlineOrderRequest(BaseModel):
     customer_name: str = Field(..., min_length=1, max_length=200)
     shipping_address: ShippingAddress | None = None
     saved_address_id: str | None = Field(
-        default=None, description="登録済み住所ID（指定された場合はshipping_addressより優先）"
+        default=None,
+        description="登録済み住所ID（指定された場合はshipping_addressより優先）",
     )
     user_id: str | None = Field(
         default=None, description="ユーザーID（saved_address_id使用時に必要）"
@@ -193,14 +194,23 @@ class OnlineOrderResponse(BaseModel):
 class UpdateShippingRequest(BaseModel):
     tracking_number: str | None = Field(default=None, max_length=200)
     carrier: str | None = Field(default=None, max_length=100)
-    shipping_method: str | None = Field(default=None, max_length=200, description="配送方法（レターパック、宅配便など）")
-    shipping_method_other: str | None = Field(default=None, max_length=200, description="配送方法（その他・手打ち）")
+    shipping_method: str | None = Field(
+        default=None, max_length=200, description="配送方法（レターパック、宅配便など）"
+    )
+    shipping_method_other: str | None = Field(
+        default=None, max_length=200, description="配送方法（その他・手打ち）"
+    )
     notes: str | None = Field(default=None, max_length=500)
 
 
 # 送料設定管理用モデル
 class ShippingOptionBase(BaseModel):
-    label: str = Field(..., min_length=1, max_length=100, description="送料の表示名（例: レターパック）")
+    label: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="送料の表示名（例: レターパック）",
+    )
     price: int = Field(..., ge=0, description="送料金額（円）")
     sort_order: int = Field(default=0, description="表示順序")
     description: str = Field(default="", max_length=500, description="説明")
