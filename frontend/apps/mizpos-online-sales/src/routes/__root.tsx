@@ -12,7 +12,6 @@ function RootComponent() {
     <>
       <div>
         <Header cartItemCount={totalItems} />
-        <Link to="/cart">カートへ</Link>
       </div>
       <Outlet />
       <TanStackDevtools
