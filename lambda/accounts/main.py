@@ -1,3 +1,7 @@
+"""
+Accounts Lambda Function
+住所管理エンドポイントを含むユーザーアカウント管理API
+"""
 import json
 import logging
 import os
