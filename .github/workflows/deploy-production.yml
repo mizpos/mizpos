@@ -62,7 +62,6 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
 
       - name: Get AWS Account ID and Save to Environment Variable
-        if: github.event.inputs.deploy_type == 'all'
         shell: bash
         run: |
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -70,14 +69,12 @@ jobs:
           echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
 
       - name: Install Lambroll
-        if: github.event.inputs.deploy_type == 'all'
         shell: bash
         run: |
           curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ env.LAMBROLL_VERSION }}/lambroll_v${{ env.LAMBROLL_VERSION }}_linux_amd64.tar.gz | tar -xz
           sudo mv lambroll /usr/local/bin/
 
       - name: Deploy "Accounts" Lambda Functions
-        if: github.event.inputs.deploy_type == 'all'
         uses: ./.github/actions/deploy-lambda
         with:
           WORKING_DIR: ${{ env.WORKING_DIR }}
@@ -86,7 +83,6 @@ jobs:
           LAMBDA_FUNTION_PATH: lambda/accounts
 
       - name: Deploy "STOCK" Lambda Functions
-        if: github.event.inputs.deploy_type == 'all'
         uses: ./.github/actions/deploy-lambda
         with:
           WORKING_DIR: ${{ env.WORKING_DIR }}
@@ -95,7 +91,6 @@ jobs:
           LAMBDA_FUNTION_PATH: lambda/stock
 
       - name: Deploy "SALES" Lambda Functions
-        if: github.event.inputs.deploy_type == 'all'
         uses: ./.github/actions/deploy-lambda
         with:
           WORKING_DIR: ${{ env.WORKING_DIR }}
