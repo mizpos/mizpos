@@ -1,11 +1,14 @@
 """Email service using AWS SES"""
+
 import os
 from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 
 # SES クライアント
-ses_client = boto3.client("ses", region_name=os.environ.get("AWS_REGION", "ap-northeast-1"))
+ses_client = boto3.client(
+    "ses", region_name=os.environ.get("AWS_REGION", "ap-northeast-1")
+)
 
 # 環境変数
 SENDER_EMAIL = os.environ.get("SES_SENDER_EMAIL", "noreply@miz.cab")
@@ -34,9 +37,7 @@ def send_email(
     try:
         message = {
             "Subject": {"Data": subject, "Charset": "UTF-8"},
-            "Body": {
-                "Html": {"Data": body_html, "Charset": "UTF-8"}
-            }
+            "Body": {"Html": {"Data": body_html, "Charset": "UTF-8"}},
         }
 
         if body_text:

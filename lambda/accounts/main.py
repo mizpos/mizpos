@@ -208,7 +208,7 @@ async def confirm_email(request: ConfirmEmailRequest):
             response = users_table.query(
                 IndexName="EmailIndex",
                 KeyConditionExpression="email = :email",
-                ExpressionAttributeValues={":email": request.email}
+                ExpressionAttributeValues={":email": request.email},
             )
             users = response.get("Items", [])
             if users:
