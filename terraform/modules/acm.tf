@@ -87,3 +87,46 @@ resource "aws_apigatewayv2_api_mapping" "api" {
   domain_name = aws_apigatewayv2_domain_name.api[0].id
   stage       = aws_apigatewayv2_stage.main.id
 }
+
+# ACM Certificate for Cognito Custom Domain (us-east-1 required)
+resource "aws_acm_certificate" "cognito_domain" {
+  count             = var.enable_custom_domain ? 1 : 0
+  provider          = aws.us_east_1
+  domain_name       = "auth.${var.domain_name}"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "${var.environment}-${var.project_name}-cognito-domain-cert"
+  }
+}
+
+# DNS validation records for Cognito domain certificate
+resource "aws_route53_record" "cognito_cert_validation" {
+  for_each = var.enable_custom_domain ? {
+    for dvo in aws_acm_certificate.cognito_domain[0].domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  } : {}
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.main[0].zone_id
+}
+
+# Certificate validation for Cognito domain
+resource "aws_acm_certificate_validation" "cognito_domain" {
+  count    = var.enable_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
+  certificate_arn         = aws_acm_certificate.cognito_domain[0].arn
+  validation_record_fqdns = [for record in aws_route53_record.cognito_cert_validation : record.fqdn]
+}
