@@ -593,7 +593,12 @@ function SalesPage() {
                   >
                     カードブランド
                   </p>
-                  <p className={css({ fontSize: "sm", textTransform: "capitalize" })}>
+                  <p
+                    className={css({
+                      fontSize: "sm",
+                      textTransform: "capitalize",
+                    })}
+                  >
                     {selectedSale.card_brand}
                   </p>
                 </div>

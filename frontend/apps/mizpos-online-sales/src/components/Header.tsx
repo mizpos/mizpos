@@ -189,9 +189,7 @@ export default function Header({
               })}
             >
               こんにちは、
-              {user.displayName ||
-                user.email?.split("@")[0] ||
-                user.username}
+              {user.displayName || user.email?.split("@")[0] || user.username}
               さん
             </p>
             <div
@@ -429,9 +427,7 @@ export default function Header({
                 })}
               >
                 こんにちは、
-                {user.displayName ||
-                  user.email?.split("@")[0] ||
-                  user.username}
+                {user.displayName || user.email?.split("@")[0] || user.username}
                 さん
               </p>
               <Link

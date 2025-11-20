@@ -44,7 +44,12 @@ interface Product {
   publisher: string;
 }
 
-type ReportType = "sales" | "products" | "categories" | "consignment" | "card_brands";
+type ReportType =
+  | "sales"
+  | "products"
+  | "categories"
+  | "consignment"
+  | "card_brands";
 type DateRange = "today" | "week" | "month" | "all";
 
 // 安全な数値フォーマット関数
@@ -205,7 +210,8 @@ function ReportsPage() {
             })}
           >
             {Object.entries(paymentMethodBreakdown).map(([method, amount]) => (
-              <div
+              <button
+                type="button"
                 key={method}
                 className={css({
                   display: "flex",
@@ -214,6 +220,9 @@ function ReportsPage() {
                   backgroundColor: "gray.50",
                   borderRadius: "md",
                   cursor: "pointer",
+                  border: "none",
+                  width: "100%",
+                  textAlign: "left",
                   _hover: {
                     backgroundColor: "gray.100",
                   },
@@ -232,7 +241,7 @@ function ReportsPage() {
                 <span className={css({ fontWeight: "semibold" })}>
                   ¥{amount.toLocaleString()}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -441,7 +450,10 @@ function ReportsPage() {
   };
 
   const renderCardBrandsReport = () => {
-    const cardBrandSales: Record<string, { quantity: number; revenue: number; count: number }> = {};
+    const cardBrandSales: Record<
+      string,
+      { quantity: number; revenue: number; count: number }
+    > = {};
 
     completedSales.forEach((sale) => {
       const brand = sale.card_brand || "不明";
@@ -526,9 +538,13 @@ function ReportsPage() {
           })}
         >
           {sortedBrands
-            .filter(([brand]) => selectedCardBrand === "all" || brand === selectedCardBrand)
+            .filter(
+              ([brand]) =>
+                selectedCardBrand === "all" || brand === selectedCardBrand,
+            )
             .map(([brand, data]) => (
-              <div
+              <button
+                type="button"
                 key={brand}
                 className={css({
                   display: "flex",
@@ -538,6 +554,9 @@ function ReportsPage() {
                   backgroundColor: "gray.50",
                   borderRadius: "md",
                   cursor: "pointer",
+                  border: "none",
+                  width: "100%",
+                  textAlign: "left",
                   _hover: {
                     backgroundColor: "gray.100",
                   },
@@ -548,7 +567,11 @@ function ReportsPage() {
               >
                 <div>
                   <span
-                    className={css({ fontWeight: "medium", color: "gray.900", textTransform: "capitalize" })}
+                    className={css({
+                      fontWeight: "medium",
+                      color: "gray.900",
+                      textTransform: "capitalize",
+                    })}
                   >
                     {brand}
                   </span>
@@ -565,7 +588,7 @@ function ReportsPage() {
                 <span className={css({ fontWeight: "semibold" })}>
                   ¥{data.revenue.toLocaleString()}
                 </span>
-              </div>
+              </button>
             ))}
           {sortedBrands.length === 0 && (
             <p
@@ -921,7 +944,10 @@ function ReportsPage() {
                     if (drilldownData.type === "payment_method") {
                       return sale.payment_method === drilldownData.value;
                     }
-                    return sale.card_brand === drilldownData.value || (!sale.card_brand && drilldownData.value === "不明");
+                    return (
+                      sale.card_brand === drilldownData.value ||
+                      (!sale.card_brand && drilldownData.value === "不明")
+                    );
                   })
                   .map((sale) => (
                     <div
@@ -936,10 +962,17 @@ function ReportsPage() {
                       })}
                     >
                       <div>
-                        <p className={css({ fontSize: "sm", fontWeight: "medium" })}>
+                        <p
+                          className={css({
+                            fontSize: "sm",
+                            fontWeight: "medium",
+                          })}
+                        >
                           {sale.customer_email || sale.user_id}
                         </p>
-                        <p className={css({ fontSize: "xs", color: "gray.500" })}>
+                        <p
+                          className={css({ fontSize: "xs", color: "gray.500" })}
+                        >
                           {new Date(sale.created_at).toLocaleString("ja-JP")}
                         </p>
                       </div>
