@@ -1,6 +1,6 @@
 import { IconFingerprint, IconLock, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   deleteWebAuthnCredential,
   listWebAuthnCredentials,
@@ -15,7 +15,6 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
-  const _navigate = useNavigate();
   const { user, registerPasskey, isAuthenticated } = useAuth();
 
   // パスワード変更用の状態
@@ -489,13 +488,18 @@ function SettingsPage() {
                     </p>
                     <p className={css({ fontSize: "12px", color: "#666" })}>
                       登録日:{" "}
-                      {new Date(passkey.createdAt).toLocaleDateString("ja-JP")}
+                      {passkey.createdAt
+                        ? new Date(passkey.createdAt).toLocaleDateString("ja-JP")
+                        : "不明"}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm("このパスキーを削除しますか？")) {
+                      if (
+                        passkey.credentialId &&
+                        confirm("このパスキーを削除しますか？")
+                      ) {
                         passkeyDeleteMutation.mutate(passkey.credentialId);
                       }
                     }}
