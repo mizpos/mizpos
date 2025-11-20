@@ -1,14 +1,9 @@
-import { Amplify } from "aws-amplify";
 import {
   associateWebAuthnCredential,
-  confirmSignUp,
   fetchAuthSession,
   fetchUserAttributes,
-  type SignInInput,
-  type SignUpInput,
-  signIn,
+  getCurrentUser,
   signOut,
-  signUp,
 } from "aws-amplify/auth";
 import type React from "react";
 import {
@@ -18,24 +13,12 @@ import {
   useEffect,
   useState,
 } from "react";
-
-// Amplify設定
-const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
-const userPoolClientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
-
-if (userPoolId && userPoolClientId) {
-  Amplify.configure({
-    Auth: {
-      Cognito: {
-        userPoolId,
-        userPoolClientId,
-      },
-    },
-  });
-}
+import { cognitoConfig } from "../lib/cognito";
 
 export interface User {
-  email: string;
+  username: string;
+  userId: string;
+  email?: string;
   name?: string;
   sub: string;
 }
@@ -44,13 +27,10 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signInWithWebAuthn: (email: string) => Promise<void>;
-  signUp: (email: string, password: string, name?: string) => Promise<void>;
-  confirmSignUp: (email: string, code: string) => Promise<void>;
+  signInWithHostedUI: () => Promise<void>;
   registerPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
-  getIdToken: () => Promise<string | null>;
+  getAccessToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,118 +41,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const session = await fetchAuthSession();
-      if (session.tokens?.accessToken) {
-        const attributes = await fetchUserAttributes();
-        setUser({
-          email: attributes.email || "",
-          name: attributes.name,
-          sub: attributes.sub || "",
-        });
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error);
+      const currentUser = await getCurrentUser();
+      const attributes = await fetchUserAttributes();
+      setUser({
+        username: currentUser.username,
+        userId: currentUser.userId,
+        email: currentUser.signInDetails?.loginId || attributes.email,
+        name: attributes.name,
+        sub: attributes.sub || currentUser.userId,
+      });
+    } catch {
       setUser(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // 初回マウント時に認証状態を確認
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  const handleSignIn = async (email: string, password: string) => {
-    try {
-      const input: SignInInput = {
-        username: email,
-        password,
-      };
-      await signIn(input);
-      await checkAuth();
-    } catch (error) {
-      console.error("Sign in error:", error);
-      throw error;
-    }
-  };
+  const handleSignInWithHostedUI = async (): Promise<void> => {
+    // Cognito Hosted UIにリダイレクト（日本語表示）
+    // lang=jaパラメータを追加するため手動でURLを構築
+    const domain = cognitoConfig.domain;
+    const clientId = cognitoConfig.userPoolClientId;
+    const redirectUri = encodeURIComponent(cognitoConfig.redirectSignIn);
+    const scope = encodeURIComponent("openid email profile");
 
-  const handleSignInWithWebAuthn = async (email: string) => {
-    try {
-      await signIn({
-        username: email,
-        options: {
-          authFlowType: "USER_AUTH",
-          preferredChallenge: "WEB_AUTHN",
-        },
-      });
-      await checkAuth();
-    } catch (error) {
-      console.error("Passkey sign in error:", error);
-      throw error;
-    }
+    // CSRF対策用のランダムなstate値を生成
+    const state = encodeURIComponent(
+      Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15),
+    );
+
+    // stateをsessionStorageに保存（コールバック時に検証用）
+    sessionStorage.setItem("oauth_state", state);
+
+    const hostedUIUrl = `https://${domain}/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}&scope=${scope}&lang=ja`;
+
+    window.location.href = hostedUIUrl;
   };
 
   const handleRegisterPasskey = async (): Promise<void> => {
-    try {
-      await associateWebAuthnCredential();
-    } catch (error) {
-      console.error("Register passkey error:", error);
-      throw error;
-    }
-  };
-
-  const handleSignUp = async (
-    email: string,
-    password: string,
-    name?: string,
-  ) => {
-    try {
-      const input: SignUpInput = {
-        username: email,
-        password,
-        options: {
-          userAttributes: {
-            email,
-            name: name || "",
-          },
-        },
-      };
-      await signUp(input);
-    } catch (error) {
-      console.error("Sign up error:", error);
-      throw error;
-    }
-  };
-
-  const handleConfirmSignUp = async (email: string, code: string) => {
-    try {
-      await confirmSignUp({
-        username: email,
-        confirmationCode: code,
-      });
-    } catch (error) {
-      console.error("Confirm sign up error:", error);
-      throw error;
-    }
+    await associateWebAuthnCredential();
   };
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      setUser(null);
-    } catch (error) {
-      console.error("Sign out error:", error);
-      throw error;
-    }
+    await signOut();
+    setUser(null);
   };
 
-  const getIdToken = async (): Promise<string | null> => {
+  const getAccessToken = async (): Promise<string | null> => {
     try {
       const session = await fetchAuthSession();
-      return session.tokens?.idToken?.toString() || null;
-    } catch (error) {
-      console.error("Get ID token error:", error);
+      return session.tokens?.accessToken?.toString() || null;
+    } catch {
       return null;
     }
   };
@@ -183,13 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
-        signIn: handleSignIn,
-        signInWithWebAuthn: handleSignInWithWebAuthn,
-        signUp: handleSignUp,
-        confirmSignUp: handleConfirmSignUp,
+        signInWithHostedUI: handleSignInWithHostedUI,
         registerPasskey: handleRegisterPasskey,
         signOut: handleSignOut,
-        getIdToken,
+        getAccessToken,
       }}
     >
       {children}

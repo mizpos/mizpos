@@ -20,6 +20,7 @@ import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as DeliveryIndexRouteImport } from './routes/delivery/index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
 import { Route as CartIndexRouteImport } from './routes/cart/index'
+import { Route as CallbackIndexRouteImport } from './routes/callback/index'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -77,6 +78,11 @@ const CartIndexRoute = CartIndexRouteImport.update({
   path: '/cart/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CallbackIndexRoute = CallbackIndexRouteImport.update({
+  id: '/callback/',
+  path: '/callback/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
   id: '/products/$productId',
   path: '/products/$productId',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/products/$productId': typeof ProductsProductIdRoute
+  '/callback': typeof CallbackIndexRoute
   '/cart': typeof CartIndexRoute
   '/checkout': typeof CheckoutIndexRoute
   '/delivery': typeof DeliveryIndexRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/products/$productId': typeof ProductsProductIdRoute
+  '/callback': typeof CallbackIndexRoute
   '/cart': typeof CartIndexRoute
   '/checkout': typeof CheckoutIndexRoute
   '/delivery': typeof DeliveryIndexRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/products/$productId': typeof ProductsProductIdRoute
+  '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/checkout/': typeof CheckoutIndexRoute
   '/delivery/': typeof DeliveryIndexRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/products/$productId'
+    | '/callback'
     | '/cart'
     | '/checkout'
     | '/delivery'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/products/$productId'
+    | '/callback'
     | '/cart'
     | '/checkout'
     | '/delivery'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/products/$productId'
+    | '/callback/'
     | '/cart/'
     | '/checkout/'
     | '/delivery/'
@@ -173,6 +185,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   ProductsProductIdRoute: typeof ProductsProductIdRoute
+  CallbackIndexRoute: typeof CallbackIndexRoute
   CartIndexRoute: typeof CartIndexRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
   DeliveryIndexRoute: typeof DeliveryIndexRoute
@@ -262,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CartIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/callback/': {
+      id: '/callback/'
+      path: '/callback'
+      fullPath: '/callback'
+      preLoaderRoute: typeof CallbackIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/$productId': {
       id: '/products/$productId'
       path: '/products/$productId'
@@ -288,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRouteWithChildren,
   ProductsProductIdRoute: ProductsProductIdRoute,
+  CallbackIndexRoute: CallbackIndexRoute,
   CartIndexRoute: CartIndexRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,
   DeliveryIndexRoute: DeliveryIndexRoute,

@@ -188,7 +188,8 @@ export default function Header({
                 fontWeight: "medium",
               })}
             >
-              こんにちは、{user.name || user.email.split("@")[0]}さん
+              こんにちは、
+              {user.name || user.email?.split("@")[0] || user.username}さん
             </p>
             <div
               className={css({
@@ -424,7 +425,8 @@ export default function Header({
                   fontWeight: "medium",
                 })}
               >
-                こんにちは、{user.name || user.email.split("@")[0]}さん
+                こんにちは、
+                {user.name || user.email?.split("@")[0] || user.username}さん
               </p>
               <Link
                 to="/settings"

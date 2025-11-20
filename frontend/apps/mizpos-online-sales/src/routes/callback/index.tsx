@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
+import { fetchAuthSession } from "aws-amplify/auth";
+import { Hub } from "aws-amplify/utils";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
-export const Route = createFileRoute("/callback")({
+export const Route = createFileRoute("/callback/")({
   component: CallbackPage,
 });
 
@@ -13,7 +14,6 @@ function CallbackPage() {
 
   useEffect(() => {
     // Cognito Hosted UIからのリダイレクト後の処理
-    // Amplifyが自動的にURLのcodeパラメータを処理し、トークンを取得してくれる
     const handleCallback = async () => {
       try {
         // URLのエラーパラメータをチェック
@@ -29,24 +29,47 @@ function CallbackPage() {
           return;
         }
 
-        // Amplifyが自動的にトークンを処理するのを少し待つ
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Amplifyが自動的に認証トークンを処理するのを待つ
+        // Hub eventsをリッスンして認証完了を検出
+        const hubListener = Hub.listen("auth", (data) => {
+          if (data.payload.event === "signedIn") {
+            navigate({ to: "/" });
+          }
+        });
 
-        // 認証セッションとユーザー情報を確認
-        const [session, user] = await Promise.all([
-          fetchAuthSession(),
-          getCurrentUser(),
-        ]);
-
-        if (session.tokens?.accessToken && user) {
-          // 認証成功、ホームにリダイレクト
-          navigate({ to: "/" });
-        } else {
-          setError("認証情報の取得に失敗しました。");
+        // 念のため、認証セッションを確認
+        try {
+          const session = await fetchAuthSession();
+          if (session.tokens?.accessToken) {
+            // 認証成功、ホームにリダイレクト
+            setTimeout(() => {
+              navigate({ to: "/" });
+            }, 500);
+          } else {
+            // トークンがまだない場合は、Amplifyの処理を待つ
+            setTimeout(async () => {
+              const retrySession = await fetchAuthSession();
+              if (retrySession.tokens?.accessToken) {
+                navigate({ to: "/" });
+              } else {
+                setError("認証トークンの取得に失敗しました。");
+              }
+            }, 2000);
+          }
+        } catch (sessionError) {
+          console.error("Session check error:", sessionError);
+          // セッションエラーの場合も少し待ってからリトライ
+          setTimeout(() => {
+            navigate({ to: "/" });
+          }, 1500);
         }
+
+        return () => {
+          hubListener();
+        };
       } catch (err) {
         console.error("Callback処理エラー:", err);
-        setError("認証処理中にエラーが発生しました。もう一度お試しください。");
+        setError("認証処理中にエラーが発生しました。");
       }
     };
 

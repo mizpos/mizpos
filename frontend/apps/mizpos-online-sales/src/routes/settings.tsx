@@ -564,6 +564,91 @@ function SettingsPage() {
         </button>
       </div>
 
+      {/* 住所管理・注文履歴 */}
+      <div
+        className={css({
+          backgroundColor: "white",
+          padding: "24px",
+          borderRadius: "8px",
+          border: "1px solid #ddd",
+          marginTop: "24px",
+        })}
+      >
+        <h2
+          className={css({
+            fontSize: "20px",
+            fontWeight: "bold",
+            marginBottom: "16px",
+          })}
+        >
+          その他の設定
+        </h2>
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          })}
+        >
+          <Link
+            to="/my-addresses"
+            className={css({
+              display: "block",
+              padding: "16px",
+              backgroundColor: "#f7f7f7",
+              borderRadius: "4px",
+              border: "1px solid #ddd",
+              textDecoration: "none",
+              color: "#111",
+              _hover: {
+                backgroundColor: "#e7e7e7",
+              },
+            })}
+          >
+            <div
+              className={css({
+                fontSize: "16px",
+                fontWeight: "bold",
+                marginBottom: "4px",
+              })}
+            >
+              配送先住所管理
+            </div>
+            <div className={css({ fontSize: "14px", color: "#666" })}>
+              登録済みの配送先住所を管理
+            </div>
+          </Link>
+          <Link
+            to="/my-orders"
+            className={css({
+              display: "block",
+              padding: "16px",
+              backgroundColor: "#f7f7f7",
+              borderRadius: "4px",
+              border: "1px solid #ddd",
+              textDecoration: "none",
+              color: "#111",
+              _hover: {
+                backgroundColor: "#e7e7e7",
+              },
+            })}
+          >
+            <div
+              className={css({
+                fontSize: "16px",
+                fontWeight: "bold",
+                marginBottom: "4px",
+              })}
+            >
+              注文履歴
+            </div>
+            <div className={css({ fontSize: "14px", color: "#666" })}>
+              過去の注文を確認
+            </div>
+          </Link>
+        </div>
+      </div>
+
       <div className={css({ marginTop: "24px", textAlign: "center" })}>
         <Link
           to="/products"
