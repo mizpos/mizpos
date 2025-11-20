@@ -25,8 +25,8 @@ variable "cloudflare_account_id" {
   # GitHub Actionsから環境変数として渡される
 }
 
-variable "admin_domain" {
-  description = "Admin application domain for Turnstile (e.g., admin.stg-pos.miz.cab)"
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token for Turnstile"
   type        = string
-  default     = "admin.stg-pos.miz.cab"
+  # GitHub Actionsから環境変数として渡される
 }

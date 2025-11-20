@@ -44,7 +44,7 @@ provider "aws" {
 
 # Cloudflare provider
 provider "cloudflare" {
-    api_token = var.cloudflare_api_token
+  api_token = var.cloudflare_api_token
 }
 
 module "mizpos_infrastructure" {
@@ -67,5 +67,4 @@ module "mizpos_infrastructure" {
 
   # Cloudflare Turnstile Settings
   cloudflare_account_id = var.cloudflare_account_id
-  admin_domain          = var.admin_domain
 }
