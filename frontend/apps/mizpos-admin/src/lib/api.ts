@@ -14,7 +14,7 @@ const API_GATEWAY_BASE =
 async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
     const session = await fetchAuthSession();
-    const token = session.tokens?.accessToken?.toString();
+    const token = session.tokens?.idToken?.toString();
     if (token) {
       return {
         "Content-Type": "application/json",
