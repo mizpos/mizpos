@@ -29,6 +29,7 @@ interface Sale {
   discount: number;
   total: number;
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
+  card_brand?: string;
   status: "pending" | "completed" | "cancelled";
   created_at: string;
 }
@@ -42,7 +43,7 @@ interface Product {
   publisher: string;
 }
 
-type ReportType = "sales" | "products" | "categories" | "consignment";
+type ReportType = "sales" | "products" | "categories" | "consignment" | "card_brands";
 type DateRange = "today" | "week" | "month" | "all";
 
 // 安全な数値フォーマット関数
@@ -61,6 +62,11 @@ function ReportsPage() {
   const [reportType, setReportType] = useState<ReportType>("sales");
   const [dateRange, setDateRange] = useState<DateRange>("month");
   const [selectedPublisher, setSelectedPublisher] = useState<string>("all");
+  const [selectedCardBrand, setSelectedCardBrand] = useState<string>("all");
+  const [drilldownData, setDrilldownData] = useState<{
+    type: string;
+    value: string;
+  } | null>(null);
 
   const handleExportPDF = () => {
     window.print();
@@ -203,7 +209,17 @@ function ReportsPage() {
                 className={css({
                   display: "flex",
                   justifyContent: "space-between",
+                  padding: "3",
+                  backgroundColor: "gray.50",
+                  borderRadius: "md",
+                  cursor: "pointer",
+                  _hover: {
+                    backgroundColor: "gray.100",
+                  },
                 })}
+                onClick={() => {
+                  setDrilldownData({ type: "payment_method", value: method });
+                }}
               >
                 <span className={css({ color: "gray.700" })}>
                   {method === "stripe_online"
@@ -423,6 +439,149 @@ function ReportsPage() {
     );
   };
 
+  const renderCardBrandsReport = () => {
+    const cardBrandSales: Record<string, { quantity: number; revenue: number; count: number }> = {};
+
+    completedSales.forEach((sale) => {
+      const brand = sale.card_brand || "不明";
+      if (!cardBrandSales[brand]) {
+        cardBrandSales[brand] = { quantity: 0, revenue: 0, count: 0 };
+      }
+      sale.items.forEach((item) => {
+        cardBrandSales[brand].quantity += safeNumber(item.quantity);
+      });
+      cardBrandSales[brand].revenue += safeNumber(sale.total);
+      cardBrandSales[brand].count += 1;
+    });
+
+    const sortedBrands = Object.entries(cardBrandSales).sort(
+      ([, a], [, b]) => b.revenue - a.revenue,
+    );
+
+    return (
+      <div
+        className={css({
+          backgroundColor: "white",
+          padding: "6",
+          borderRadius: "lg",
+          border: "1px solid",
+          borderColor: "gray.200",
+        })}
+      >
+        <div
+          className={css({
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "4",
+          })}
+        >
+          <div>
+            <h3
+              className={css({
+                fontSize: "lg",
+                fontWeight: "semibold",
+              })}
+            >
+              カードブランド別売上
+            </h3>
+            <p
+              className={css({
+                fontSize: "sm",
+                color: "gray.500",
+              })}
+            >
+              カード決済ブランドごとの売上集計
+            </p>
+          </div>
+          <select
+            value={selectedCardBrand}
+            onChange={(e) => setSelectedCardBrand(e.target.value)}
+            className={`${css({
+              padding: "2",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.300",
+              fontSize: "sm",
+              _focus: {
+                outline: "none",
+                borderColor: "primary.500",
+              },
+            })} no-print`}
+          >
+            <option value="all">すべてのブランド</option>
+            {sortedBrands.map(([brand]) => (
+              <option key={brand} value={brand}>
+                {brand}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "3",
+          })}
+        >
+          {sortedBrands
+            .filter(([brand]) => selectedCardBrand === "all" || brand === selectedCardBrand)
+            .map(([brand, data]) => (
+              <div
+                key={brand}
+                className={css({
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "3",
+                  backgroundColor: "gray.50",
+                  borderRadius: "md",
+                  cursor: "pointer",
+                  _hover: {
+                    backgroundColor: "gray.100",
+                  },
+                })}
+                onClick={() => {
+                  setDrilldownData({ type: "card_brand", value: brand });
+                }}
+              >
+                <div>
+                  <span
+                    className={css({ fontWeight: "medium", color: "gray.900", textTransform: "capitalize" })}
+                  >
+                    {brand}
+                  </span>
+                  <span
+                    className={css({
+                      color: "gray.500",
+                      marginLeft: "2",
+                      fontSize: "sm",
+                    })}
+                  >
+                    ({data.count}件、{data.quantity}個)
+                  </span>
+                </div>
+                <span className={css({ fontWeight: "semibold" })}>
+                  ¥{data.revenue.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          {sortedBrands.length === 0 && (
+            <p
+              className={css({
+                color: "gray.500",
+                textAlign: "center",
+                padding: "4",
+              })}
+            >
+              データがありません
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderConsignmentReport = () => {
     const publisherSales: Record<
       string,
@@ -574,6 +733,7 @@ function ReportsPage() {
       products: "商品別売上レポート",
       categories: "カテゴリ別売上レポート",
       consignment: "委託元別売上レポート",
+      card_brands: "カードブランド別売上レポート",
     };
     return titles[reportType];
   };
@@ -679,6 +839,7 @@ function ReportsPage() {
                 <option value="products">商品別</option>
                 <option value="categories">カテゴリ別</option>
                 <option value="consignment">委託元別</option>
+                <option value="card_brands">カードブランド別</option>
               </select>
             </div>
 
@@ -711,10 +872,93 @@ function ReportsPage() {
         </div>
 
         {/* Report Content */}
-        {reportType === "sales" && renderSalesReport()}
-        {reportType === "products" && renderProductsReport()}
-        {reportType === "categories" && renderCategoriesReport()}
-        {reportType === "consignment" && renderConsignmentReport()}
+        {drilldownData ? (
+          <div>
+            <Button
+              variant="secondary"
+              onClick={() => setDrilldownData(null)}
+              className={css({ marginBottom: "4" })}
+            >
+              ← 戻る
+            </Button>
+            <div
+              className={css({
+                backgroundColor: "white",
+                padding: "6",
+                borderRadius: "lg",
+                border: "1px solid",
+                borderColor: "gray.200",
+              })}
+            >
+              <h3
+                className={css({
+                  fontSize: "lg",
+                  fontWeight: "semibold",
+                  marginBottom: "4",
+                })}
+              >
+                {drilldownData.type === "payment_method"
+                  ? `決済方法: ${
+                      drilldownData.value === "stripe_online"
+                        ? "オンライン決済"
+                        : drilldownData.value === "stripe_terminal"
+                          ? "端末決済"
+                          : "現金"
+                    }`
+                  : `カードブランド: ${drilldownData.value}`}
+                の詳細
+              </h3>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2",
+                })}
+              >
+                {completedSales
+                  .filter((sale) => {
+                    if (drilldownData.type === "payment_method") {
+                      return sale.payment_method === drilldownData.value;
+                    }
+                    return sale.card_brand === drilldownData.value || (!sale.card_brand && drilldownData.value === "不明");
+                  })
+                  .map((sale) => (
+                    <div
+                      key={sale.sale_id}
+                      className={css({
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "3",
+                        backgroundColor: "gray.50",
+                        borderRadius: "md",
+                      })}
+                    >
+                      <div>
+                        <p className={css({ fontSize: "sm", fontWeight: "medium" })}>
+                          {sale.customer_email || sale.user_id}
+                        </p>
+                        <p className={css({ fontSize: "xs", color: "gray.500" })}>
+                          {new Date(sale.created_at).toLocaleString("ja-JP")}
+                        </p>
+                      </div>
+                      <span className={css({ fontWeight: "semibold" })}>
+                        ¥{safeNumber(sale.total).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {reportType === "sales" && renderSalesReport()}
+            {reportType === "products" && renderProductsReport()}
+            {reportType === "categories" && renderCategoriesReport()}
+            {reportType === "consignment" && renderConsignmentReport()}
+            {reportType === "card_brands" && renderCardBrandsReport()}
+          </>
+        )}
       </div>
     </>
   );
