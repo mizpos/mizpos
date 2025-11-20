@@ -169,6 +169,7 @@ export interface Order {
   shipping_address: ShippingAddress;
   stripe_payment_intent_id?: string;
   stripe_checkout_session_id?: string;
+  card_brand?: string; // 決済に使用されたカードブランド（Visa, Mastercard, JCB等）、不明な場合はnull
   tracking_number?: string;
   carrier?: string;
   shipping_notes?: string;
@@ -182,6 +183,7 @@ export interface PaymentIntent {
   amount: number;
   currency: string;
   status: string;
+  card_brand?: string; // 決済に使用されたカードブランド（Visa, Mastercard, JCB等）、不明な場合はnull
 }
 
 /**

@@ -51,6 +51,54 @@ def init_stripe() -> None:
             pass
 
 
+def get_card_brand_from_payment_intent(payment_intent_id: str) -> str | None:
+    """
+    Stripe PaymentIntentからカードブランド情報を取得
+
+    Returns:
+        カードブランド名（例: "visa", "mastercard", "jcb"）、取得できない場合はNone
+    """
+    try:
+        init_stripe()
+        payment_intent = stripe.PaymentIntent.retrieve(
+            payment_intent_id,
+            expand=["payment_method"],  # payment_methodを展開して取得
+        )
+
+        # payment_methodが存在するか確認
+        payment_method = (
+            payment_intent.get("payment_method")
+            if isinstance(payment_intent, dict)
+            else payment_intent.payment_method
+        )
+
+        if not payment_method:
+            return None
+
+        # payment_methodがオブジェクトの場合
+        if isinstance(payment_method, dict):
+            if payment_method.get("type") == "card":
+                card = payment_method.get("card", {})
+                return card.get("brand")
+        elif hasattr(payment_method, "type"):
+            if payment_method.type == "card":
+                return (
+                    payment_method.card.brand
+                    if hasattr(payment_method, "card")
+                    else None
+                )
+
+        return None
+    except Exception as e:
+        # エラーが発生してもNoneを返す（カードブランド取得失敗を許容）
+        import logging
+
+        logging.error(
+            f"Failed to get card brand from PaymentIntent {payment_intent_id}: {e}"
+        )
+        return None
+
+
 def dynamo_to_dict(item: dict) -> dict:
     """DynamoDB のレスポンスを通常のdictに変換"""
 
@@ -691,7 +739,10 @@ def update_order_status(order_id: str, status: str) -> dict | None:
 
 
 def update_order_status_with_stripe(
-    order_id: str, status: str, stripe_payment_status: str
+    order_id: str,
+    status: str,
+    stripe_payment_status: str,
+    card_brand: str | None = None,
 ) -> dict | None:
     """注文のステータスとStripe支払いステータスを更新"""
     # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
@@ -706,14 +757,22 @@ def update_order_status_with_stripe(
     order = items[0]
     timestamp = order["timestamp"]  # Decimal型のまま
 
+    update_parts = ["#st = :status", "stripe_payment_status = :stripe_status"]
+    expression_values = {
+        ":status": status,
+        ":stripe_status": stripe_payment_status,
+    }
+
+    # カードブランド情報がある場合は追加
+    if card_brand:
+        update_parts.append("card_brand = :card_brand")
+        expression_values[":card_brand"] = card_brand
+
     response = sales_table.update_item(
         Key={"sale_id": order_id, "timestamp": timestamp},
-        UpdateExpression="SET #st = :status, stripe_payment_status = :stripe_status",
+        UpdateExpression=f"SET {', '.join(update_parts)}",
         ExpressionAttributeNames={"#st": "status"},
-        ExpressionAttributeValues={
-            ":status": status,
-            ":stripe_status": stripe_payment_status,
-        },
+        ExpressionAttributeValues=expression_values,
         ReturnValues="ALL_NEW",
     )
     return dynamo_to_dict(response["Attributes"])
