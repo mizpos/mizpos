@@ -10,7 +10,7 @@ export const Route = createFileRoute("/settings/")({
 });
 
 function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, registerPasskey } = useAuth();
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
     oldPassword: "",
@@ -19,6 +19,8 @@ function SettingsPage() {
   });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passkeyError, setPasskeyError] = useState("");
+  const [passkeySuccess, setPasskeySuccess] = useState(false);
 
   // ユーザー属性を取得
   const { data: userAttributes, isLoading } = useQuery({
@@ -65,6 +67,31 @@ function SettingsPage() {
     },
   });
 
+  // パスキー登録mutation
+  const registerPasskeyMutation = useMutation({
+    mutationFn: async () => {
+      await registerPasskey();
+    },
+    onSuccess: () => {
+      setPasskeySuccess(true);
+      setPasskeyError("");
+      setTimeout(() => {
+        setPasskeySuccess(false);
+      }, 3000);
+    },
+    onError: (error: Error) => {
+      console.error("Passkey registration error:", error);
+      if (error.message.includes("NotAllowedError")) {
+        setPasskeyError("パスキーの登録がキャンセルされました");
+      } else if (error.message.includes("NotSupportedError")) {
+        setPasskeyError("このブラウザはパスキーに対応していません");
+      } else {
+        setPasskeyError("パスキーの登録に失敗しました");
+      }
+      setPasskeySuccess(false);
+    },
+  });
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError("");
@@ -92,6 +119,12 @@ function SettingsPage() {
     } catch (error) {
       console.error("Sign out error:", error);
     }
+  };
+
+  const handleRegisterPasskey = () => {
+    setPasskeyError("");
+    setPasskeySuccess(false);
+    registerPasskeyMutation.mutate();
   };
 
   if (!user) {
@@ -492,6 +525,92 @@ function SettingsPage() {
               </div>
             </form>
           )}
+        </div>
+
+        {/* パスキー登録 */}
+        <div
+          className={css({
+            padding: "24px",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+          })}
+        >
+          <h2
+            className={css({
+              fontSize: "20px",
+              fontWeight: "bold",
+              marginBottom: "20px",
+            })}
+          >
+            パスキー（生体認証）
+          </h2>
+          <p
+            className={css({
+              fontSize: "14px",
+              color: "#666",
+              marginBottom: "16px",
+            })}
+          >
+            パスキーを登録すると、パスワードなしで簡単にログインできます
+          </p>
+
+          {passkeyError && (
+            <div
+              className={css({
+                padding: "12px",
+                backgroundColor: "#f8d7da",
+                border: "1px solid #f5c2c7",
+                borderRadius: "4px",
+                color: "#842029",
+                fontSize: "14px",
+                marginBottom: "16px",
+              })}
+            >
+              {passkeyError}
+            </div>
+          )}
+
+          {passkeySuccess && (
+            <div
+              className={css({
+                padding: "12px",
+                backgroundColor: "#d1e7dd",
+                border: "1px solid #badbcc",
+                borderRadius: "4px",
+                color: "#0f5132",
+                fontSize: "14px",
+                marginBottom: "16px",
+              })}
+            >
+              パスキーを登録しました
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleRegisterPasskey}
+            disabled={registerPasskeyMutation.isPending}
+            className={css({
+              padding: "12px 24px",
+              backgroundColor: "#f0c14b",
+              border: "1px solid #a88734",
+              borderRadius: "3px",
+              fontSize: "14px",
+              fontWeight: "bold",
+              cursor: registerPasskeyMutation.isPending
+                ? "not-allowed"
+                : "pointer",
+              opacity: registerPasskeyMutation.isPending ? 0.6 : 1,
+              _hover: {
+                backgroundColor: registerPasskeyMutation.isPending
+                  ? "#f0c14b"
+                  : "#ddb347",
+              },
+            })}
+          >
+            {registerPasskeyMutation.isPending ? "登録中..." : "パスキーを登録"}
+          </button>
         </div>
 
         {/* 住所管理へのリンク */}

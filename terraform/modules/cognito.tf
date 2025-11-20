@@ -89,8 +89,8 @@ resource "aws_cognito_user_pool_client" "main" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_scopes                 = ["email", "openid", "profile"]
-  callback_urls                        = ["${var.frontend_url}/callback", "http://localhost:3000/callback"]
-  logout_urls                          = ["${var.frontend_url}/logout", "http://localhost:3000/logout"]
+  callback_urls                        = ["https://admin.${var.domain_name}/callback", "https://sales.${var.domain_name}/callback", "http://localhost:3000/callback"]
+  logout_urls                          = ["https://admin.${var.domain_name}/logout", "https://sales.${var.domain_name}/logout", "http://localhost:3000/logout"]
 
   # トークンの有効期限
   refresh_token_validity = 30
