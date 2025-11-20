@@ -718,7 +718,7 @@ function PublisherMembersView({ publisherId }: { publisherId: string }) {
     queryFn: async () => {
       const { accounts } = await getAuthenticatedClients();
       const { data, error } = await accounts.GET(
-        "/publishers/{publisher_id}/roles",
+        "/publishers/{publisher_id}/roles" as any,
         {
           params: { path: { publisher_id: publisherId } },
         },

@@ -334,7 +334,7 @@ function LoginPage() {
                 >
                   <Turnstile
                     siteKey={turnstileSiteKey}
-                    onSuccess={(token) => setTurnstileToken(token)}
+                    onSuccess={(token: string) => setTurnstileToken(token)}
                     onError={() => {
                       setTurnstileToken("");
                       setError(
