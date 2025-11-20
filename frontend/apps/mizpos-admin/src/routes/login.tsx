@@ -12,7 +12,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, isAuthenticated } = useAuth();
+  const { signIn, signInWithWebAuthn, isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -64,6 +64,35 @@ function LoginPage() {
         setError(err.message);
       } else {
         setError("ログインに失敗しました");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    if (!email) {
+      setError("パスキーログインにはメールアドレスが必要です");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const result = await signInWithWebAuthn(email);
+      if (result.isSignedIn) {
+        navigate({ to: "/" });
+      } else {
+        setError(
+          `パスキーログインに失敗しました: ${result.nextStep?.signInStep || "不明"}`,
+        );
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("パスキーログインに失敗しました");
       }
     } finally {
       setIsLoading(false);
@@ -344,6 +373,46 @@ function LoginPage() {
 
               <Button type="submit" disabled={isLoading || !turnstileToken} size="lg">
                 {isLoading ? "ログイン中..." : "ログイン"}
+              </Button>
+
+              <div
+                className={css({
+                  position: "relative",
+                  textAlign: "center",
+                  marginY: "4",
+                })}
+              >
+                <div
+                  className={css({
+                    position: "absolute",
+                    left: "0",
+                    right: "0",
+                    top: "50%",
+                    borderTop: "1px solid",
+                    borderColor: "gray.300",
+                  })}
+                />
+                <span
+                  className={css({
+                    position: "relative",
+                    backgroundColor: "white",
+                    paddingX: "2",
+                    color: "gray.500",
+                    fontSize: "sm",
+                  })}
+                >
+                  または
+                </span>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handlePasskeyLogin}
+                disabled={isLoading}
+                size="lg"
+                variant="secondary"
+              >
+                {isLoading ? "認証中..." : "パスキーでログイン"}
               </Button>
             </div>
           </form>

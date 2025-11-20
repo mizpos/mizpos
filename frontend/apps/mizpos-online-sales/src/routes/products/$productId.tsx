@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { css } from "styled-system/css";
 import { useCart } from "../../contexts/CartContext";
 import { getProduct } from "../../lib/api";
@@ -173,15 +174,82 @@ function ProductDetailPage() {
             >
               商品説明
             </h2>
-            <p
+            <div
               className={css({
                 fontSize: "14px",
                 lineHeight: "1.6",
                 color: "#333",
+                "& h1": {
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  marginTop: "20px",
+                  marginBottom: "12px",
+                },
+                "& h2": {
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                  marginTop: "16px",
+                  marginBottom: "10px",
+                },
+                "& h3": {
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  marginTop: "14px",
+                  marginBottom: "8px",
+                },
+                "& p": {
+                  marginBottom: "12px",
+                },
+                "& ul, & ol": {
+                  marginLeft: "20px",
+                  marginBottom: "12px",
+                },
+                "& li": {
+                  marginBottom: "6px",
+                },
+                "& code": {
+                  backgroundColor: "#f4f4f4",
+                  padding: "2px 6px",
+                  borderRadius: "3px",
+                  fontFamily: "monospace",
+                  fontSize: "13px",
+                },
+                "& pre": {
+                  backgroundColor: "#f4f4f4",
+                  padding: "12px",
+                  borderRadius: "4px",
+                  overflow: "auto",
+                  marginBottom: "12px",
+                },
+                "& pre code": {
+                  backgroundColor: "transparent",
+                  padding: "0",
+                },
+                "& blockquote": {
+                  borderLeft: "4px solid #ddd",
+                  paddingLeft: "16px",
+                  color: "#666",
+                  marginBottom: "12px",
+                },
+                "& a": {
+                  color: "#007185",
+                  textDecoration: "underline",
+                  _hover: {
+                    color: "#c45500",
+                  },
+                },
+                "& strong": {
+                  fontWeight: "bold",
+                },
+                "& em": {
+                  fontStyle: "italic",
+                },
               })}
             >
-              {product.description || "商品説明はありません"}
-            </p>
+              <ReactMarkdown>
+                {product.description || "商品説明はありません"}
+              </ReactMarkdown>
+            </div>
           </div>
 
           <div className={css({ marginBottom: "20px" })}>
