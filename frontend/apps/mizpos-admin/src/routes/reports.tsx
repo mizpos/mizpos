@@ -51,7 +51,7 @@ function safeNumber(value: number | string | undefined | null): number {
     return 0;
   }
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) {
+  if (Number.isNaN(num)) {
     return 0;
   }
   return num;
@@ -99,7 +99,7 @@ function ReportsPage() {
         const today = new Date(
           now.getFullYear(),
           now.getMonth(),
-          now.getDate(),
+          now.getDate()
         );
         return date >= today;
       }
@@ -117,34 +117,31 @@ function ReportsPage() {
   };
 
   const completedSales = salesData.filter(
-    (s) => s.status === "completed" && filterByDateRange(s.created_at),
+    (s) => s.status === "completed" && filterByDateRange(s.created_at)
   );
 
   // 委託元リストを取得（重複なし）
   const publishersList = Array.from(
-    new Set(productsData.map((p) => p.publisher || "自社").filter(Boolean)),
+    new Set(productsData.map((p) => p.publisher || "自社").filter(Boolean))
   ).sort();
 
   const renderSalesReport = () => {
     const totalRevenue = completedSales.reduce(
       (sum, s) => sum + safeNumber(s.total),
-      0,
+      0
     );
     const totalDiscount = completedSales.reduce(
       (sum, s) => sum + safeNumber(s.discount),
-      0,
+      0
     );
     const averageOrder =
       completedSales.length > 0 ? totalRevenue / completedSales.length : 0;
 
-    const paymentMethodBreakdown = completedSales.reduce(
-      (acc, sale) => {
-        acc[sale.payment_method] =
-          (acc[sale.payment_method] || 0) + safeNumber(sale.total);
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    const paymentMethodBreakdown = completedSales.reduce((acc, sale) => {
+      acc[sale.payment_method] =
+        (acc[sale.payment_method] || 0) + safeNumber(sale.total);
+      return acc;
+    }, {} as Record<string, number>);
 
     return (
       <div
@@ -209,8 +206,8 @@ function ReportsPage() {
                   {method === "stripe_online"
                     ? "オンライン決済"
                     : method === "stripe_terminal"
-                      ? "端末決済"
-                      : "現金"}
+                    ? "端末決済"
+                    : "現金"}
                 </span>
                 <span className={css({ fontWeight: "semibold" })}>
                   ¥{amount.toLocaleString()}
@@ -348,7 +345,7 @@ function ReportsPage() {
     });
 
     const sortedCategories = Object.entries(categorySales).sort(
-      ([, a], [, b]) => b.revenue - a.revenue,
+      ([, a], [, b]) => b.revenue - a.revenue
     );
 
     return (
@@ -450,7 +447,7 @@ function ReportsPage() {
     });
 
     const sortedPublishers = Object.entries(publisherSales).sort(
-      ([, a], [, b]) => b.revenue - a.revenue,
+      ([, a], [, b]) => b.revenue - a.revenue
     );
 
     return (
@@ -624,11 +621,18 @@ function ReportsPage() {
       >
         {/* Print Header */}
         <div className="print-only" style={{ marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
+          <h1
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              marginBottom: "8px",
+            }}
+          >
             {getReportTitle()}
           </h1>
           <p style={{ color: "#666", fontSize: "14px" }}>
-            期間: {getDateRangeLabel()} | 出力日時: {new Date().toLocaleString("ja-JP")}
+            期間: {getDateRangeLabel()} | 出力日時:{" "}
+            {new Date().toLocaleString("ja-JP")}
             {selectedPublisher !== "all" && ` | 委託元: ${selectedPublisher}`}
           </p>
         </div>
