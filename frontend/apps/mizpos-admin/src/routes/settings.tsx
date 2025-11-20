@@ -1043,15 +1043,20 @@ function SettingsPage() {
                             })}
                           >
                             登録日:{" "}
-                            {new Date(passkey.createdAt).toLocaleDateString(
-                              "ja-JP",
-                            )}
+                            {passkey.createdAt
+                              ? new Date(passkey.createdAt).toLocaleDateString(
+                                  "ja-JP",
+                                )
+                              : "不明"}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm("このパスキーを削除しますか？")) {
+                            if (
+                              passkey.credentialId &&
+                              confirm("このパスキーを削除しますか？")
+                            ) {
                               passkeyDeleteMutation.mutate(
                                 passkey.credentialId,
                               );
