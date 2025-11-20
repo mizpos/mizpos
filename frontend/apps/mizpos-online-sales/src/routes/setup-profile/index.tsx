@@ -5,6 +5,7 @@ import { css } from "styled-system/css";
 import { useAuth } from "../../contexts/AuthContext";
 import { getUserInfo, updateUserInfo } from "../../lib/api";
 
+// @ts-expect-error - Route will be added to routeTree after dev server restart
 export const Route = createFileRoute("/setup-profile/")({
   component: SetupProfilePage,
 });
