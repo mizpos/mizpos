@@ -31,6 +31,11 @@ output "cognito_domain" {
   value       = aws_cognito_user_pool_domain.main.domain
 }
 
+output "cognito_hosted_ui_url" {
+  description = "Cognito Hosted UI URL"
+  value       = "https://${aws_cognito_user_pool_domain.main.domain}.auth.${var.aws_region}.amazoncognito.com"
+}
+
 # DynamoDB Outputs
 output "dynamodb_users_table_name" {
   description = "DynamoDB Users Table Name"
@@ -187,17 +192,4 @@ output "cdn_domain" {
 output "ses_sender_email" {
   description = "SES sender email address"
   value       = aws_sesv2_email_identity.sender.email_identity
-}
-
-# Cloudflare Turnstile Outputs
-output "turnstile_site_key" {
-  description = "Cloudflare Turnstile site key for admin login"
-  value       = cloudflare_turnstile_widget.admin_login.id
-  sensitive   = false
-}
-
-output "turnstile_secret_key_secret_arn" {
-  description = "ARN of the Secrets Manager secret containing Turnstile secret key"
-  value       = aws_secretsmanager_secret.turnstile_secret_key.arn
-  sensitive   = false
 }
