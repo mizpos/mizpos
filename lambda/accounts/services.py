@@ -223,12 +223,8 @@ def assign_role(
     elif scope == "event" and event_id:
         item["event_id"] = event_id
 
-    # スパースインデックスのため、nullableなフィールドは存在しない場合は含めない
-    # ただし、GSIでクエリする必要があるため、nullの代わりに空文字列を使用
-    if "publisher_id" not in item:
-        item["publisher_id"] = ""
-    if "event_id" not in item:
-        item["event_id"] = ""
+    # スパースインデックスのため、使用しないフィールドは含めない
+    # 空文字列を設定するとDynamoDBのGSIでエラーになる
 
     roles_table.put_item(Item=item)
 

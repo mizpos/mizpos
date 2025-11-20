@@ -29,6 +29,7 @@ def get_terraform_outputs(environment: str) -> dict:
         return {
             "user_pool_id": outputs.get("cognito_user_pool_id", {}).get("value"),
             "users_table": outputs.get("dynamodb_users_table_name", {}).get("value"),
+            "roles_table": outputs.get("dynamodb_roles_table_name", {}).get("value"),
         }
     except Exception as e:
         print(f"Terraform outputs の取得に失敗: {e}")
@@ -38,17 +39,19 @@ def get_terraform_outputs(environment: str) -> dict:
 def create_admin_user(
     user_pool_id: str,
     users_table_name: str,
+    roles_table_name: str,
     email: str,
     password: str,
     display_name: str,
     region: str = "ap-northeast-1",
 ) -> dict:
-    """管理者ユーザーを作成"""
+    """管理者ユーザーを作成してsystem_adminロールを付与"""
 
     # AWS クライアント初期化
     cognito = boto3.client("cognito-idp", region_name=region)
     dynamodb = boto3.resource("dynamodb", region_name=region)
     users_table = dynamodb.Table(users_table_name)
+    roles_table = dynamodb.Table(roles_table_name)
 
     print(f"Creating admin user: {email}")
 
@@ -109,7 +112,28 @@ def create_admin_user(
         print(f"     Error creating DynamoDB user: {e}")
         raise
 
-    print(f"Admin user created successfully!")
+    # 4. system_admin ロールを付与
+    print("  4. Assigning system_admin role...")
+    role_id = str(uuid.uuid4())
+
+    role_item = {
+        "user_id": user_id,
+        "role_id": role_id,
+        "scope": "system",
+        "role_type": "system_admin",
+        "created_at": now,
+        "created_by": user_id,  # 自分自身が作成者
+        # publisher_id と event_id は省略（スパースインデックスのため）
+    }
+
+    try:
+        roles_table.put_item(Item=role_item)
+        print(f"     system_admin role assigned: {role_id}")
+    except ClientError as e:
+        print(f"     Error assigning role: {e}")
+        raise
+
+    print(f"Admin user created successfully with system_admin role!")
     return user_item
 
 
@@ -146,6 +170,10 @@ def main():
         help="DynamoDB Users Table 名 (省略時は Terraform outputs から取得)",
     )
     parser.add_argument(
+        "--roles-table",
+        help="DynamoDB Roles Table 名 (省略時は Terraform outputs から取得)",
+    )
+    parser.add_argument(
         "--region",
         default="ap-northeast-1",
         help="AWS リージョン (default: ap-northeast-1)",
@@ -154,7 +182,7 @@ def main():
     args = parser.parse_args()
 
     # Terraform outputs から設定を取得
-    if not args.user_pool_id or not args.users_table:
+    if not args.user_pool_id or not args.users_table or not args.roles_table:
         print(f"Fetching configuration from Terraform outputs ({args.environment})...")
         tf_outputs = get_terraform_outputs(args.environment)
 
@@ -162,6 +190,8 @@ def main():
             args.user_pool_id = tf_outputs.get("user_pool_id")
         if not args.users_table:
             args.users_table = tf_outputs.get("users_table")
+        if not args.roles_table:
+            args.roles_table = tf_outputs.get("roles_table")
 
     # 必須パラメータの検証
     if not args.user_pool_id:
@@ -170,11 +200,15 @@ def main():
     if not args.users_table:
         print("Error: --users-table is required (or set in Terraform outputs)")
         return 1
+    if not args.roles_table:
+        print("Error: --roles-table is required (or set in Terraform outputs)")
+        return 1
 
     print(f"Configuration:")
     print(f"  Environment: {args.environment}")
     print(f"  User Pool ID: {args.user_pool_id}")
     print(f"  Users Table: {args.users_table}")
+    print(f"  Roles Table: {args.roles_table}")
     print(f"  Region: {args.region}")
     print(f"  Email: {args.email}")
     print(f"  Display Name: {args.display_name}")
@@ -185,6 +219,7 @@ def main():
         user = create_admin_user(
             user_pool_id=args.user_pool_id,
             users_table_name=args.users_table,
+            roles_table_name=args.roles_table,
             email=args.email,
             password=args.password,
             display_name=args.display_name,

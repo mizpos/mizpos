@@ -67,12 +67,16 @@ jobs:
           USER_POOL_ID=$(aws cognito-idp list-user-pools --max-results 60 --query "UserPools[?Name=='${{ inputs.environment }}-mizpos-user-pool'].Id" --output text)
           echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
 
-          # DynamoDB table name follows naming convention
+          # DynamoDB table names follow naming convention
           USERS_TABLE="${{ inputs.environment }}-mizpos-users"
           echo "users_table=$USERS_TABLE" >> $GITHUB_OUTPUT
 
+          ROLES_TABLE="${{ inputs.environment }}-mizpos-roles"
+          echo "roles_table=$ROLES_TABLE" >> $GITHUB_OUTPUT
+
           echo "User Pool ID: $USER_POOL_ID"
           echo "Users Table: $USERS_TABLE"
+          echo "Roles Table: $ROLES_TABLE"
 
       - name: Create Admin User
         env:
@@ -85,4 +89,5 @@ jobs:
             --password "$ADMIN_PASSWORD" \
             --display-name "${{ inputs.display_name }}" \
             --user-pool-id "${{ steps.aws_resources.outputs.user_pool_id }}" \
-            --users-table "${{ steps.aws_resources.outputs.users_table }}"
+            --users-table "${{ steps.aws_resources.outputs.users_table }}" \
+            --roles-table "${{ steps.aws_resources.outputs.roles_table }}"
