@@ -27,7 +27,6 @@ from models import (
     ResendConfirmationRequest,
     UpdateAddressRequest,
     UpdateUserRequest,
-    VerifyTurnstileRequest,
 )
 from permissions import (
     get_user_id_from_auth,
