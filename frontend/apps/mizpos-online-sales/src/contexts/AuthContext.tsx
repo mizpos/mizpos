@@ -1,5 +1,4 @@
 import {
-  associateWebAuthnCredential,
   fetchAuthSession,
   getCurrentUser,
   signInWithRedirect,
@@ -28,7 +27,6 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signInWithHostedUI: () => Promise<void>;
-  registerPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 }
@@ -107,11 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleSignInWithHostedUI = async (): Promise<void> => {
     // Amplifyの signInWithRedirect を使用
     // これによりAmplifyが認証フローを管理し、callbackでトークンを自動取得できる
-    await signInWithRedirect();
-  };
-
-  const handleRegisterPasskey = async (): Promise<void> => {
-    await associateWebAuthnCredential();
+    await signInWithRedirect({
+      options: {
+        lang: "ja",
+      },
+    });
   };
 
   const handleSignOut = async () => {
@@ -135,7 +133,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         signInWithHostedUI: handleSignInWithHostedUI,
-        registerPasskey: handleRegisterPasskey,
         signOut: handleSignOut,
         getAccessToken,
       }}

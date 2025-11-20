@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { fetchAuthSession } from "aws-amplify/auth";
+import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 import { Hub } from "aws-amplify/utils";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
+import { getUserInfo } from "../../lib/api";
 
 export const Route = createFileRoute("/callback/")({
   component: CallbackPage,
@@ -70,9 +71,28 @@ function CallbackPage() {
         });
 
         if (session.tokens?.accessToken) {
-          // 認証成功、ホームにリダイレクト
-          console.log("Access token found, navigating to home");
-          navigate({ to: "/" });
+          // 認証成功、ユーザー情報をチェック
+          console.log("Access token found, checking user profile");
+
+          try {
+            const currentUser = await getCurrentUser();
+            const userInfo = await getUserInfo(currentUser.userId);
+
+            // ディスプレイネームが未設定の場合はプロフィール設定画面へ
+            if (!userInfo.display_name) {
+              console.log("Display name not set, navigating to setup-profile");
+              window.location.href = "/setup-profile";
+              return;
+            } else {
+              console.log("Display name is set, navigating to home");
+              navigate({ to: "/" });
+            }
+          } catch (userInfoError) {
+            console.error("Failed to check user info:", userInfoError);
+            // エラーが発生した場合もホームにリダイレクト
+            console.log("Error checking user info, navigating to home anyway");
+            navigate({ to: "/" });
+          }
         } else {
           // トークンがまだない場合は、もう少し待ってからリトライ
           console.log("No access token yet, waiting 2 more seconds...");
@@ -87,8 +107,31 @@ function CallbackPage() {
           });
 
           if (retrySession.tokens?.accessToken) {
-            console.log("Access token found on retry, navigating to home");
-            navigate({ to: "/" });
+            console.log("Access token found on retry, checking user profile");
+
+            try {
+              const currentUser = await getCurrentUser();
+              const userInfo = await getUserInfo(currentUser.userId);
+
+              // ディスプレイネームが未設定の場合はプロフィール設定画面へ
+              if (!userInfo.display_name) {
+                console.log(
+                  "Display name not set, navigating to setup-profile",
+                );
+                window.location.href = "/setup-profile";
+                return;
+              } else {
+                console.log("Display name is set, navigating to home");
+                navigate({ to: "/" });
+              }
+            } catch (userInfoError) {
+              console.error("Failed to check user info:", userInfoError);
+              // エラーが発生した場合もホームにリダイレクト
+              console.log(
+                "Error checking user info, navigating to home anyway",
+              );
+              navigate({ to: "/" });
+            }
           } else {
             console.error("Failed to get access token after retry");
             console.error("Session details:", retrySession);

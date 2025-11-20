@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SetupProfileIndexRouteImport } from './routes/setup-profile/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
 import { Route as OrderCompleteIndexRouteImport } from './routes/order-complete/index'
@@ -31,6 +32,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupProfileIndexRoute = SetupProfileIndexRouteImport.update({
+  id: '/setup-profile/',
+  path: '/setup-profile/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/order-complete': typeof OrderCompleteIndexRoute
   '/products': typeof ProductsIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/setup-profile': typeof SetupProfileIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/order-complete': typeof OrderCompleteIndexRoute
   '/products': typeof ProductsIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/setup-profile': typeof SetupProfileIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/order-complete/': typeof OrderCompleteIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/setup-profile/': typeof SetupProfileIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/order-complete'
     | '/products'
     | '/settings/'
+    | '/setup-profile'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/order-complete'
     | '/products'
     | '/settings'
+    | '/setup-profile'
   id:
     | '__root__'
     | '/'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/order-complete/'
     | '/products/'
     | '/settings/'
+    | '/setup-profile/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -194,6 +206,7 @@ export interface RootRouteChildren {
   MyOrdersIndexRoute: typeof MyOrdersIndexRoute
   OrderCompleteIndexRoute: typeof OrderCompleteIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  SetupProfileIndexRoute: typeof SetupProfileIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -210,6 +223,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup-profile/': {
+      id: '/setup-profile/'
+      path: '/setup-profile'
+      fullPath: '/setup-profile'
+      preLoaderRoute: typeof SetupProfileIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -317,6 +337,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyOrdersIndexRoute: MyOrdersIndexRoute,
   OrderCompleteIndexRoute: OrderCompleteIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  SetupProfileIndexRoute: SetupProfileIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

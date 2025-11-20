@@ -1,4 +1,4 @@
-import { IconFingerprint, IconLock, IconTrash } from "@tabler/icons-react";
+import { IconLock, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
-  const { user, registerPasskey, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   // パスワード変更用の状態
   const [oldPassword, setOldPassword] = useState("");
@@ -26,7 +26,6 @@ function SettingsPage() {
 
   // パスキー関連の状態
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
-  const [passkeySuccess, setPasskeySuccess] = useState(false);
 
   // パスキー一覧取得
   const {
@@ -75,22 +74,7 @@ function SettingsPage() {
     },
   });
 
-  // パスキー登録
-  const passkeyRegisterMutation = useMutation({
-    mutationFn: async () => {
-      await registerPasskey();
-    },
-    onSuccess: () => {
-      setPasskeySuccess(true);
-      setPasskeyError(null);
-      refetchPasskeys();
-      setTimeout(() => setPasskeySuccess(false), 3000);
-    },
-    onError: (error: Error) => {
-      setPasskeySuccess(false);
-      setPasskeyError(error.message);
-    },
-  });
+  // パスキー登録はCognitoマネージドUIで行うため、ここでは削除
 
   // パスキー削除
   const passkeyDeleteMutation = useMutation({
@@ -423,21 +407,6 @@ function SettingsPage() {
           </div>
         )}
 
-        {passkeySuccess && (
-          <div
-            className={css({
-              backgroundColor: "#d4edda",
-              borderRadius: "4px",
-              padding: "12px",
-              marginBottom: "16px",
-              color: "#155724",
-              fontSize: "14px",
-            })}
-          >
-            パスキーを登録しました
-          </div>
-        )}
-
         {/* Passkey List */}
         {isLoadingPasskeys ? (
           <div
@@ -532,36 +501,19 @@ function SettingsPage() {
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={() => passkeyRegisterMutation.mutate()}
-          disabled={passkeyRegisterMutation.isPending}
+        <div
           className={css({
-            padding: "12px 24px",
-            backgroundColor: "#f0c14b",
-            border: "1px solid #a88734",
-            borderRadius: "3px",
-            fontSize: "14px",
-            fontWeight: "bold",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            _hover: {
-              backgroundColor: "#ddb347",
-            },
-            _disabled: {
-              backgroundColor: "#ddd",
-              cursor: "not-allowed",
-              borderColor: "#999",
-            },
+            padding: "16px",
+            backgroundColor: "#f7f7f7",
+            borderRadius: "4px",
+            border: "1px solid #ddd",
           })}
         >
-          <IconFingerprint size={18} />
-          {passkeyRegisterMutation.isPending
-            ? "登録中..."
-            : "新しいパスキーを登録"}
-        </button>
+          <p className={css({ fontSize: "14px", color: "#666" })}>
+            パスキーの登録は、Cognitoのログイン画面から行うことができます。
+            ログイン画面でパスキーの設定を行ってください。
+          </p>
+        </div>
       </div>
 
       {/* 住所管理・注文履歴 */}

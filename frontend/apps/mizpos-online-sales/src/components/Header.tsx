@@ -105,7 +105,7 @@ export default function Header({
           >
             <img
               src="/logo.png"
-              alt="mizpos Online Sales"
+              alt="utteru 販売プラットフォーム"
               className={css({
                 height: { base: "20px", md: "26px", lg: "32px" },
                 width: "auto",
