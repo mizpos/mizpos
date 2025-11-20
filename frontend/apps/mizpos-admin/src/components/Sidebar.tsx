@@ -1,6 +1,7 @@
 import {
   IconBox,
   IconBuildingStore,
+  IconCalendar,
   IconChartBar,
   IconHome,
   IconKey,
@@ -28,6 +29,11 @@ const navItems: NavItem[] = [
     label: "サークル管理",
     href: "/publishers",
     icon: <IconBuildingStore size={20} />,
+  },
+  {
+    label: "イベント管理",
+    href: "/events",
+    icon: <IconCalendar size={20} />,
   },
   { label: "売上管理", href: "/sales", icon: <IconShoppingCart size={20} /> },
   { label: "レポート", href: "/reports", icon: <IconChartBar size={20} /> },
