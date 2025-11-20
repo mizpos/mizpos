@@ -13,6 +13,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { cognitoConfig } from "./cognito";
 
 interface User {
   username: string;
@@ -56,8 +57,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkAuth]);
 
   const handleSignInWithHostedUI = async (): Promise<void> => {
-    // Cognito Hosted UIにリダイレクト
-    await signInWithRedirect();
+    // Cognito Hosted UIにリダイレクト（日本語表示）
+    // lang=jaパラメータを追加するため手動でURLを構築
+    const domain = cognitoConfig.domain;
+    const clientId = cognitoConfig.userPoolClientId;
+    const redirectUri = encodeURIComponent(cognitoConfig.redirectSignIn);
+    const scope = encodeURIComponent("openid email profile");
+
+    // CSRF対策用のランダムなstate値を生成
+    const state = encodeURIComponent(
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
+
+    // stateをsessionStorageに保存（コールバック時に検証用）
+    sessionStorage.setItem("oauth_state", state);
+
+    const hostedUIUrl = `https://${domain}/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}&scope=${scope}&lang=ja`;
+
+    window.location.href = hostedUIUrl;
   };
 
   const handleRegisterPasskey = async (): Promise<void> => {
