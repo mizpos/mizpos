@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { css } from "styled-system/css";
+import AddToCartModal from "../../components/AddToCartModal";
 import { useCart } from "../../contexts/CartContext";
 import { getProduct } from "../../lib/api";
 
@@ -13,8 +14,8 @@ export const Route = createFileRoute("/products/$productId")({
 function ProductDetailPage() {
   const { productId } = Route.useParams();
   const { addItem } = useCart();
-  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const [showModal, setShowModal] = useState(false);
 
   const {
     data: product,
@@ -51,317 +52,326 @@ function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addItem(product, quantity);
-    navigate({ to: "/cart" });
+    setShowModal(true);
   };
 
   return (
-    <div
-      className={css({
-        maxWidth: "1200px",
-        margin: "0 auto",
-        padding: "40px 20px",
-      })}
-    >
-      <Link
-        to="/products"
-        className={css({
-          display: "inline-block",
-          marginBottom: "20px",
-          color: "blue",
-          textDecoration: "underline",
-        })}
-      >
-        ← 商品一覧に戻る
-      </Link>
-
+    <>
+      {showModal && (
+        <AddToCartModal
+          product={product}
+          quantity={quantity}
+          onClose={() => setShowModal(false)}
+        />
+      )}
       <div
         className={css({
-          display: "grid",
-          gridTemplateColumns: { base: "1fr", md: "1fr 1fr" },
-          gap: "40px",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "40px 20px",
         })}
       >
-        {/* 商品画像 */}
-        <div>
-          <div
-            className={css({
-              width: "100%",
-              height: "500px",
-              backgroundColor: "#f5f5f5",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "8px",
-              overflow: "hidden",
-            })}
-          >
-            {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className={css({
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                })}
-              />
-            ) : (
-              <p className={css({ color: "#999", fontSize: "18px" })}>
-                No Image
-              </p>
-            )}
-          </div>
-        </div>
+        <Link
+          to="/products"
+          className={css({
+            display: "inline-block",
+            marginBottom: "20px",
+            color: "blue",
+            textDecoration: "underline",
+          })}
+        >
+          ← 商品一覧に戻る
+        </Link>
 
-        {/* 商品情報 */}
-        <div>
-          <h1
-            className={css({
-              fontSize: "28px",
-              fontWeight: "bold",
-              marginBottom: "12px",
-            })}
-          >
-            {product.name}
-          </h1>
-
-          <p
-            className={css({
-              fontSize: "16px",
-              color: "#666",
-              marginBottom: "8px",
-            })}
-          >
-            著者: {product.author}
-          </p>
-
-          <p
-            className={css({
-              fontSize: "16px",
-              color: "#666",
-              marginBottom: "20px",
-            })}
-          >
-            出版社: {product.publisher}
-          </p>
-
-          <div
-            className={css({
-              borderTop: "1px solid #ddd",
-              borderBottom: "1px solid #ddd",
-              paddingY: "16px",
-              marginBottom: "20px",
-            })}
-          >
-            <p
+        <div
+          className={css({
+            display: "grid",
+            gridTemplateColumns: { base: "1fr", md: "1fr 1fr" },
+            gap: "40px",
+          })}
+        >
+          {/* 商品画像 */}
+          <div>
+            <div
               className={css({
-                fontSize: "32px",
-                fontWeight: "bold",
-                color: "#e47911",
+                width: "100%",
+                height: "500px",
+                backgroundColor: "#f5f5f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "8px",
+                overflow: "hidden",
               })}
             >
-              ¥{product.price.toLocaleString()}
-            </p>
+              {product.image_url ? (
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className={css({
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  })}
+                />
+              ) : (
+                <p className={css({ color: "#999", fontSize: "18px" })}>
+                  No Image
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className={css({ marginBottom: "20px" })}>
-            <h2
+          {/* 商品情報 */}
+          <div>
+            <h1
               className={css({
-                fontSize: "18px",
+                fontSize: "28px",
                 fontWeight: "bold",
+                marginBottom: "12px",
+              })}
+            >
+              {product.name}
+            </h1>
+
+            <p
+              className={css({
+                fontSize: "16px",
+                color: "#666",
                 marginBottom: "8px",
               })}
             >
-              商品説明
-            </h2>
+              著者: {product.author}
+            </p>
+
+            <p
+              className={css({
+                fontSize: "16px",
+                color: "#666",
+                marginBottom: "20px",
+              })}
+            >
+              出版社: {product.publisher}
+            </p>
+
             <div
               className={css({
-                fontSize: "14px",
-                lineHeight: "1.6",
-                color: "#333",
-                "& h1": {
-                  fontSize: "24px",
+                borderTop: "1px solid #ddd",
+                borderBottom: "1px solid #ddd",
+                paddingY: "16px",
+                marginBottom: "20px",
+              })}
+            >
+              <p
+                className={css({
+                  fontSize: "32px",
                   fontWeight: "bold",
-                  marginTop: "20px",
-                  marginBottom: "12px",
-                },
-                "& h2": {
-                  fontSize: "20px",
-                  fontWeight: "bold",
-                  marginTop: "16px",
-                  marginBottom: "10px",
-                },
-                "& h3": {
+                  color: "#e47911",
+                })}
+              >
+                ¥{product.price.toLocaleString()}
+              </p>
+            </div>
+
+            <div className={css({ marginBottom: "20px" })}>
+              <h2
+                className={css({
                   fontSize: "18px",
                   fontWeight: "bold",
-                  marginTop: "14px",
                   marginBottom: "8px",
-                },
-                "& p": {
-                  marginBottom: "12px",
-                },
-                "& ul, & ol": {
-                  marginLeft: "20px",
-                  marginBottom: "12px",
-                },
-                "& li": {
-                  marginBottom: "6px",
-                },
-                "& code": {
-                  backgroundColor: "#f4f4f4",
-                  padding: "2px 6px",
-                  borderRadius: "3px",
-                  fontFamily: "monospace",
-                  fontSize: "13px",
-                },
-                "& pre": {
-                  backgroundColor: "#f4f4f4",
-                  padding: "12px",
-                  borderRadius: "4px",
-                  overflow: "auto",
-                  marginBottom: "12px",
-                },
-                "& pre code": {
-                  backgroundColor: "transparent",
-                  padding: "0",
-                },
-                "& blockquote": {
-                  borderLeft: "4px solid #ddd",
-                  paddingLeft: "16px",
-                  color: "#666",
-                  marginBottom: "12px",
-                },
-                "& a": {
-                  color: "#007185",
-                  textDecoration: "underline",
-                  _hover: {
-                    color: "#c45500",
+                })}
+              >
+                商品説明
+              </h2>
+              <div
+                className={css({
+                  fontSize: "14px",
+                  lineHeight: "1.6",
+                  color: "#333",
+                  "& h1": {
+                    fontSize: "24px",
+                    fontWeight: "bold",
+                    marginTop: "20px",
+                    marginBottom: "12px",
                   },
-                },
-                "& strong": {
-                  fontWeight: "bold",
-                },
-                "& em": {
-                  fontStyle: "italic",
-                },
-              })}
-            >
-              <ReactMarkdown>
-                {product.description || "商品説明はありません"}
-              </ReactMarkdown>
-            </div>
-          </div>
-
-          <div className={css({ marginBottom: "20px" })}>
-            <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
-              カテゴリ: {product.category}
-            </p>
-            <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
-              在庫: {product.stock_quantity}点
-            </p>
-            <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
-              種類:{" "}
-              {product.variant_type === "physical"
-                ? "物理商品"
-                : product.variant_type === "digital"
-                  ? "デジタル商品"
-                  : "両方"}
-            </p>
-          </div>
-
-          {/* カートに追加 */}
-          <div
-            className={css({
-              padding: "20px",
-              backgroundColor: "#f3f3f3",
-              borderRadius: "8px",
-            })}
-          >
-            <div className={css({ marginBottom: "16px" })}>
-              <label
-                htmlFor="quantity"
-                className={css({
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  marginBottom: "8px",
-                  display: "block",
+                  "& h2": {
+                    fontSize: "20px",
+                    fontWeight: "bold",
+                    marginTop: "16px",
+                    marginBottom: "10px",
+                  },
+                  "& h3": {
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    marginTop: "14px",
+                    marginBottom: "8px",
+                  },
+                  "& p": {
+                    marginBottom: "12px",
+                  },
+                  "& ul, & ol": {
+                    marginLeft: "20px",
+                    marginBottom: "12px",
+                  },
+                  "& li": {
+                    marginBottom: "6px",
+                  },
+                  "& code": {
+                    backgroundColor: "#f4f4f4",
+                    padding: "2px 6px",
+                    borderRadius: "3px",
+                    fontFamily: "monospace",
+                    fontSize: "13px",
+                  },
+                  "& pre": {
+                    backgroundColor: "#f4f4f4",
+                    padding: "12px",
+                    borderRadius: "4px",
+                    overflow: "auto",
+                    marginBottom: "12px",
+                  },
+                  "& pre code": {
+                    backgroundColor: "transparent",
+                    padding: "0",
+                  },
+                  "& blockquote": {
+                    borderLeft: "4px solid #ddd",
+                    paddingLeft: "16px",
+                    color: "#666",
+                    marginBottom: "12px",
+                  },
+                  "& a": {
+                    color: "#007185",
+                    textDecoration: "underline",
+                    _hover: {
+                      color: "#c45500",
+                    },
+                  },
+                  "& strong": {
+                    fontWeight: "bold",
+                  },
+                  "& em": {
+                    fontStyle: "italic",
+                  },
                 })}
               >
-                数量:
-              </label>
-              <select
-                id="quantity"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
+                <ReactMarkdown>
+                  {product.description || "商品説明はありません"}
+                </ReactMarkdown>
+              </div>
+            </div>
+
+            <div className={css({ marginBottom: "20px" })}>
+              <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
+                カテゴリ: {product.category}
+              </p>
+              <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
+                在庫: {product.stock_quantity}点
+              </p>
+              <p className={css({ fontSize: "14px", marginBottom: "4px" })}>
+                種類:{" "}
+                {product.variant_type === "physical"
+                  ? "物理商品"
+                  : product.variant_type === "digital"
+                    ? "デジタル商品"
+                    : "両方"}
+              </p>
+            </div>
+
+            {/* カートに追加 */}
+            <div
+              className={css({
+                padding: "20px",
+                backgroundColor: "#f3f3f3",
+                borderRadius: "8px",
+              })}
+            >
+              <div className={css({ marginBottom: "16px" })}>
+                <label
+                  htmlFor="quantity"
+                  className={css({
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    marginBottom: "8px",
+                    display: "block",
+                  })}
+                >
+                  数量:
+                </label>
+                <select
+                  id="quantity"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  className={css({
+                    padding: "8px",
+                    borderRadius: "3px",
+                    border: "1px solid #ddd",
+                    fontSize: "14px",
+                  })}
+                >
+                  {Array.from(
+                    { length: Math.min(product.stock_quantity, 10) },
+                    (_, i) => i + 1,
+                  ).map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={product.stock_quantity <= 0}
                 className={css({
-                  padding: "8px",
+                  width: "100%",
+                  padding: "12px",
+                  backgroundColor: "#f0c14b",
+                  border: "1px solid #a88734",
                   borderRadius: "3px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  _hover: {
+                    backgroundColor: "#ddb347",
+                  },
+                  _disabled: {
+                    backgroundColor: "#ddd",
+                    cursor: "not-allowed",
+                    borderColor: "#999",
+                  },
                 })}
               >
-                {Array.from(
-                  { length: Math.min(product.stock_quantity, 10) },
-                  (_, i) => i + 1,
-                ).map((num) => (
-                  <option key={num} value={num}>
-                    {num}
-                  </option>
-                ))}
-              </select>
+                {product.stock_quantity <= 0 ? "在庫なし" : "カートに追加"}
+              </button>
+
+              <Link
+                to="/cart"
+                className={css({
+                  display: "block",
+                  width: "100%",
+                  padding: "12px",
+                  marginTop: "12px",
+                  backgroundColor: "#ff9900",
+                  border: "1px solid #e68a00",
+                  borderRadius: "3px",
+                  textAlign: "center",
+                  textDecoration: "none",
+                  color: "black",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  _hover: {
+                    backgroundColor: "#fa8900",
+                  },
+                })}
+              >
+                カートを見る
+              </Link>
             </div>
-
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={product.stock_quantity <= 0}
-              className={css({
-                width: "100%",
-                padding: "12px",
-                backgroundColor: "#f0c14b",
-                border: "1px solid #a88734",
-                borderRadius: "3px",
-                cursor: "pointer",
-                fontSize: "16px",
-                fontWeight: "bold",
-                _hover: {
-                  backgroundColor: "#ddb347",
-                },
-                _disabled: {
-                  backgroundColor: "#ddd",
-                  cursor: "not-allowed",
-                  borderColor: "#999",
-                },
-              })}
-            >
-              {product.stock_quantity <= 0 ? "在庫なし" : "カートに追加"}
-            </button>
-
-            <Link
-              to="/cart"
-              className={css({
-                display: "block",
-                width: "100%",
-                padding: "12px",
-                marginTop: "12px",
-                backgroundColor: "#ff9900",
-                border: "1px solid #e68a00",
-                borderRadius: "3px",
-                textAlign: "center",
-                textDecoration: "none",
-                color: "black",
-                fontSize: "16px",
-                fontWeight: "bold",
-                _hover: {
-                  backgroundColor: "#fa8900",
-                },
-              })}
-            >
-              カートを見る
-            </Link>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
