@@ -15,10 +15,12 @@ from mangum import Mangum
 from auth import get_current_user
 from models import (
     AdjustStockRequest,
+    CreateEventRequest,
     CreateProductRequest,
     CreatePublisherRequest,
     GenerateBarcodeRequest,
     GenerateISDNRequest,
+    UpdateEventRequest,
     UpdateProductRequest,
     UpdatePublisherRequest,
     UploadRequest,
@@ -26,14 +28,19 @@ from models import (
 )
 from services import (
     build_update_expression,
+    create_event,
+    delete_event,
     dynamo_to_dict,
     generate_presigned_upload_url,
+    get_event,
     get_publisher,
+    list_events,
     list_publishers,
     publishers_table,
     record_stock_history,
     stock_history_table,
     stock_table,
+    update_event,
 )
 from isdn import generate_full_barcode_info, generate_isdn, validate_isdn
 
@@ -408,6 +415,106 @@ async def delete_publisher(
     try:
         publishers_table.delete_item(Key={"publisher_id": publisher_id})
     except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# イベント管理エンドポイント
+# ==========================================
+
+
+@router.get("/events", response_model=dict)
+async def get_events_list(
+    publisher_id: str | None = Query(
+        None, description="サークルID（指定した場合はそのサークルのイベントのみ取得）"
+    ),
+    current_user: dict = Depends(get_current_user),
+):
+    """イベント一覧取得"""
+    try:
+        events = list_events(publisher_id)
+        return {"events": events}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/events", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_new_event(
+    request: CreateEventRequest, current_user: dict = Depends(get_current_user)
+):
+    """イベント作成
+
+    権限: システム管理者、またはサークル管理者（自分のサークルのイベントのみ）
+    """
+    try:
+        # TODO: 権限チェックを実装
+        # - システム管理者: すべてのイベントを作成可能
+        # - サークル管理者: 自分のサークルのイベントのみ作成可能
+
+        event_data = request.model_dump()
+        event = create_event(event_data)
+        return {"event": event}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/events/{event_id}", response_model=dict)
+async def get_event_detail(
+    event_id: str, current_user: dict = Depends(get_current_user)
+):
+    """イベント詳細取得"""
+    try:
+        event = get_event(event_id)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return {"event": event}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/events/{event_id}", response_model=dict)
+async def update_event_detail(
+    event_id: str,
+    request: UpdateEventRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """イベント更新
+
+    権限: システム管理者、またはサークル管理者（自分のサークルのイベントのみ）
+    """
+    try:
+        # TODO: 権限チェックを実装
+
+        update_data = request.model_dump(exclude_none=True)
+        event = update_event(event_id, update_data)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return {"event": event}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_event_endpoint(
+    event_id: str, current_user: dict = Depends(get_current_user)
+):
+    """イベント削除（論理削除）
+
+    権限: システム管理者、またはサークル管理者（自分のサークルのイベントのみ）
+    """
+    try:
+        # TODO: 権限チェックを実装
+
+        success = delete_event(event_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Event not found")
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

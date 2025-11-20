@@ -186,3 +186,39 @@ class UploadResponse(BaseModel):
     cdn_url: str = Field(..., description="アップロード完了後のCDN URL")
     object_key: str = Field(..., description="S3オブジェクトキー")
     expires_in: int = Field(..., description="URLの有効期限（秒）")
+
+
+# Event (イベント) モデル
+class EventBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200, description="イベント名")
+    description: str = Field(default="", max_length=2000, description="説明")
+    start_date: str | None = Field(default=None, description="開始日（YYYY-MM-DD）")
+    end_date: str | None = Field(default=None, description="終了日（YYYY-MM-DD）")
+    location: str = Field(default="", max_length=200, description="開催場所")
+    publisher_id: str | None = Field(
+        default=None, description="サークルID（nullの場合はglobalイベント）"
+    )
+
+
+class CreateEventRequest(EventBase):
+    pass
+
+
+class UpdateEventRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    start_date: str | None = Field(default=None)
+    end_date: str | None = Field(default=None)
+    location: str | None = Field(default=None, max_length=200)
+    publisher_id: str | None = Field(default=None)
+    is_active: bool | None = None
+
+
+class EventResponse(EventBase):
+    event_id: str
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
