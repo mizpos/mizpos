@@ -51,7 +51,7 @@ function safeNumber(value: number | string | undefined | null): number {
     return 0;
   }
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) {
+  if (Number.isNaN(num)) {
     return 0;
   }
   return num;
@@ -624,11 +624,18 @@ function ReportsPage() {
       >
         {/* Print Header */}
         <div className="print-only" style={{ marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
+          <h1
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              marginBottom: "8px",
+            }}
+          >
             {getReportTitle()}
           </h1>
           <p style={{ color: "#666", fontSize: "14px" }}>
-            期間: {getDateRangeLabel()} | 出力日時: {new Date().toLocaleString("ja-JP")}
+            期間: {getDateRangeLabel()} | 出力日時:{" "}
+            {new Date().toLocaleString("ja-JP")}
             {selectedPublisher !== "all" && ` | 委託元: ${selectedPublisher}`}
           </p>
         </div>
