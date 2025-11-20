@@ -13,7 +13,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { getAuthHeaders, getAuthenticatedClients } from "../lib/api";
+import { getAuthenticatedClients, getAuthHeaders } from "../lib/api";
 import {
   DEFAULT_STRIPE_ONLINE_FEE_RATE,
   DEFAULT_STRIPE_TERMINAL_FEE_RATE,
@@ -683,7 +683,9 @@ function PublishersPage() {
         size="lg"
       >
         {viewPublisherMembers && (
-          <PublisherMembersView publisherId={viewPublisherMembers.publisher_id} />
+          <PublisherMembersView
+            publisherId={viewPublisherMembers.publisher_id}
+          />
         )}
       </Modal>
     </>
@@ -719,7 +721,7 @@ function PublisherMembersView({ publisherId }: { publisherId: string }) {
         "/publishers/{publisher_id}/roles",
         {
           params: { path: { publisher_id: publisherId } },
-        }
+        },
       );
       if (error) throw error;
       return (data as unknown as { roles: Role[] }).roles || [];

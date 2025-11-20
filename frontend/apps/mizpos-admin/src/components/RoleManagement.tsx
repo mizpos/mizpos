@@ -1,10 +1,10 @@
-import { IconPlus, IconTrash, IconShieldCheck } from "@tabler/icons-react";
+import { IconPlus, IconShieldCheck, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { css } from "styled-system/css";
+import { getAuthenticatedClients } from "../lib/api";
 import { Button } from "./Button";
 import { Modal } from "./Modal";
-import { getAuthenticatedClients } from "../lib/api";
 
 interface Role {
   user_id: string;
@@ -126,7 +126,7 @@ export function RoleManagement({ userId }: RoleManagementProps) {
         "/users/{user_id}/roles/{role_id}",
         {
           params: { path: { user_id: userId, role_id: roleId } },
-        }
+        },
       );
       if (error) throw error;
     },
@@ -309,7 +309,7 @@ export function RoleManagement({ userId }: RoleManagementProps) {
                     window.confirm(
                       `ロール「${
                         ROLE_TYPE_LABELS[role.role_type] || role.role_type
-                      }」を削除しますか？`
+                      }」を削除しますか？`,
                     )
                   ) {
                     removeRoleMutation.mutate(role.role_id);
