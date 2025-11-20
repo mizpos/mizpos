@@ -151,10 +151,16 @@ resource "aws_cognito_user_pool_client" "main" {
 }
 
 # User Pool Domain (カスタムドメイン使用時とデフォルトドメイン使用時で分岐)
+# Note: カスタムドメインを使用する場合、ACM証明書が必要で、CNAMEの競合に注意が必要
 resource "aws_cognito_user_pool_domain" "main" {
   domain          = var.enable_custom_domain ? "auth.${var.domain_name}" : "${var.environment}-${var.project_name}-auth"
   user_pool_id    = aws_cognito_user_pool.main.id
   certificate_arn = var.enable_custom_domain ? aws_acm_certificate_validation.cognito_domain[0].certificate_arn : null
+
+  # カスタムドメイン使用時は証明書の検証完了を待つ
+  depends_on = [
+    aws_acm_certificate_validation.cognito_domain
+  ]
 }
 
 # Route53 A record for Cognito Custom Domain

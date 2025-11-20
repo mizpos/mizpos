@@ -14,7 +14,7 @@ ses_client = boto3.client(
 # 環境変数
 SENDER_EMAIL = os.environ.get("SES_SENDER_EMAIL", "noreply@miz.cab")
 CONFIGURATION_SET = os.environ.get("SES_CONFIGURATION_SET", "")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://sales.stg-pos.miz.cab")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://sales.pos-stg.miz.cab")
 
 
 def send_email(

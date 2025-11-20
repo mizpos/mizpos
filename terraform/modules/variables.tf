@@ -21,7 +21,7 @@ variable "domain_name" {
   description = "Base domain name for the API"
   type        = string
   # GitHub secretから渡される想定
-  # dev: *.stg-pos.miz.cab
+  # dev: *.pos-stg.miz.cab
   # prod: *.pos.miz.cab
 }
 
