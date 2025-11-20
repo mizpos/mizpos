@@ -1,6 +1,6 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { Hub } from "aws-amplify/utils";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 

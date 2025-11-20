@@ -2,7 +2,6 @@ import {
   associateWebAuthnCredential,
   fetchAuthSession,
   getCurrentUser,
-  signInWithRedirect,
   signOut,
 } from "aws-amplify/auth";
 import type { ReactNode } from "react";
@@ -67,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // CSRF対策用のランダムなstate値を生成
     const state = encodeURIComponent(
       Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15)
+        Math.random().toString(36).substring(2, 15),
     );
 
     // stateをsessionStorageに保存（コールバック時に検証用）

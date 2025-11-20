@@ -609,9 +609,7 @@ function SettingsPage() {
               },
             })}
           >
-            {registerPasskeyMutation.isPending
-              ? "登録中..."
-              : "パスキーを登録"}
+            {registerPasskeyMutation.isPending ? "登録中..." : "パスキーを登録"}
           </button>
         </div>
 
