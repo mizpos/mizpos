@@ -107,10 +107,17 @@ resource "aws_cognito_user_pool_client" "main" {
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH"
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_USER_AUTH" # WebAuthn/Passkey用
   ]
 
+  # WebAuthn設定（Passkey対応）
+  enable_token_revocation = true
+
   prevent_user_existence_errors = "ENABLED"
+
+  # Supported identity providers (Hosted UIで使用)
+  supported_identity_providers = ["COGNITO"]
 }
 
 # User Pool Domain

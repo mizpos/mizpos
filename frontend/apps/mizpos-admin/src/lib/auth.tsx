@@ -2,7 +2,7 @@ import {
   associateWebAuthnCredential,
   fetchAuthSession,
   getCurrentUser,
-  signIn,
+  signInWithRedirect,
   signOut,
 } from "aws-amplify/auth";
 import type { ReactNode } from "react";
@@ -20,19 +20,11 @@ interface User {
   email?: string;
 }
 
-interface SignInResult {
-  isSignedIn: boolean;
-  nextStep?: {
-    signInStep: string;
-  };
-}
-
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<SignInResult>;
-  signInWithWebAuthn: (email: string) => Promise<SignInResult>;
+  signInWithHostedUI: () => Promise<void>;
   registerPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
@@ -63,45 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, [checkAuth]);
 
-  const handleSignIn = async (
-    email: string,
-    password: string,
-  ): Promise<SignInResult> => {
-    const result = await signIn({ username: email, password });
-    if (result.isSignedIn) {
-      await checkAuth();
-    }
-    return {
-      isSignedIn: result.isSignedIn,
-      nextStep: result.nextStep
-        ? {
-            signInStep: result.nextStep.signInStep,
-          }
-        : undefined,
-    };
-  };
-
-  const handleSignInWithWebAuthn = async (
-    email: string,
-  ): Promise<SignInResult> => {
-    const result = await signIn({
-      username: email,
-      options: {
-        authFlowType: "USER_AUTH",
-        preferredChallenge: "WEB_AUTHN",
-      },
-    });
-    if (result.isSignedIn) {
-      await checkAuth();
-    }
-    return {
-      isSignedIn: result.isSignedIn,
-      nextStep: result.nextStep
-        ? {
-            signInStep: result.nextStep.signInStep,
-          }
-        : undefined,
-    };
+  const handleSignInWithHostedUI = async (): Promise<void> => {
+    // Cognito Hosted UIにリダイレクト
+    await signInWithRedirect();
   };
 
   const handleRegisterPasskey = async (): Promise<void> => {
@@ -128,8 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
-        signIn: handleSignIn,
-        signInWithWebAuthn: handleSignInWithWebAuthn,
+        signInWithHostedUI: handleSignInWithHostedUI,
         registerPasskey: handleRegisterPasskey,
         signOut: handleSignOut,
         getAccessToken,
