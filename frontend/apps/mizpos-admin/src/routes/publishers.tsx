@@ -718,6 +718,7 @@ function PublisherMembersView({ publisherId }: { publisherId: string }) {
     queryFn: async () => {
       const { accounts } = await getAuthenticatedClients();
       const { data, error } = await accounts.GET(
+        // biome-ignore lint/suspicious/noExplicitAny: API型定義に存在しないエンドポイントのため
         "/publishers/{publisher_id}/roles" as any,
         {
           params: { path: { publisher_id: publisherId } },
