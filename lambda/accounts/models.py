@@ -99,3 +99,8 @@ class UpdateAddressRequest(BaseModel):
     address_line2: str | None = None
     phone_number: str | None = Field(default=None, min_length=1, max_length=50)
     is_default: bool | None = None
+
+
+# Cloudflare Turnstile検証用モデル
+class VerifyTurnstileRequest(BaseModel):
+    token: str = Field(..., min_length=1, description="Turnstile token from frontend")
