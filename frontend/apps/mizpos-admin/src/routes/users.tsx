@@ -1,5 +1,11 @@
 import type { AccountsComponents } from "@mizpos/api";
-import { IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+  IconShieldCheck,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -7,6 +13,7 @@ import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
+import { RoleManagement } from "../components/RoleManagement";
 import { Table } from "../components/Table";
 import { getAuthenticatedClients } from "../lib/api";
 
@@ -43,6 +50,7 @@ function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [viewUserRoles, setViewUserRoles] = useState<User | null>(null);
   const [createFormData, setCreateFormData] =
     useState<CreateUserForm>(initialCreateForm);
   const [editFormData, setEditFormData] = useState<UpdateUserRequest>({
@@ -148,10 +156,19 @@ function UsersPage() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setViewUserRoles(item)}
+            title="ロール管理"
+          >
+            <IconShieldCheck size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setEditUser(item);
               setEditFormData({ display_name: item.display_name });
             }}
+            title="編集"
           >
             <IconEdit size={16} />
           </Button>
@@ -168,6 +185,7 @@ function UsersPage() {
               }
             }}
             disabled={deleteMutation.isPending}
+            title="削除"
           >
             <IconTrash size={16} />
           </Button>
@@ -598,6 +616,49 @@ function UsersPage() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Role Management Modal */}
+      <Modal
+        isOpen={!!viewUserRoles}
+        onClose={() => setViewUserRoles(null)}
+        title={`ロール管理 - ${viewUserRoles?.display_name || ""}`}
+        size="lg"
+      >
+        {viewUserRoles && (
+          <div>
+            <div
+              className={css({
+                marginBottom: "4",
+                paddingBottom: "4",
+                borderBottom: "1px solid",
+                borderColor: "gray.200",
+              })}
+            >
+              <div
+                className={css({
+                  display: "grid",
+                  gridTemplateColumns: "100px 1fr",
+                  gap: "2",
+                  fontSize: "sm",
+                })}
+              >
+                <span className={css({ fontWeight: "medium" })}>表示名:</span>
+                <span>{viewUserRoles.display_name}</span>
+                <span className={css({ fontWeight: "medium" })}>メール:</span>
+                <span>{viewUserRoles.email}</span>
+                <span className={css({ fontWeight: "medium" })}>
+                  ユーザーID:
+                </span>
+                <span className={css({ fontFamily: "mono", fontSize: "xs" })}>
+                  {viewUserRoles.user_id}
+                </span>
+              </div>
+            </div>
+
+            <RoleManagement userId={viewUserRoles.user_id} />
+          </div>
         )}
       </Modal>
     </>
