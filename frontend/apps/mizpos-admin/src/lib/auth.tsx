@@ -1,4 +1,5 @@
 import {
+  associateWebAuthnCredential,
   fetchAuthSession,
   getCurrentUser,
   signIn,
@@ -31,6 +32,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<SignInResult>;
+  signInWithWebAuthn: (email: string) => Promise<SignInResult>;
+  registerPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 }
@@ -78,6 +81,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const handleSignInWithWebAuthn = async (
+    email: string,
+  ): Promise<SignInResult> => {
+    const result = await signIn({
+      username: email,
+      options: {
+        authFlowType: "USER_AUTH",
+        preferredChallenge: "WEB_AUTHN",
+      },
+    });
+    if (result.isSignedIn) {
+      await checkAuth();
+    }
+    return {
+      isSignedIn: result.isSignedIn,
+      nextStep: result.nextStep
+        ? {
+            signInStep: result.nextStep.signInStep,
+          }
+        : undefined,
+    };
+  };
+
+  const handleRegisterPasskey = async (): Promise<void> => {
+    await associateWebAuthnCredential();
+  };
+
   const handleSignOut = async () => {
     await signOut();
     setUser(null);
@@ -99,6 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         signIn: handleSignIn,
+        signInWithWebAuthn: handleSignInWithWebAuthn,
+        registerPasskey: handleRegisterPasskey,
         signOut: handleSignOut,
         getAccessToken,
       }}
