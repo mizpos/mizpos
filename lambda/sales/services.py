@@ -62,7 +62,7 @@ def get_card_brand_from_payment_intent(payment_intent_id: str) -> str | None:
         init_stripe()
         payment_intent = stripe.PaymentIntent.retrieve(
             payment_intent_id,
-            expand=["payment_method"]  # payment_methodを展開して取得
+            expand=["payment_method"],  # payment_methodを展開して取得
         )
 
         # payment_methodが存在するか確認
@@ -82,13 +82,20 @@ def get_card_brand_from_payment_intent(payment_intent_id: str) -> str | None:
                 return card.get("brand")
         elif hasattr(payment_method, "type"):
             if payment_method.type == "card":
-                return payment_method.card.brand if hasattr(payment_method, "card") else None
+                return (
+                    payment_method.card.brand
+                    if hasattr(payment_method, "card")
+                    else None
+                )
 
         return None
     except Exception as e:
         # エラーが発生してもNoneを返す（カードブランド取得失敗を許容）
         import logging
-        logging.error(f"Failed to get card brand from PaymentIntent {payment_intent_id}: {e}")
+
+        logging.error(
+            f"Failed to get card brand from PaymentIntent {payment_intent_id}: {e}"
+        )
         return None
 
 
@@ -732,7 +739,10 @@ def update_order_status(order_id: str, status: str) -> dict | None:
 
 
 def update_order_status_with_stripe(
-    order_id: str, status: str, stripe_payment_status: str, card_brand: str | None = None
+    order_id: str,
+    status: str,
+    stripe_payment_status: str,
+    card_brand: str | None = None,
 ) -> dict | None:
     """注文のステータスとStripe支払いステータスを更新"""
     # DynamoDBから直接取得してtimestampを取得（Decimal型のまま）
