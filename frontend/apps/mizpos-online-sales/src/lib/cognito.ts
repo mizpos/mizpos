@@ -14,7 +14,16 @@ const cognitoConfig = {
     `${window.location.origin}/logout`,
 };
 
-// 設定値の検証
+// 設定値の検証とログ出力
+console.log("Cognito Configuration:", {
+  userPoolId: cognitoConfig.userPoolId,
+  userPoolClientId: cognitoConfig.userPoolClientId,
+  region: cognitoConfig.region,
+  domain: cognitoConfig.domain,
+  redirectSignIn: cognitoConfig.redirectSignIn,
+  redirectSignOut: cognitoConfig.redirectSignOut,
+});
+
 if (!cognitoConfig.userPoolId) {
   console.error("VITE_COGNITO_USER_POOL_ID が設定されていません");
 }

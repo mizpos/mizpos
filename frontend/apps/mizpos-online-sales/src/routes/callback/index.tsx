@@ -17,8 +17,18 @@ function CallbackPage() {
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get("error");
     const errorDescription = urlParams.get("error_description");
+    const code = urlParams.get("code");
+    const state = urlParams.get("state");
+
+    console.log("Callback URL params:", {
+      hasCode: !!code,
+      hasState: !!state,
+      hasError: !!errorParam,
+      currentUrl: window.location.href,
+    });
 
     if (errorParam) {
+      console.error("OAuth error:", errorParam, errorDescription);
       setError(
         errorDescription ||
           "認証エラーが発生しました。もう一度お試しください。",
@@ -29,10 +39,18 @@ function CallbackPage() {
     // Amplifyが自動的に認証トークンを処理するのを待つ
     // Hub eventsをリッスンして認証完了を検出
     const hubListener = Hub.listen("auth", (data) => {
-      console.log("Auth event:", data.payload.event);
-      if (data.payload.event === "signedIn") {
-        console.log("SignedIn event detected, navigating to home");
+      console.log("Auth Hub event:", {
+        event: data.payload.event,
+        payload: data.payload,
+      });
+      if (data.payload.event === "signInWithRedirect") {
+        console.log("SignInWithRedirect event detected, navigating to home");
         navigate({ to: "/" });
+      } else if (data.payload.event === "signInWithRedirect_failure") {
+        console.error("SignInWithRedirect failure:", data.payload);
+        setError("認証に失敗しました。もう一度お試しください。");
+      } else if (data.payload.event === "tokenRefresh") {
+        console.log("Token refresh event");
       }
     });
 
@@ -40,11 +58,15 @@ function CallbackPage() {
     const checkAuth = async () => {
       try {
         // まず少し待ってからチェック（Amplifyの処理を待つ）
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log("Waiting for Amplify to process OAuth code...");
+        await new Promise((resolve) => setTimeout(resolve, 1500));
 
+        console.log("Fetching auth session (first attempt)...");
         const session = await fetchAuthSession({ forceRefresh: true });
-        console.log("Session check:", {
+        console.log("First session check:", {
           hasAccessToken: !!session.tokens?.accessToken,
+          hasIdToken: !!session.tokens?.idToken,
+          hasTokens: !!session.tokens,
         });
 
         if (session.tokens?.accessToken) {
@@ -53,12 +75,15 @@ function CallbackPage() {
           navigate({ to: "/" });
         } else {
           // トークンがまだない場合は、もう少し待ってからリトライ
-          console.log("No access token yet, retrying in 2 seconds");
+          console.log("No access token yet, waiting 2 more seconds...");
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
+          console.log("Fetching auth session (retry attempt)...");
           const retrySession = await fetchAuthSession({ forceRefresh: true });
           console.log("Retry session check:", {
             hasAccessToken: !!retrySession.tokens?.accessToken,
+            hasIdToken: !!retrySession.tokens?.idToken,
+            hasTokens: !!retrySession.tokens,
           });
 
           if (retrySession.tokens?.accessToken) {
@@ -66,6 +91,7 @@ function CallbackPage() {
             navigate({ to: "/" });
           } else {
             console.error("Failed to get access token after retry");
+            console.error("Session details:", retrySession);
             setError("認証トークンの取得に失敗しました。");
           }
         }
