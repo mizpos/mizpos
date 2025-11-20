@@ -71,9 +71,11 @@ resource "aws_cognito_user_pool" "main" {
   }
 
   # WebAuthn（パスキー）設定
-  user_pool_add_ons {
-    advanced_security_mode = "AUDIT" # または "ENFORCED"（本番環境では "ENFORCED" を推奨）
-  }
+  # Note: advanced_security_mode は ESSENTIALS tier では利用できません
+  # 本番環境で PLUS tier 以上を使用する場合のみ有効化してください
+  # user_pool_add_ons {
+  #   advanced_security_mode = "AUDIT" # または "ENFORCED"（本番環境では "ENFORCED" を推奨）
+  # }
 
   # WebAuthn設定を有効化
   # Note: Terraform AWS Provider 5.70.0以降で利用可能
@@ -99,8 +101,8 @@ resource "aws_cognito_user_pool_client" "main" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_scopes                 = ["email", "openid", "profile"]
-  callback_urls                        = ["https://admin.${var.domain_name}/callback", "https://sales.${var.domain_name}/callback", "http://localhost:3000/callback"]
-  logout_urls                          = ["https://admin.${var.domain_name}/logout", "https://sales.${var.domain_name}/logout", "http://localhost:3000/logout"]
+  callback_urls                        = ["https://admin.${var.domain_name}/callback", "https://sales.${var.domain_name}/callback", "http://localhost:3000/callback", "http://localhost:5173/callback"]
+  logout_urls                          = ["https://admin.${var.domain_name}/logout", "https://sales.${var.domain_name}/logout", "http://localhost:3000/logout", "http://localhost:5173/logout"]
 
   # トークンの有効期限
   refresh_token_validity = 30
