@@ -45,6 +45,7 @@ from services import (
     dynamo_to_dict,
     events_table,
     get_all_shipping_options,
+    get_card_brand_from_payment_intent,
     get_config,
     get_coupon_by_code,
     get_order_by_id,
@@ -911,11 +912,17 @@ async def stripe_webhook(request: Request):
             payment_intent = event["data"]["object"]
             order_id = payment_intent.get("metadata", {}).get("order_id")
             payment_status = payment_intent.get("status", "succeeded")
+            payment_intent_id = payment_intent.get("id")
 
             if order_id:
-                # 注文ステータスを「完了」に更新し、Stripeステータスも保存
+                # カードブランド情報を取得
+                card_brand = None
+                if payment_intent_id:
+                    card_brand = get_card_brand_from_payment_intent(payment_intent_id)
+
+                # 注文ステータスを「完了」に更新し、Stripeステータスとカードブランドも保存
                 update_order_status_with_stripe(
-                    order_id, SaleStatus.COMPLETED.value, payment_status
+                    order_id, SaleStatus.COMPLETED.value, payment_status, card_brand
                 )
 
                 # 購入完了メールを送信
