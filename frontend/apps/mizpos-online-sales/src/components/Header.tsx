@@ -189,7 +189,8 @@ export default function Header({
               })}
             >
               こんにちは、
-              {user.name || user.email?.split("@")[0] || user.username}さん
+              {user.displayName || user.email?.split("@")[0] || user.username}
+              さん
             </p>
             <div
               className={css({
@@ -426,7 +427,8 @@ export default function Header({
                 })}
               >
                 こんにちは、
-                {user.name || user.email?.split("@")[0] || user.username}さん
+                {user.displayName || user.email?.split("@")[0] || user.username}
+                さん
               </p>
               <Link
                 to="/settings"

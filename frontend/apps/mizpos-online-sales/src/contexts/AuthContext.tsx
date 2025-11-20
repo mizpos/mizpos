@@ -13,12 +13,14 @@ import {
   useEffect,
   useState,
 } from "react";
+import { getUserInfo } from "../lib/api";
 
 export interface User {
   username: string;
   userId: string;
   email?: string;
   name?: string;
+  displayName?: string;
   sub: string;
 }
 
@@ -57,6 +59,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = await getCurrentUser();
       console.log("Current user:", currentUser);
 
+      // Accounts APIからユーザー情報（display_name含む）を取得
+      let displayName: string | undefined;
+      try {
+        const userInfo = await getUserInfo(currentUser.userId);
+        displayName = userInfo.display_name;
+        console.log("User info from Accounts API:", userInfo);
+      } catch (error) {
+        console.log("Failed to fetch user info from Accounts API:", error);
+        // display_nameの取得に失敗しても処理は継続
+      }
+
       setUser({
         username: currentUser.username,
         userId: currentUser.userId,
@@ -68,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           (idTokenPayload.name as string) ||
           (idTokenPayload["cognito:username"] as string) ||
           currentUser.username,
+        displayName: displayName,
         sub: (idTokenPayload.sub as string) || currentUser.userId,
       });
       console.log("User info set successfully");

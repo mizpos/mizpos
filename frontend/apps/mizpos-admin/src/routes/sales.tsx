@@ -33,6 +33,7 @@ interface Sale {
   status: "pending" | "completed" | "shipped" | "cancelled";
   stripe_payment_status?: string;
   stripe_payment_intent_id?: string;
+  card_brand?: string;
   coupon_code?: string;
   customer_email?: string;
   customer_name?: string;
@@ -292,6 +293,15 @@ function SalesPage() {
       key: "payment_method",
       header: "決済方法",
       render: (item: Sale) => getPaymentMethodLabel(item.payment_method),
+    },
+    {
+      key: "card_brand",
+      header: "カードブランド",
+      render: (item: Sale) => (
+        <span className={css({ fontSize: "xs", textTransform: "capitalize" })}>
+          {item.card_brand || "-"}
+        </span>
+      ),
     },
     {
       key: "status",
@@ -572,6 +582,27 @@ function SalesPage() {
                   {getPaymentMethodLabel(selectedSale.payment_method)}
                 </p>
               </div>
+              {selectedSale.card_brand && (
+                <div>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginBottom: "1",
+                    })}
+                  >
+                    カードブランド
+                  </p>
+                  <p
+                    className={css({
+                      fontSize: "sm",
+                      textTransform: "capitalize",
+                    })}
+                  >
+                    {selectedSale.card_brand}
+                  </p>
+                </div>
+              )}
               {selectedSale.stripe_payment_status && (
                 <div>
                   <p
