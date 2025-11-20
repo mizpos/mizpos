@@ -123,6 +123,18 @@ async def create_user(
 ):
     """ユーザー作成"""
     try:
+        # メールアドレスの重複チェック（DynamoDBレベル）
+        email_check = users_table.query(
+            IndexName="EmailIndex",
+            KeyConditionExpression="email = :email",
+            ExpressionAttributeValues={":email": request.email},
+        )
+        if email_check.get("Items"):
+            raise HTTPException(
+                status_code=409, detail="Email address already exists in database"
+            )
+
+        # Cognitoユーザー作成
         cognito_user_id = create_cognito_user(request.email, request.password)
 
         user_id = str(uuid.uuid4())
