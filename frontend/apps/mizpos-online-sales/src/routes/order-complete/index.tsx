@@ -266,6 +266,23 @@ function OrderCompletePage() {
           </p>
         </div>
 
+        {order.card_brand && (
+          <div className={css({ marginBottom: "16px" })}>
+            <p
+              className={css({
+                fontSize: "14px",
+                color: "#666",
+                marginBottom: "4px",
+              })}
+            >
+              決済方法
+            </p>
+            <p className={css({ fontSize: "16px", fontWeight: "bold" })}>
+              {order.card_brand}
+            </p>
+          </div>
+        )}
+
         <div className={css({ marginBottom: "16px" })}>
           <p
             className={css({
