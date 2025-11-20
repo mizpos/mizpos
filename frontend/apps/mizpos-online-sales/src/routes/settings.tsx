@@ -489,7 +489,9 @@ function SettingsPage() {
                     <p className={css({ fontSize: "12px", color: "#666" })}>
                       登録日:{" "}
                       {passkey.createdAt
-                        ? new Date(passkey.createdAt).toLocaleDateString("ja-JP")
+                        ? new Date(passkey.createdAt).toLocaleDateString(
+                            "ja-JP",
+                          )
                         : "不明"}
                     </p>
                   </div>

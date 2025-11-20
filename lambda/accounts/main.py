@@ -269,9 +269,7 @@ async def verify_turnstile(request: VerifyTurnstileRequest, fastapi_request: Req
         if is_valid:
             return {"success": True, "message": "Turnstile verification successful"}
         else:
-            raise HTTPException(
-                status_code=400, detail="Turnstile verification failed"
-            )
+            raise HTTPException(status_code=400, detail="Turnstile verification failed")
 
     except HTTPException:
         raise
