@@ -60,3 +60,10 @@ variable "ses_sender_email" {
   type        = string
   default     = "noreply@miz.cab"
 }
+
+# Cloudflare Turnstile Settings
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID for Turnstile"
+  type        = string
+  # GitHub secretから渡される想定
+}

@@ -27,6 +27,7 @@ from models import (
     ResendConfirmationRequest,
     UpdateAddressRequest,
     UpdateUserRequest,
+    VerifyTurnstileRequest,
 )
 from services import (
     DynamoDBClientError,
@@ -50,6 +51,7 @@ from services import (
     update_user_address,
     users_table,
 )
+from turnstile import verify_turnstile_token
 
 # ロガーの設定
 logger = logging.getLogger()
@@ -248,6 +250,34 @@ async def resend_confirmation(request: ResendConfirmationRequest):
         if error_code == "LimitExceededException":
             raise HTTPException(status_code=429, detail="Too many requests") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/auth/verify-turnstile", response_model=dict)
+async def verify_turnstile(request: VerifyTurnstileRequest, fastapi_request: Request):
+    """
+    Cloudflare Turnstileトークンを検証（認証不要）
+    管理画面ログイン前に呼び出されるエンドポイント
+    """
+    try:
+        # クライアントIPアドレスを取得
+        forwarded_for = fastapi_request.headers.get("X-Forwarded-For")
+        remote_ip = forwarded_for.split(",")[0].strip() if forwarded_for else None
+
+        # Turnstileトークンを検証
+        is_valid = await verify_turnstile_token(request.token, remote_ip)
+
+        if is_valid:
+            return {"success": True, "message": "Turnstile verification successful"}
+        else:
+            raise HTTPException(status_code=400, detail="Turnstile verification failed")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Turnstile verification error: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to verify Turnstile token"
+        ) from e
 
 
 @router.get("/users/{user_id}/status", response_model=dict)

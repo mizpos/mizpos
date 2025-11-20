@@ -1,4 +1,4 @@
-name: tf-plan-apply-mizpos-dev
+name: deploy-dev-tf
 
 on:
   push:
@@ -54,6 +54,8 @@ jobs:
           TFCMT_CONFIG: ${{ github.workspace }}/zig/tfcmt.yml
           GITHUB_ACTOR: ${{ github.actor }}
           WORKFLOW_NAME: ${{ github.workflow }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Get AWS Account ID and Save to Environment Variable
         shell: bash

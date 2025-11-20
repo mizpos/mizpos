@@ -1,3 +1,4 @@
+import { Turnstile } from "@marsidev/react-turnstile";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { confirmSignIn } from "aws-amplify/auth";
 import { useState } from "react";
@@ -19,6 +20,10 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [requiresNewPassword, setRequiresNewPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+
+  // Turnstile Site Key from environment variable
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
   // 既にログイン済みならリダイレクト
   if (isAuthenticated) {
@@ -29,9 +34,18 @@ function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Turnstile token validation
+    if (!turnstileToken) {
+      setError("ボット検証が完了していません。もう一度お試しください。");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
+      // TODO: Backend should verify turnstileToken before authenticating
+      // For now, we just proceed with authentication
       const result = await signIn(email, password);
       if (result.isSignedIn) {
         navigate({ to: "/" });
@@ -342,7 +356,30 @@ function LoginPage() {
                 />
               </div>
 
-              <Button type="submit" disabled={isLoading} size="lg">
+              {/* Cloudflare Turnstile Widget */}
+              {turnstileSiteKey && (
+                <div
+                  className={css({ display: "flex", justifyContent: "center" })}
+                >
+                  <Turnstile
+                    siteKey={turnstileSiteKey}
+                    onSuccess={(token) => setTurnstileToken(token)}
+                    onError={() => {
+                      setTurnstileToken("");
+                      setError(
+                        "ボット検証に失敗しました。ページを再読み込みしてください。",
+                      );
+                    }}
+                    onExpire={() => setTurnstileToken("")}
+                  />
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isLoading || !turnstileToken}
+                size="lg"
+              >
                 {isLoading ? "ログイン中..." : "ログイン"}
               </Button>
 

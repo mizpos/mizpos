@@ -2,8 +2,8 @@
 
 # SES Email Identity (ドメインまたはメールアドレス)
 # Note: 本番環境では実際のドメインを使用してください
-resource "aws_ses_email_identity" "sender" {
-  email = var.ses_sender_email
+resource "aws_sesv2_email_identity" "sender" {
+  email_identity = var.ses_sender_email
 }
 
 # SES Configuration Set (メール送信の追跡用)

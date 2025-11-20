@@ -17,3 +17,22 @@ variable "enable_custom_domain" {
   type        = bool
   default     = false
 }
+
+# Cloudflare Turnstile Settings
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID for Turnstile"
+  type        = string
+  # GitHub Actionsから環境変数として渡される
+}
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token for Turnstile"
+  type        = string
+  # GitHub Actionsから環境変数として渡される
+}
+
+variable "admin_domain" {
+  description = "Admin application domain for Turnstile (e.g., admin.pos.miz.cab)"
+  type        = string
+  default     = "admin.pos.miz.cab"
+}
