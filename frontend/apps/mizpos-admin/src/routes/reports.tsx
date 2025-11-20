@@ -51,7 +51,7 @@ function safeNumber(value: number | string | undefined | null): number {
     return 0;
   }
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) {
+  if (Number.isNaN(num)) {
     return 0;
   }
   return num;
