@@ -18,15 +18,12 @@ function SetupProfilePage() {
   // ユーザー情報を取得
   const { data: userInfo, isLoading } = useQuery({
     queryKey: ["userInfo", user?.sub],
-    queryFn: () => getUserInfo(user!.sub),
+    queryFn: () => {
+      if (!user?.sub) throw new Error("User not found");
+      return getUserInfo(user.sub);
+    },
     enabled: !!user?.sub,
   });
-
-  // すでにディスプレイネームが設定されている場合はホームにリダイレクト
-  if (!isLoading && userInfo?.display_name) {
-    window.location.href = "/";
-    return null;
-  }
 
   // ディスプレイネーム設定mutation
   const setupProfileMutation = useMutation({
@@ -59,6 +56,12 @@ function SetupProfilePage() {
 
     setupProfileMutation.mutate(displayName);
   };
+
+  // すでにディスプレイネームが設定されている場合はホームにリダイレクト
+  if (!isLoading && userInfo?.display_name) {
+    window.location.href = "/";
+    return null;
+  }
 
   if (!user) {
     window.location.href = "/login";
@@ -166,7 +169,6 @@ function SetupProfilePage() {
                 placeholder="例: 山田太郎"
                 required
                 maxLength={100}
-                autoFocus
                 className={css({
                   width: "100%",
                   padding: "12px",

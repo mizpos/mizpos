@@ -34,7 +34,10 @@ function SettingsPage() {
   // ユーザー情報を取得
   const { data: userInfo, refetch: refetchUserInfo } = useQuery({
     queryKey: ["userInfo", user?.sub],
-    queryFn: () => getUserInfo(user!.sub),
+    queryFn: () => {
+      if (!user?.sub) throw new Error("User not found");
+      return getUserInfo(user.sub);
+    },
     enabled: !!user?.sub,
   });
 

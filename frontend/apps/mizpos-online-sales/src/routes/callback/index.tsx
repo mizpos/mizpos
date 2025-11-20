@@ -115,7 +115,9 @@ function CallbackPage() {
 
               // ディスプレイネームが未設定の場合はプロフィール設定画面へ
               if (!userInfo.display_name) {
-                console.log("Display name not set, navigating to setup-profile");
+                console.log(
+                  "Display name not set, navigating to setup-profile",
+                );
                 window.location.href = "/setup-profile";
                 return;
               } else {
@@ -125,7 +127,9 @@ function CallbackPage() {
             } catch (userInfoError) {
               console.error("Failed to check user info:", userInfoError);
               // エラーが発生した場合もホームにリダイレクト
-              console.log("Error checking user info, navigating to home anyway");
+              console.log(
+                "Error checking user info, navigating to home anyway",
+              );
               navigate({ to: "/" });
             }
           } else {
