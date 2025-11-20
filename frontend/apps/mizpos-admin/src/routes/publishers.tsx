@@ -1,4 +1,10 @@
-import { IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+  IconUsers,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -7,7 +13,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { getAuthHeaders } from "../lib/api";
+import { getAuthenticatedClients, getAuthHeaders } from "../lib/api";
 import {
   DEFAULT_STRIPE_ONLINE_FEE_RATE,
   DEFAULT_STRIPE_TERMINAL_FEE_RATE,
@@ -57,6 +63,8 @@ function PublishersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editPublisher, setEditPublisher] = useState<Publisher | null>(null);
+  const [viewPublisherMembers, setViewPublisherMembers] =
+    useState<Publisher | null>(null);
   const [formData, setFormData] =
     useState<CreatePublisherForm>(initialFormState);
 
@@ -186,7 +194,16 @@ function PublishersPage() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setViewPublisherMembers(item)}
+            title="メンバー管理"
+          >
+            <IconUsers size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setEditPublisher(item)}
+            title="編集"
           >
             <IconEdit size={16} />
           </Button>
@@ -198,6 +215,7 @@ function PublishersPage() {
                 deleteMutation.mutate(item.publisher_id);
               }
             }}
+            title="削除"
           >
             <IconTrash size={16} />
           </Button>
@@ -656,6 +674,177 @@ function PublishersPage() {
           </form>
         )}
       </Modal>
+
+      {/* Members Management Modal */}
+      <Modal
+        isOpen={!!viewPublisherMembers}
+        onClose={() => setViewPublisherMembers(null)}
+        title={`メンバー管理 - ${viewPublisherMembers?.name || ""}`}
+        size="lg"
+      >
+        {viewPublisherMembers && (
+          <PublisherMembersView
+            publisherId={viewPublisherMembers.publisher_id}
+          />
+        )}
+      </Modal>
     </>
+  );
+}
+
+// サークルのメンバー（ロール）を表示するコンポーネント
+function PublisherMembersView({ publisherId }: { publisherId: string }) {
+  interface Role {
+    user_id: string;
+    role_id: string;
+    role_type: string;
+    created_at: string;
+  }
+
+  interface User {
+    user_id: string;
+    email: string;
+    display_name: string;
+  }
+
+  const ROLE_TYPE_LABELS: Record<string, string> = {
+    publisher_admin: "管理者",
+    publisher_sales: "販売担当",
+  };
+
+  // サークルのロール一覧を取得
+  const { data: rolesData = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ["publisher-roles", publisherId],
+    queryFn: async () => {
+      const { accounts } = await getAuthenticatedClients();
+      const { data, error } = await accounts.GET(
+        "/publishers/{publisher_id}/roles" as any,
+        {
+          params: { path: { publisher_id: publisherId } },
+        },
+      );
+      if (error) throw error;
+      return (data as unknown as { roles: Role[] }).roles || [];
+    },
+  });
+
+  // ユーザー一覧を取得（メンバーの詳細情報取得用）
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const { accounts } = await getAuthenticatedClients();
+      const { data, error } = await accounts.GET("/users");
+      if (error) throw error;
+      return (data as unknown as { users: User[] }).users || [];
+    },
+  });
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // ユーザーIDからユーザー情報を取得
+  const getUserInfo = (userId: string) => {
+    return users.find((u) => u.user_id === userId);
+  };
+
+  return (
+    <div>
+      <div
+        className={css({
+          marginBottom: "4",
+          fontSize: "sm",
+          color: "gray.600",
+        })}
+      >
+        このサークルのメンバーとロールの一覧です。ロールの追加・削除は「ユーザー管理」画面から行ってください。
+      </div>
+
+      {rolesLoading ? (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "4",
+            color: "gray.500",
+          })}
+        >
+          読み込み中...
+        </div>
+      ) : rolesData.length > 0 ? (
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            gap: "2",
+          })}
+        >
+          {rolesData.map((role) => {
+            const user = getUserInfo(role.user_id);
+            return (
+              <div
+                key={role.role_id}
+                className={css({
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "3",
+                  backgroundColor: "gray.50",
+                  borderRadius: "md",
+                  border: "1px solid",
+                  borderColor: "gray.200",
+                })}
+              >
+                <div>
+                  <div
+                    className={css({
+                      fontWeight: "medium",
+                      fontSize: "sm",
+                    })}
+                  >
+                    {user?.display_name || "不明なユーザー"}
+                  </div>
+                  <div
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.600",
+                      marginTop: "1",
+                    })}
+                  >
+                    {user?.email || role.user_id}
+                  </div>
+                  <div
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginTop: "1",
+                    })}
+                  >
+                    ロール: {ROLE_TYPE_LABELS[role.role_type] || role.role_type}{" "}
+                    | 付与日時: {formatDate(role.created_at)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "4",
+            color: "gray.500",
+            fontSize: "sm",
+          })}
+        >
+          メンバーが登録されていません
+        </div>
+      )}
+    </div>
   );
 }
