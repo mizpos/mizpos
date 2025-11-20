@@ -1,4 +1,4 @@
-name: tf-plan-apply-mizpos-dev
+name: deploy-dev-tf
 
 on:
   push:

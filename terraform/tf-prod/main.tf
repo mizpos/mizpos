@@ -44,7 +44,7 @@ provider "aws" {
 
 # Cloudflare provider
 provider "cloudflare" {
-  # CLOUDFLARE_API_TOKEN environment variable を使用
+    api_token = var.cloudflare_api_token
 }
 
 module "mizpos_infrastructure" {
