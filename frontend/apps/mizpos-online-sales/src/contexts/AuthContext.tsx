@@ -1,7 +1,6 @@
 import {
   associateWebAuthnCredential,
   fetchAuthSession,
-  fetchUserAttributes,
   getCurrentUser,
   signInWithRedirect,
   signOut,
@@ -43,16 +42,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = useCallback(async () => {
     try {
       console.log("Checking auth...");
+
+      // まずセッションを取得してトークンを確認
+      const session = await fetchAuthSession();
+      if (!session.tokens?.idToken) {
+        console.log("No ID token found");
+        setUser(null);
+        return;
+      }
+
+      // ID Tokenのペイロードからユーザー情報を取得
+      const idTokenPayload = session.tokens.idToken.payload;
+      console.log("ID Token payload:", idTokenPayload);
+
+      // getCurrentUserは基本的なユーザー識別情報のみ取得
       const currentUser = await getCurrentUser();
       console.log("Current user:", currentUser);
-      const attributes = await fetchUserAttributes();
-      console.log("User attributes:", attributes);
+
       setUser({
         username: currentUser.username,
         userId: currentUser.userId,
-        email: currentUser.signInDetails?.loginId || attributes.email,
-        name: attributes.name,
-        sub: attributes.sub || currentUser.userId,
+        email:
+          (idTokenPayload.email as string) ||
+          currentUser.signInDetails?.loginId ||
+          "",
+        name:
+          (idTokenPayload.name as string) ||
+          (idTokenPayload["cognito:username"] as string) ||
+          currentUser.username,
+        sub: (idTokenPayload.sub as string) || currentUser.userId,
       });
       console.log("User info set successfully");
     } catch (error) {
