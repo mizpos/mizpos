@@ -85,6 +85,7 @@ export function RoleManagement({ userId }: RoleManagementProps) {
     queryKey: ["events"],
     queryFn: async () => {
       const { stock } = await getAuthenticatedClients();
+      // biome-ignore lint/suspicious/noExplicitAny: API型定義に存在しないエンドポイントのため
       const { data, error } = await stock.GET("/events" as any, {});
       if (error) throw error;
       return (data as unknown as { events: Event[] }).events || [];
@@ -102,6 +103,7 @@ export function RoleManagement({ userId }: RoleManagementProps) {
       const { accounts } = await getAuthenticatedClients();
       const { error } = await accounts.POST("/users/{user_id}/roles", {
         params: { path: { user_id: userId } },
+        // biome-ignore lint/suspicious/noExplicitAny: API型定義との不一致のため
         body: roleData as any,
       });
       if (error) throw error;

@@ -10,7 +10,13 @@ interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl";
 }
 
-export function Modal({ isOpen, onClose, title, children, size = "lg" }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = "lg",
+}: ModalProps) {
   if (!isOpen) return null;
 
   const maxWidthMap = {
