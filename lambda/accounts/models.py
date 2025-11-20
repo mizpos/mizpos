@@ -43,19 +43,45 @@ class AdminResetPasswordRequest(BaseModel):
 
 
 class AssignRoleRequest(BaseModel):
-    event_id: str = Field(..., min_length=1)
-    role_type: str = Field(..., pattern="^(admin|sales|viewer)$")
+    """ロール付与リクエスト
+
+    event_idまたはpublisher_idのどちらかを指定する必要があります。
+    role_typeによってスコープが自動的に決まります:
+      - system_admin: スコープはsystem (event_id/publisher_idは不要)
+      - publisher_admin/publisher_sales: スコープはpublisher (publisher_id必須)
+      - event_admin/event_sales: スコープはevent (event_id必須)
+    """
+
+    event_id: str | None = None
+    publisher_id: str | None = None
+    role_type: str = Field(
+        ...,
+        pattern="^(system_admin|publisher_admin|publisher_sales|event_admin|event_sales)$",
+    )
 
 
 class RoleResponse(BaseModel):
+    """ロールレスポンス"""
+
     user_id: str
     role_id: str
-    event_id: str
+    scope: str  # system | publisher | event
+    event_id: str | None = None
+    publisher_id: str | None = None
     role_type: str
     created_at: str
+    created_by: str | None = None  # ロールを付与したユーザーのID
 
     class Config:
         from_attributes = True
+
+
+class ListRolesRequest(BaseModel):
+    """ロール一覧取得リクエスト（フィルタ用）"""
+
+    scope: str | None = Field(None, pattern="^(system|publisher|event)$")
+    publisher_id: str | None = None
+    event_id: str | None = None
 
 
 # 住所管理用モデル

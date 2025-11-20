@@ -28,12 +28,17 @@ from models import (
     UpdateAddressRequest,
     UpdateUserRequest,
 )
+from permissions import (
+    get_user_id_from_auth,
+)
 from services import (
     DynamoDBClientError,
     UsernameExistsException,
     add_user_address,
     admin_confirm_user,
     admin_reset_user_password,
+    assign_role as assign_role_service,
+    can_assign_role,
     change_user_password,
     confirm_user_email,
     create_cognito_user,
@@ -41,11 +46,14 @@ from services import (
     delete_user_address,
     delete_user_roles,
     dynamo_to_dict,
+    get_roles_by_event,
+    get_roles_by_publisher,
     get_user_address_by_id,
     get_user_addresses,
+    get_user_roles as get_user_roles_service,
     get_user_status,
+    remove_role as remove_role_service,
     resend_confirmation_code,
-    roles_table,
     set_default_address,
     update_user_address,
     users_table,
@@ -352,18 +360,35 @@ async def admin_reset_password(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+# ==========================================
 # ロール管理エンドポイント
+# ==========================================
+
+
 @router.get("/users/{user_id}/roles", response_model=dict)
 async def get_user_roles(user_id: str, current_user: dict = Depends(get_current_user)):
-    """ユーザーのロール一覧取得"""
+    """ユーザーのロール一覧取得
+
+    システム管理者、またはユーザー本人のみアクセス可能
+    """
     try:
-        response = roles_table.query(
-            KeyConditionExpression="user_id = :uid",
-            ExpressionAttributeValues={":uid": user_id},
-        )
-        roles = [dynamo_to_dict(item) for item in response.get("Items", [])]
+        current_user_id = await get_user_id_from_auth(current_user)
+
+        # ユーザー本人またはシステム管理者のみアクセス可能
+        from services import is_system_admin
+
+        if current_user_id != user_id and not is_system_admin(current_user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You can only view your own roles",
+            )
+
+        roles = get_user_roles_service(user_id)
         return {"roles": roles}
-    except DynamoDBClientError as e:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user roles: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -375,23 +400,43 @@ async def assign_role(
     request: AssignRoleRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """ロール割り当て"""
+    """ロール割り当て
+
+    権限:
+    - システム管理者: すべてのロールを付与可能
+    - サークル管理者: 自分のサークルのpublisher_admin/publisher_salesを付与可能
+    - イベント管理者: 自分のイベントのevent_admin/event_salesを付与可能
+    """
     try:
-        role_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
+        current_user_id = await get_user_id_from_auth(current_user)
 
-        role_item = {
-            "user_id": user_id,
-            "role_id": role_id,
-            "event_id": request.event_id,
-            "role_type": request.role_type,
-            "created_at": now,
-        }
+        # 権限チェック
+        if not can_assign_role(
+            assigner_user_id=current_user_id,
+            target_role_type=request.role_type,
+            publisher_id=request.publisher_id,
+            event_id=request.event_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"You don't have permission to assign {request.role_type} role",
+            )
 
-        roles_table.put_item(Item=role_item)
+        role = assign_role_service(
+            user_id=user_id,
+            role_type=request.role_type,
+            created_by=current_user_id,
+            publisher_id=request.publisher_id,
+            event_id=request.event_id,
+        )
 
-        return {"role": role_item}
-    except DynamoDBClientError as e:
+        return {"role": role}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error assigning role: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -401,10 +446,67 @@ async def assign_role(
 async def remove_role(
     user_id: str, role_id: str, current_user: dict = Depends(get_current_user)
 ):
-    """ロール削除"""
+    """ロール削除
+
+    システム管理者のみ実行可能
+    TODO: サークル管理者が自分のサークルのロールを削除できるようにする
+    """
     try:
-        roles_table.delete_item(Key={"user_id": user_id, "role_id": role_id})
-    except DynamoDBClientError as e:
+        current_user_id = await get_user_id_from_auth(current_user)
+
+        # システム管理者のみ削除可能
+        from services import is_system_admin
+
+        if not is_system_admin(current_user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only system administrators can remove roles",
+            )
+
+        success = remove_role_service(user_id, role_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Role not found"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing role: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/publishers/{publisher_id}/roles", response_model=dict)
+async def get_publisher_roles(
+    publisher_id: str, current_user: dict = Depends(get_current_user)
+):
+    """サークルのロール一覧取得
+
+    システム管理者、またはサークルのメンバー（管理者・販売担当）のみアクセス可能
+    """
+    try:
+        current_user_id = await get_user_id_from_auth(current_user)
+
+        # 権限チェック: システム管理者またはサークルメンバー
+        from services import is_system_admin, is_publisher_admin, has_role
+
+        is_admin = is_system_admin(current_user_id)
+        is_circle_admin = is_publisher_admin(current_user_id, publisher_id)
+        is_circle_sales = has_role(
+            current_user_id, "publisher_sales", publisher_id=publisher_id
+        )
+
+        if not (is_admin or is_circle_admin or is_circle_sales):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You don't have access to this publisher",
+            )
+
+        roles = get_roles_by_publisher(publisher_id)
+        return {"roles": roles}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting publisher roles: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -412,16 +514,32 @@ async def remove_role(
 async def get_event_roles(
     event_id: str, current_user: dict = Depends(get_current_user)
 ):
-    """イベントのロール一覧取得"""
+    """イベントのロール一覧取得
+
+    システム管理者、またはイベントのメンバー（管理者・販売担当）のみアクセス可能
+    """
     try:
-        response = roles_table.query(
-            IndexName="EventIndex",
-            KeyConditionExpression="event_id = :eid",
-            ExpressionAttributeValues={":eid": event_id},
-        )
-        roles = [dynamo_to_dict(item) for item in response.get("Items", [])]
+        current_user_id = await get_user_id_from_auth(current_user)
+
+        # 権限チェック: システム管理者またはイベントメンバー
+        from services import is_system_admin, has_role
+
+        is_admin = is_system_admin(current_user_id)
+        is_event_admin = has_role(current_user_id, "event_admin", event_id=event_id)
+        is_event_sales = has_role(current_user_id, "event_sales", event_id=event_id)
+
+        if not (is_admin or is_event_admin or is_event_sales):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You don't have access to this event",
+            )
+
+        roles = get_roles_by_event(event_id)
         return {"roles": roles}
-    except DynamoDBClientError as e:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting event roles: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
