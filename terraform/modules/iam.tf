@@ -126,13 +126,6 @@ resource "aws_iam_role_policy" "lambda_accounts" {
         ]
         Resource = "*"
       },
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = aws_secretsmanager_secret.turnstile_secret_key.arn
-      }
     ]
   })
 }
