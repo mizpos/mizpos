@@ -15,7 +15,7 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { user, registerPasskey, isAuthenticated } = useAuth();
 
   // パスワード変更用の状態
