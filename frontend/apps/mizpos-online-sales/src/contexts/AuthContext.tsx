@@ -1,6 +1,7 @@
 import {
   associateWebAuthnCredential,
   fetchAuthSession,
+  fetchUserAttributes,
   getCurrentUser,
   signOut,
 } from "aws-amplify/auth";
@@ -19,6 +20,7 @@ export interface User {
   userId: string;
   email?: string;
   name?: string;
+  sub: string;
 }
 
 interface AuthContextType {
@@ -40,10 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = useCallback(async () => {
     try {
       const currentUser = await getCurrentUser();
+      const attributes = await fetchUserAttributes();
       setUser({
         username: currentUser.username,
         userId: currentUser.userId,
-        email: currentUser.signInDetails?.loginId,
+        email: currentUser.signInDetails?.loginId || attributes.email,
+        name: attributes.name,
+        sub: attributes.sub || currentUser.userId,
       });
     } catch {
       setUser(null);

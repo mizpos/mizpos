@@ -4,7 +4,7 @@ import { Hub } from "aws-amplify/utils";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
-export const Route = createFileRoute("/callback")({
+export const Route = createFileRoute("/callback/")({
   component: CallbackPage,
 });
 
