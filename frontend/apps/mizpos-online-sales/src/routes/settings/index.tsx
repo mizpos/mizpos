@@ -4,13 +4,14 @@ import { fetchUserAttributes, updatePassword } from "aws-amplify/auth";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { useAuth } from "../../contexts/AuthContext";
+import { getUserInfo, updateUserInfo } from "../../lib/api";
 
 export const Route = createFileRoute("/settings/")({
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const { user, signOut, registerPasskey } = useAuth();
+  const { user, signOut } = useAuth();
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
     oldPassword: "",
@@ -19,13 +20,25 @@ function SettingsPage() {
   });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [passkeyError, setPasskeyError] = useState("");
-  const [passkeySuccess, setPasskeySuccess] = useState(false);
+  const [showDisplayNameForm, setShowDisplayNameForm] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [displayNameError, setDisplayNameError] = useState("");
+  const [displayNameSuccess, setDisplayNameSuccess] = useState(false);
 
   // ユーザー属性を取得
   const { data: userAttributes, isLoading } = useQuery({
     queryKey: ["userAttributes"],
     queryFn: fetchUserAttributes,
+  });
+
+  // ユーザー情報を取得
+  const { data: userInfo, refetch: refetchUserInfo } = useQuery({
+    queryKey: ["userInfo", user?.sub],
+    queryFn: () => {
+      if (!user?.sub) throw new Error("User not found");
+      return getUserInfo(user.sub);
+    },
+    enabled: !!user?.sub,
   });
 
   // パスワード変更mutation
@@ -67,28 +80,26 @@ function SettingsPage() {
     },
   });
 
-  // パスキー登録mutation
-  const registerPasskeyMutation = useMutation({
-    mutationFn: async () => {
-      await registerPasskey();
+  // ディスプレイネーム変更mutation
+  const changeDisplayNameMutation = useMutation({
+    mutationFn: async (newDisplayName: string) => {
+      if (!user?.sub) throw new Error("User not found");
+      return await updateUserInfo(user.sub, { display_name: newDisplayName });
     },
     onSuccess: () => {
-      setPasskeySuccess(true);
-      setPasskeyError("");
+      setDisplayNameSuccess(true);
+      setDisplayNameError("");
+      setDisplayName("");
+      refetchUserInfo();
       setTimeout(() => {
-        setPasskeySuccess(false);
-      }, 3000);
+        setShowDisplayNameForm(false);
+        setDisplayNameSuccess(false);
+      }, 2000);
     },
     onError: (error: Error) => {
-      console.error("Passkey registration error:", error);
-      if (error.message.includes("NotAllowedError")) {
-        setPasskeyError("パスキーの登録がキャンセルされました");
-      } else if (error.message.includes("NotSupportedError")) {
-        setPasskeyError("このブラウザはパスキーに対応していません");
-      } else {
-        setPasskeyError("パスキーの登録に失敗しました");
-      }
-      setPasskeySuccess(false);
+      console.error("Display name change error:", error);
+      setDisplayNameError("ディスプレイネームの変更に失敗しました");
+      setDisplayNameSuccess(false);
     },
   });
 
@@ -121,10 +132,22 @@ function SettingsPage() {
     }
   };
 
-  const handleRegisterPasskey = () => {
-    setPasskeyError("");
-    setPasskeySuccess(false);
-    registerPasskeyMutation.mutate();
+  const handleDisplayNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setDisplayNameError("");
+    setDisplayNameSuccess(false);
+
+    if (!displayName.trim()) {
+      setDisplayNameError("ディスプレイネームを入力してください");
+      return;
+    }
+
+    if (displayName.length > 100) {
+      setDisplayNameError("ディスプレイネームは100文字以内にしてください");
+      return;
+    }
+
+    changeDisplayNameMutation.mutate(displayName);
   };
 
   if (!user) {
@@ -231,10 +254,10 @@ function SettingsPage() {
                     marginBottom: "4px",
                   })}
                 >
-                  ユーザー名
+                  ディスプレイネーム
                 </p>
                 <p className={css({ fontSize: "16px" })}>
-                  {userAttributes?.name || "未設定"}
+                  {userInfo?.display_name || "未設定"}
                 </p>
               </div>
               <div>
@@ -527,7 +550,7 @@ function SettingsPage() {
           )}
         </div>
 
-        {/* パスキー登録 */}
+        {/* ディスプレイネーム変更 */}
         <div
           className={css({
             padding: "24px",
@@ -543,74 +566,164 @@ function SettingsPage() {
               marginBottom: "20px",
             })}
           >
-            パスキー（生体認証）
+            ディスプレイネーム変更
           </h2>
-          <p
-            className={css({
-              fontSize: "14px",
-              color: "#666",
-              marginBottom: "16px",
-            })}
-          >
-            パスキーを登録すると、パスワードなしで簡単にログインできます
-          </p>
 
-          {passkeyError && (
-            <div
+          {!showDisplayNameForm ? (
+            <button
+              type="button"
+              onClick={() => setShowDisplayNameForm(true)}
               className={css({
-                padding: "12px",
-                backgroundColor: "#f8d7da",
-                border: "1px solid #f5c2c7",
-                borderRadius: "4px",
-                color: "#842029",
+                padding: "12px 24px",
+                backgroundColor: "#f0c14b",
+                border: "1px solid #a88734",
+                borderRadius: "3px",
                 fontSize: "14px",
-                marginBottom: "16px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                _hover: {
+                  backgroundColor: "#ddb347",
+                },
               })}
             >
-              {passkeyError}
-            </div>
-          )}
+              ディスプレイネームを変更する
+            </button>
+          ) : (
+            <form onSubmit={handleDisplayNameSubmit}>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                })}
+              >
+                {displayNameError && (
+                  <div
+                    className={css({
+                      padding: "12px",
+                      backgroundColor: "#f8d7da",
+                      border: "1px solid #f5c2c7",
+                      borderRadius: "4px",
+                      color: "#842029",
+                      fontSize: "14px",
+                    })}
+                  >
+                    {displayNameError}
+                  </div>
+                )}
 
-          {passkeySuccess && (
-            <div
-              className={css({
-                padding: "12px",
-                backgroundColor: "#d1e7dd",
-                border: "1px solid #badbcc",
-                borderRadius: "4px",
-                color: "#0f5132",
-                fontSize: "14px",
-                marginBottom: "16px",
-              })}
-            >
-              パスキーを登録しました
-            </div>
-          )}
+                {displayNameSuccess && (
+                  <div
+                    className={css({
+                      padding: "12px",
+                      backgroundColor: "#d1e7dd",
+                      border: "1px solid #badbcc",
+                      borderRadius: "4px",
+                      color: "#0f5132",
+                      fontSize: "14px",
+                    })}
+                  >
+                    ディスプレイネームを変更しました
+                  </div>
+                )}
 
-          <button
-            type="button"
-            onClick={handleRegisterPasskey}
-            disabled={registerPasskeyMutation.isPending}
-            className={css({
-              padding: "12px 24px",
-              backgroundColor: "#f0c14b",
-              border: "1px solid #a88734",
-              borderRadius: "3px",
-              fontSize: "14px",
-              fontWeight: "bold",
-              cursor: registerPasskeyMutation.isPending
-                ? "not-allowed"
-                : "pointer",
-              opacity: registerPasskeyMutation.isPending ? 0.6 : 1,
-              _hover: {
-                backgroundColor: registerPasskeyMutation.isPending
-                  ? "#f0c14b"
-                  : "#ddb347",
-              },
-            })}
-          >
-            {registerPasskeyMutation.isPending ? "登録中..." : "パスキーを登録"}
-          </button>
+                <div>
+                  <label
+                    htmlFor="displayName"
+                    className={css({
+                      display: "block",
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      marginBottom: "4px",
+                    })}
+                  >
+                    新しいディスプレイネーム
+                  </label>
+                  <input
+                    type="text"
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder={userInfo?.display_name || ""}
+                    required
+                    maxLength={100}
+                    className={css({
+                      width: "100%",
+                      padding: "10px",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      fontSize: "14px",
+                    })}
+                  />
+                  <p
+                    className={css({
+                      fontSize: "12px",
+                      color: "#666",
+                      marginTop: "4px",
+                    })}
+                  >
+                    100文字以内
+                  </p>
+                </div>
+
+                <div
+                  className={css({
+                    display: "flex",
+                    gap: "12px",
+                  })}
+                >
+                  <button
+                    type="submit"
+                    disabled={changeDisplayNameMutation.isPending}
+                    className={css({
+                      padding: "12px 24px",
+                      backgroundColor: "#f0c14b",
+                      border: "1px solid #a88734",
+                      borderRadius: "3px",
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      cursor: changeDisplayNameMutation.isPending
+                        ? "not-allowed"
+                        : "pointer",
+                      opacity: changeDisplayNameMutation.isPending ? 0.6 : 1,
+                      _hover: {
+                        backgroundColor: changeDisplayNameMutation.isPending
+                          ? "#f0c14b"
+                          : "#ddb347",
+                      },
+                    })}
+                  >
+                    {changeDisplayNameMutation.isPending
+                      ? "変更中..."
+                      : "変更する"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDisplayNameForm(false);
+                      setDisplayNameError("");
+                      setDisplayNameSuccess(false);
+                      setDisplayName("");
+                    }}
+                    className={css({
+                      padding: "12px 24px",
+                      backgroundColor: "#fff",
+                      border: "1px solid #ddd",
+                      borderRadius: "3px",
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      _hover: {
+                        backgroundColor: "#f7f7f7",
+                      },
+                    })}
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* 住所管理へのリンク */}

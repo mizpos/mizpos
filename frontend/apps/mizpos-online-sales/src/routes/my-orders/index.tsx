@@ -220,6 +220,17 @@ function MyOrdersPage() {
                     注文日時:{" "}
                     {new Date(order.created_at).toLocaleString("ja-JP")}
                   </p>
+                  {order.card_brand && (
+                    <p
+                      className={css({
+                        fontSize: "14px",
+                        color: "#666",
+                        marginTop: "4px",
+                      })}
+                    >
+                      決済方法: {order.card_brand}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <span

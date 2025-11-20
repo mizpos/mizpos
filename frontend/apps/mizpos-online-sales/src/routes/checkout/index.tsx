@@ -13,6 +13,7 @@ import {
   createOrder,
   createOrderPaymentIntent,
   getUserAddresses,
+  getUserInfo,
   type SavedAddress,
 } from "../../lib/api";
 
@@ -52,7 +53,7 @@ function CheckoutPage() {
     }
   }, [user, navigate]);
 
-  // ユーザー情報を取得
+  // ユーザー属性を取得
   useQuery({
     queryKey: ["userAttributes"],
     queryFn: async () => {
@@ -61,7 +62,6 @@ function CheckoutPage() {
         setCustomerInfo((prev) => ({
           ...prev,
           email: attributes.email || prev.email,
-          name: attributes.name || prev.name,
         }));
         return attributes;
       } catch {
@@ -69,6 +69,25 @@ function CheckoutPage() {
       }
     },
     enabled: !!user,
+  });
+
+  // ユーザー情報（ディスプレイネーム）を取得
+  useQuery({
+    queryKey: ["userInfo", user?.sub],
+    queryFn: async () => {
+      if (!user?.sub) return null;
+      try {
+        const userInfo = await getUserInfo(user.sub);
+        setCustomerInfo((prev) => ({
+          ...prev,
+          name: userInfo.display_name || prev.name,
+        }));
+        return userInfo;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!user?.sub,
   });
 
   // 登録済み住所を取得（ログイン済みユーザーのみ）

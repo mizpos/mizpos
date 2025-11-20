@@ -169,6 +169,7 @@ export interface Order {
   shipping_address: ShippingAddress;
   stripe_payment_intent_id?: string;
   stripe_checkout_session_id?: string;
+  card_brand?: string; // 決済に使用されたカードブランド（Visa, Mastercard, JCB等）、不明な場合はnull
   tracking_number?: string;
   carrier?: string;
   shipping_notes?: string;
@@ -182,6 +183,7 @@ export interface PaymentIntent {
   amount: number;
   currency: string;
   status: string;
+  card_brand?: string; // 決済に使用されたカードブランド（Visa, Mastercard, JCB等）、不明な場合はnull
 }
 
 /**
@@ -292,6 +294,19 @@ export async function getOrderReceipt(orderId: string): Promise<{
 
 // ========== Accounts API ==========
 
+export interface UserInfo {
+  user_id: string;
+  cognito_user_id: string;
+  email: string;
+  display_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateUserInfoRequest {
+  display_name: string;
+}
+
 export interface SavedAddress {
   address_id: string;
   label: string;
@@ -327,6 +342,36 @@ export interface UpdateAddressRequest {
   address_line2?: string;
   phone_number?: string;
   is_default?: boolean;
+}
+
+/**
+ * ユーザー情報を取得（認証必要）
+ */
+export async function getUserInfo(userId: string): Promise<UserInfo> {
+  const data = await fetchJSON<{ user: UserInfo }>(
+    `${ACCOUNTS_API_URL}/users/${userId}`,
+    undefined,
+    true, // 認証必要
+  );
+  return data.user;
+}
+
+/**
+ * ユーザー情報を更新（認証必要）
+ */
+export async function updateUserInfo(
+  userId: string,
+  request: UpdateUserInfoRequest,
+): Promise<UserInfo> {
+  const data = await fetchJSON<{ user: UserInfo }>(
+    `${ACCOUNTS_API_URL}/users/${userId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(request),
+    },
+    true, // 認証必要
+  );
+  return data.user;
 }
 
 /**

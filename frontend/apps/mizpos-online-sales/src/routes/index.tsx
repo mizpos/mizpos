@@ -32,7 +32,7 @@ function HomePage() {
             color: "#232f3e",
           })}
         >
-          mizpos Online Sales
+          utteruオンラインストア
         </h1>
         <p
           className={css({
@@ -41,7 +41,7 @@ function HomePage() {
             marginBottom: "30px",
           })}
         >
-          同人誌・書籍のオンライン販売
+          utteru提携同人誌・書籍のオンライン販売
         </p>
         <Link
           to="/products"
@@ -88,7 +88,7 @@ function HomePage() {
               marginBottom: "12px",
             })}
           >
-            豊富な品揃え
+            正規直販サービス
           </h2>
           <p
             className={css({
@@ -97,7 +97,7 @@ function HomePage() {
               lineHeight: "1.6",
             })}
           >
-            様々なジャンルの同人誌・書籍を取り揃えています
+            開発チームが自主刊行したか、正式に委託販売契約した作品のみを扱っています。
           </p>
         </div>
 
@@ -153,12 +153,10 @@ function HomePage() {
               lineHeight: "1.6",
             })}
           >
-            ご注文後、迅速に配送いたします
+            指定のない限り、主要配送業者を通じてクイックにお届けします。UGX/国際宅急便/EMSも対応。
           </p>
         </div>
       </div>
-
-      {/* クイックリンク */}
       <div
         className={css({
           padding: "32px",

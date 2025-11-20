@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getAccessToken = async (): Promise<string | null> => {
     try {
       const session = await fetchAuthSession();
-      return session.tokens?.accessToken?.toString() || null;
+      return session.tokens?.idToken?.toString() || null;
     } catch {
       return null;
     }
