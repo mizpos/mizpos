@@ -37,6 +37,12 @@ resource "aws_dynamodb_table" "users" {
 }
 
 # Roles table - ユーザーロール管理（管理者、販売担当など）
+# サポートするロール:
+#   - system_admin: システム全体の管理者
+#   - publisher_admin: サークル管理者（特定のpublisher_id）
+#   - publisher_sales: 販売担当（特定のpublisher_id）
+#   - event_admin: イベント管理者（特定のevent_id）
+#   - event_sales: イベント販売担当（特定のevent_id）
 resource "aws_dynamodb_table" "roles" {
   name         = "${var.environment}-mizpos-roles"
   billing_mode = "PAY_PER_REQUEST"
@@ -58,9 +64,21 @@ resource "aws_dynamodb_table" "roles" {
     type = "S"
   }
 
+  attribute {
+    name = "publisher_id"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "EventIndex"
     hash_key        = "event_id"
+    range_key       = "user_id"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "PublisherIndex"
+    hash_key        = "publisher_id"
     range_key       = "user_id"
     projection_type = "ALL"
   }

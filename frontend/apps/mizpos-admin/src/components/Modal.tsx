@@ -7,10 +7,18 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = "lg" }: ModalProps) {
   if (!isOpen) return null;
+
+  const maxWidthMap = {
+    sm: "sm",
+    md: "md",
+    lg: "lg",
+    xl: "xl",
+  };
 
   return (
     <div
@@ -44,7 +52,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
           borderRadius: "lg",
           boxShadow: "xl",
           width: "100%",
-          maxWidth: "lg",
+          maxWidth: maxWidthMap[size],
           maxHeight: "90vh",
           overflow: "hidden",
           display: "flex",
