@@ -5,5 +5,12 @@ terraform {
       version               = "~> 6.0"
       configuration_aliases = [aws.us_east_1]
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
 }
+
+# Required providers configuration
+# This ensures the module can accept cloudflare provider from parent
