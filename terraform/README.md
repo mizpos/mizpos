@@ -78,10 +78,10 @@ cp terraform.tfvars.example terraform.tfvars
 
 2. `terraform.tfvars` を編集して実際の値を設定:
 ```hcl
-domain_name  = "stg-pos.miz.cab"  # 開発環境
+domain_name  = "pos-stg.miz.cab"  # 開発環境
 # domain_name  = "pos.miz.cab"    # 本番環境
 
-frontend_url = "https://stg-pos.miz.cab"  # 開発環境
+frontend_url = "https://pos-stg.miz.cab"  # 開発環境
 # frontend_url = "https://pos.miz.cab"    # 本番環境
 ```
 
@@ -137,7 +137,7 @@ API Gateway のカスタムドメインを DNS に設定:
 terraform output api_gateway_domain_name_target
 
 # CNAME レコードを作成
-# api.stg-pos.miz.cab -> [target_domain_name]
+# api.pos-stg.miz.cab -> [target_domain_name]
 # api.pos.miz.cab -> [target_domain_name]
 ```
 
@@ -196,8 +196,8 @@ GitHub Actions でのデプロイを推奨します。以下の secrets を設�
 - `AWS_REGION`: ap-northeast-1
 
 #### 開発環境
-- `DEV_DOMAIN_NAME`: stg-pos.miz.cab
-- `DEV_FRONTEND_URL`: https://stg-pos.miz.cab
+- `DEV_DOMAIN_NAME`: pos-stg.miz.cab
+- `DEV_FRONTEND_URL`: https://pos-stg.miz.cab
 
 #### 本番環境
 - `PROD_DOMAIN_NAME`: pos.miz.cab

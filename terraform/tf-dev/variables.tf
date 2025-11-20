@@ -1,7 +1,7 @@
 # Variables for dev environment
 
 variable "domain_name" {
-  description = "Domain name for the API (e.g., stg-pos.miz.cab)"
+  description = "Domain name for the API (e.g., pos-stg.miz.cab)"
   type        = string
   # GitHub Actionsから環境変数として渡される
 }
