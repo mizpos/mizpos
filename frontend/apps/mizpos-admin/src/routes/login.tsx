@@ -1,8 +1,8 @@
+import { Turnstile } from "@marsidev/react-turnstile";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { confirmSignIn } from "aws-amplify/auth";
 import { useState } from "react";
 import { css } from "styled-system/css";
-import { Turnstile } from "@marsidev/react-turnstile";
 import { Button } from "../components/Button";
 import { useAuth } from "../lib/auth";
 
@@ -329,20 +329,28 @@ function LoginPage() {
 
               {/* Cloudflare Turnstile Widget */}
               {turnstileSiteKey && (
-                <div className={css({ display: "flex", justifyContent: "center" })}>
+                <div
+                  className={css({ display: "flex", justifyContent: "center" })}
+                >
                   <Turnstile
                     siteKey={turnstileSiteKey}
                     onSuccess={(token) => setTurnstileToken(token)}
                     onError={() => {
                       setTurnstileToken("");
-                      setError("ボット検証に失敗しました。ページを再読み込みしてください。");
+                      setError(
+                        "ボット検証に失敗しました。ページを再読み込みしてください。",
+                      );
                     }}
                     onExpire={() => setTurnstileToken("")}
                   />
                 </div>
               )}
 
-              <Button type="submit" disabled={isLoading || !turnstileToken} size="lg">
+              <Button
+                type="submit"
+                disabled={isLoading || !turnstileToken}
+                size="lg"
+              >
                 {isLoading ? "ログイン中..." : "ログイン"}
               </Button>
             </div>
