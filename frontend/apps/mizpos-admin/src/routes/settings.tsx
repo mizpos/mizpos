@@ -1,7 +1,16 @@
-import { IconDeviceFloppy, IconLock } from "@tabler/icons-react";
+import {
+  IconDeviceFloppy,
+  IconFingerprint,
+  IconLock,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { updatePassword } from "aws-amplify/auth";
+import {
+  deleteWebAuthnCredential,
+  listWebAuthnCredentials,
+  updatePassword,
+} from "aws-amplify/auth";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
@@ -81,7 +90,7 @@ async function saveConfig(
 
 function SettingsPage() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, registerPasskey } = useAuth();
   const [brandSettings, setBrandSettings] = useState<BrandSettings>({
     storeName: "",
     storeDescription: "",
@@ -109,6 +118,10 @@ function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  // パスキー関連の状態
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
+  const [passkeySuccess, setPasskeySuccess] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
     "brand" | "payment" | "consignment" | "account"
@@ -200,6 +213,50 @@ function SettingsPage() {
       } else {
         setPasswordError(error.message);
       }
+    },
+  });
+
+  // パスキー一覧取得
+  const {
+    data: passkeys,
+    isLoading: isLoadingPasskeys,
+    refetch: refetchPasskeys,
+  } = useQuery({
+    queryKey: ["passkeys"],
+    queryFn: async () => {
+      const result = await listWebAuthnCredentials();
+      return result.credentials || [];
+    },
+    enabled: activeTab === "account",
+  });
+
+  // パスキー登録
+  const passkeyRegisterMutation = useMutation({
+    mutationFn: async () => {
+      await registerPasskey();
+    },
+    onSuccess: () => {
+      setPasskeySuccess(true);
+      setPasskeyError(null);
+      refetchPasskeys();
+      setTimeout(() => setPasskeySuccess(false), 3000);
+    },
+    onError: (error: Error) => {
+      setPasskeySuccess(false);
+      setPasskeyError(error.message);
+    },
+  });
+
+  // パスキー削除
+  const passkeyDeleteMutation = useMutation({
+    mutationFn: async (credentialId: string) => {
+      await deleteWebAuthnCredential({ credentialId });
+    },
+    onSuccess: () => {
+      refetchPasskeys();
+    },
+    onError: (error: Error) => {
+      setPasskeyError(error.message);
     },
   });
 
@@ -863,6 +920,181 @@ function SettingsPage() {
                   </Button>
                 </div>
               </div>
+            </div>
+
+            {/* Passkey Management */}
+            <div
+              className={css({
+                marginTop: "8",
+                paddingTop: "6",
+                borderTop: "1px solid",
+                borderColor: "gray.200",
+              })}
+            >
+              <h4
+                className={css({
+                  fontSize: "md",
+                  fontWeight: "semibold",
+                  marginBottom: "2",
+                })}
+              >
+                パスキー管理
+              </h4>
+              <p
+                className={css({
+                  fontSize: "sm",
+                  color: "gray.600",
+                  marginBottom: "4",
+                })}
+              >
+                パスキーを使用すると、パスワードなしで安全にログインできます
+              </p>
+
+              {passkeyError && (
+                <div
+                  className={css({
+                    backgroundColor: "red.50",
+                    border: "1px solid",
+                    borderColor: "red.200",
+                    borderRadius: "md",
+                    padding: "3",
+                    marginBottom: "4",
+                    color: "red.700",
+                    fontSize: "sm",
+                  })}
+                >
+                  {passkeyError}
+                </div>
+              )}
+
+              {passkeySuccess && (
+                <div
+                  className={css({
+                    backgroundColor: "green.50",
+                    border: "1px solid",
+                    borderColor: "green.200",
+                    borderRadius: "md",
+                    padding: "3",
+                    marginBottom: "4",
+                    color: "green.700",
+                    fontSize: "sm",
+                  })}
+                >
+                  パスキーを登録しました
+                </div>
+              )}
+
+              {/* Passkey List */}
+              {isLoadingPasskeys ? (
+                <div
+                  className={css({
+                    textAlign: "center",
+                    padding: "4",
+                    color: "gray.500",
+                  })}
+                >
+                  読み込み中...
+                </div>
+              ) : passkeys && passkeys.length > 0 ? (
+                <div className={css({ marginBottom: "4" })}>
+                  <h5
+                    className={css({
+                      fontSize: "sm",
+                      fontWeight: "semibold",
+                      marginBottom: "2",
+                    })}
+                  >
+                    登録済みパスキー
+                  </h5>
+                  <div
+                    className={css({
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "2",
+                    })}
+                  >
+                    {passkeys.map((passkey) => (
+                      <div
+                        key={passkey.credentialId}
+                        className={css({
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "3",
+                          backgroundColor: "gray.50",
+                          borderRadius: "md",
+                          border: "1px solid",
+                          borderColor: "gray.200",
+                        })}
+                      >
+                        <div>
+                          <p
+                            className={css({
+                              fontSize: "sm",
+                              fontWeight: "medium",
+                            })}
+                          >
+                            {passkey.friendlyCredentialName || "パスキー"}
+                          </p>
+                          <p
+                            className={css({
+                              fontSize: "xs",
+                              color: "gray.500",
+                            })}
+                          >
+                            登録日:{" "}
+                            {new Date(passkey.createdAt).toLocaleDateString(
+                              "ja-JP",
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("このパスキーを削除しますか？")) {
+                              passkeyDeleteMutation.mutate(
+                                passkey.credentialId,
+                              );
+                            }
+                          }}
+                          disabled={passkeyDeleteMutation.isPending}
+                          className={css({
+                            padding: "2",
+                            color: "red.600",
+                            _hover: { color: "red.800" },
+                            _disabled: {
+                              color: "gray.400",
+                              cursor: "not-allowed",
+                            },
+                          })}
+                        >
+                          <IconTrash size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p
+                  className={css({
+                    fontSize: "sm",
+                    color: "gray.500",
+                    marginBottom: "4",
+                  })}
+                >
+                  登録済みのパスキーはありません
+                </p>
+              )}
+
+              <Button
+                onClick={() => passkeyRegisterMutation.mutate()}
+                disabled={passkeyRegisterMutation.isPending}
+              >
+                <IconFingerprint size={18} />
+                {passkeyRegisterMutation.isPending
+                  ? "登録中..."
+                  : "新しいパスキーを登録"}
+              </Button>
             </div>
           </div>
         )}
