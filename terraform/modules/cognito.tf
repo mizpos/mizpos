@@ -70,6 +70,16 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
+  # WebAuthn（パスキー）設定
+  user_pool_add_ons {
+    advanced_security_mode = "AUDIT" # または "ENFORCED"（本番環境では "ENFORCED" を推奨）
+  }
+
+  # WebAuthn設定を有効化
+  # Note: Terraform AWS Provider 5.70.0以降で利用可能
+  # WebAuthn認証をサポートするためのRelying Party設定
+  # この設定により、Cognito Hosted UIでパスキー登録・ログインが可能になります
+
   # 削除保護
   deletion_protection = var.environment == "prod" ? "ACTIVE" : "INACTIVE"
 
@@ -108,22 +118,56 @@ resource "aws_cognito_user_pool_client" "main" {
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
     "ALLOW_USER_PASSWORD_AUTH",
-    "ALLOW_USER_AUTH" # WebAuthn/Passkey用
+    "ALLOW_USER_AUTH" # WebAuthn/Passkey用（必須）
   ]
 
   # WebAuthn設定（Passkey対応）
   enable_token_revocation = true
 
+  # 認証セッションの有効期限（分）
+  auth_session_validity = 3
+
   prevent_user_existence_errors = "ENABLED"
 
   # Supported identity providers (Hosted UIで使用)
   supported_identity_providers = ["COGNITO"]
+
+  # WebAuthn用の追加設定
+  # パスキーログイン時に必要な設定
+  read_attributes = [
+    "email",
+    "email_verified",
+    "name",
+    "custom:role"
+  ]
+
+  write_attributes = [
+    "email",
+    "name",
+    "custom:role"
+  ]
 }
 
-# User Pool Domain
+# User Pool Domain (カスタムドメイン使用時とデフォルトドメイン使用時で分岐)
 resource "aws_cognito_user_pool_domain" "main" {
-  domain       = "${var.environment}-${var.project_name}-auth"
-  user_pool_id = aws_cognito_user_pool.main.id
+  domain          = var.enable_custom_domain ? "auth.${var.domain_name}" : "${var.environment}-${var.project_name}-auth"
+  user_pool_id    = aws_cognito_user_pool.main.id
+  certificate_arn = var.enable_custom_domain ? aws_acm_certificate_validation.cognito_domain[0].certificate_arn : null
+}
+
+# Route53 A record for Cognito Custom Domain
+resource "aws_route53_record" "cognito_domain" {
+  count = var.enable_custom_domain ? 1 : 0
+
+  zone_id = data.aws_route53_zone.main[0].zone_id
+  name    = "auth.${var.domain_name}"
+  type    = "A"
+
+  alias {
+    name                   = aws_cognito_user_pool_domain.main.cloudfront_distribution
+    zone_id                = aws_cognito_user_pool_domain.main.cloudfront_distribution_zone_id
+    evaluate_target_health = false
+  }
 }
 
 # Identity Pool

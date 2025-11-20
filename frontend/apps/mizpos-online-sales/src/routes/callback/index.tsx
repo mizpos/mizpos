@@ -13,67 +13,76 @@ function CallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Cognito Hosted UIからのリダイレクト後の処理
-    const handleCallback = async () => {
+    // URLのエラーパラメータをチェック
+    const urlParams = new URLSearchParams(window.location.search);
+    const errorParam = urlParams.get("error");
+    const errorDescription = urlParams.get("error_description");
+
+    if (errorParam) {
+      setError(
+        errorDescription ||
+          "認証エラーが発生しました。もう一度お試しください。",
+      );
+      return;
+    }
+
+    // Amplifyが自動的に認証トークンを処理するのを待つ
+    // Hub eventsをリッスンして認証完了を検出
+    const hubListener = Hub.listen("auth", (data) => {
+      console.log("Auth event:", data.payload.event);
+      if (data.payload.event === "signedIn") {
+        console.log("SignedIn event detected, navigating to home");
+        navigate({ to: "/" });
+      }
+    });
+
+    // 認証セッションを確認
+    const checkAuth = async () => {
       try {
-        // URLのエラーパラメータをチェック
-        const urlParams = new URLSearchParams(window.location.search);
-        const errorParam = urlParams.get("error");
-        const errorDescription = urlParams.get("error_description");
+        // まず少し待ってからチェック（Amplifyの処理を待つ）
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        if (errorParam) {
-          setError(
-            errorDescription ||
-              "認証エラーが発生しました。もう一度お試しください。",
-          );
-          return;
-        }
-
-        // Amplifyが自動的に認証トークンを処理するのを待つ
-        // Hub eventsをリッスンして認証完了を検出
-        const hubListener = Hub.listen("auth", (data) => {
-          if (data.payload.event === "signedIn") {
-            navigate({ to: "/" });
-          }
+        const session = await fetchAuthSession({ forceRefresh: true });
+        console.log("Session check:", {
+          hasAccessToken: !!session.tokens?.accessToken,
         });
 
-        // 念のため、認証セッションを確認
-        try {
-          const session = await fetchAuthSession();
-          if (session.tokens?.accessToken) {
-            // 認証成功、ホームにリダイレクト
-            setTimeout(() => {
-              navigate({ to: "/" });
-            }, 500);
-          } else {
-            // トークンがまだない場合は、Amplifyの処理を待つ
-            setTimeout(async () => {
-              const retrySession = await fetchAuthSession();
-              if (retrySession.tokens?.accessToken) {
-                navigate({ to: "/" });
-              } else {
-                setError("認証トークンの取得に失敗しました。");
-              }
-            }, 2000);
-          }
-        } catch (sessionError) {
-          console.error("Session check error:", sessionError);
-          // セッションエラーの場合も少し待ってからリトライ
-          setTimeout(() => {
-            navigate({ to: "/" });
-          }, 1500);
-        }
+        if (session.tokens?.accessToken) {
+          // 認証成功、ホームにリダイレクト
+          console.log("Access token found, navigating to home");
+          navigate({ to: "/" });
+        } else {
+          // トークンがまだない場合は、もう少し待ってからリトライ
+          console.log("No access token yet, retrying in 2 seconds");
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        return () => {
-          hubListener();
-        };
-      } catch (err) {
-        console.error("Callback処理エラー:", err);
-        setError("認証処理中にエラーが発生しました。");
+          const retrySession = await fetchAuthSession({ forceRefresh: true });
+          console.log("Retry session check:", {
+            hasAccessToken: !!retrySession.tokens?.accessToken,
+          });
+
+          if (retrySession.tokens?.accessToken) {
+            console.log("Access token found on retry, navigating to home");
+            navigate({ to: "/" });
+          } else {
+            console.error("Failed to get access token after retry");
+            setError("認証トークンの取得に失敗しました。");
+          }
+        }
+      } catch (sessionError) {
+        console.error("Session check error:", sessionError);
+        setError(
+          "認証処理中にエラーが発生しました。もう一度ログインしてください。",
+        );
       }
     };
 
-    handleCallback();
+    checkAuth();
+
+    // クリーンアップ
+    return () => {
+      hubListener();
+    };
   }, [navigate]);
 
   return (
