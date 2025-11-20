@@ -30,8 +30,7 @@ function CallbackPage() {
     if (errorParam) {
       console.error("OAuth error:", errorParam, errorDescription);
       setError(
-        errorDescription ||
-          "認証エラーが発生しました。もう一度お試しください。",
+        errorDescription || "認証エラーが発生しました。もう一度お試しください。"
       );
       return;
     }
@@ -98,7 +97,7 @@ function CallbackPage() {
       } catch (sessionError) {
         console.error("Session check error:", sessionError);
         setError(
-          "認証処理中にエラーが発生しました。もう一度ログインしてください。",
+          "認証処理中にエラーが発生しました。もう一度ログインしてください。"
         );
       }
     };

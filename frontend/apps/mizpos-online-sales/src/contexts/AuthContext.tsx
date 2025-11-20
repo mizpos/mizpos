@@ -107,7 +107,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleSignInWithHostedUI = async (): Promise<void> => {
     // Amplifyの signInWithRedirect を使用
     // これによりAmplifyが認証フローを管理し、callbackでトークンを自動取得できる
-    await signInWithRedirect();
+    await signInWithRedirect({
+      options: {
+        lang: "ja",
+      },
+    });
   };
 
   const handleRegisterPasskey = async (): Promise<void> => {
