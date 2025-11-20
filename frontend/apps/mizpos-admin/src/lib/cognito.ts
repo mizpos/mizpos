@@ -6,8 +6,12 @@ const cognitoConfig = {
   userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID || "",
   region: import.meta.env.VITE_AWS_REGION || "ap-northeast-1",
   domain: import.meta.env.VITE_COGNITO_DOMAIN || "",
-  redirectSignIn: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN || window.location.origin + "/callback",
-  redirectSignOut: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT || window.location.origin + "/logout",
+  redirectSignIn:
+    import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN ||
+    `${window.location.origin}/callback`,
+  redirectSignOut:
+    import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT ||
+    `${window.location.origin}/logout`,
 };
 
 // 設定値の検証

@@ -22,7 +22,8 @@ function CallbackPage() {
 
         if (errorParam) {
           setError(
-            errorDescription || "認証エラーが発生しました。もう一度お試しください。",
+            errorDescription ||
+              "認証エラーが発生しました。もう一度お試しください。",
           );
           return;
         }
@@ -84,6 +85,7 @@ function CallbackPage() {
               {error}
             </p>
             <button
+              type="button"
               onClick={() => navigate({ to: "/login" })}
               className={css({
                 backgroundColor: "primary.500",
