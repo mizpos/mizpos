@@ -31,6 +31,7 @@ interface Sale {
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
   card_brand?: string;
   status: "pending" | "completed" | "cancelled";
+  customer_email?: string;
   created_at: string;
 }
 
