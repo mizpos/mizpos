@@ -3,7 +3,7 @@
 resource "cloudflare_turnstile_widget" "admin_login" {
   account_id = var.cloudflare_account_id
   name       = "${var.project_name}-${var.environment}-admin-login"
-  domains    = [var.admin_domain]
+  domains    = [var.environment == "dev" ? "admin.stg-pos.miz.cab" : "admin.pos.miz.cab"]
   mode       = "managed" # managed, non-interactive, invisible から選択
 
   # 必要に応じてカスタマイズ
