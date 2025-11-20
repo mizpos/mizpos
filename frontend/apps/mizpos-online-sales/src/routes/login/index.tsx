@@ -9,7 +9,8 @@ export const Route = createFileRoute("/login/")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, confirmSignUp, user, isLoading } = useAuth();
+  const { signIn, signInWithWebAuthn, signUp, confirmSignUp, user, isLoading } =
+    useAuth();
   const [mode, setMode] = useState<"signin" | "signup" | "confirm">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +82,27 @@ function LoginPage() {
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "ログインに失敗しました";
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    if (!email) {
+      setError("パスキーログインにはメールアドレスが必要です");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      await signInWithWebAuthn(email);
+      navigate({ to: "/" });
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "パスキーログインに失敗しました";
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -247,6 +269,62 @@ function LoginPage() {
               })}
             >
               {isSubmitting ? "ログイン中..." : "ログイン"}
+            </button>
+
+            <div
+              className={css({
+                position: "relative",
+                textAlign: "center",
+                marginY: "16px",
+              })}
+            >
+              <div
+                className={css({
+                  position: "absolute",
+                  left: "0",
+                  right: "0",
+                  top: "50%",
+                  borderTop: "1px solid #ddd",
+                })}
+              />
+              <span
+                className={css({
+                  position: "relative",
+                  backgroundColor: "white",
+                  paddingX: "12px",
+                  color: "#666",
+                  fontSize: "14px",
+                })}
+              >
+                または
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePasskeyLogin}
+              disabled={isSubmitting}
+              className={css({
+                width: "100%",
+                padding: "12px",
+                backgroundColor: "white",
+                border: "1px solid #a88734",
+                borderRadius: "3px",
+                fontSize: "16px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                marginBottom: "16px",
+                color: "#111",
+                _hover: {
+                  backgroundColor: "#f7f7f7",
+                },
+                _disabled: {
+                  backgroundColor: "#ddd",
+                  cursor: "not-allowed",
+                },
+              })}
+            >
+              {isSubmitting ? "認証中..." : "パスキーでログイン"}
             </button>
 
             <button

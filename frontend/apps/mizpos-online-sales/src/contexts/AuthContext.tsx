@@ -1,5 +1,6 @@
 import { Amplify } from "aws-amplify";
 import {
+  associateWebAuthnCredential,
   confirmSignUp,
   fetchAuthSession,
   fetchUserAttributes,
@@ -44,8 +45,10 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithWebAuthn: (email: string) => Promise<void>;
   signUp: (email: string, password: string, name?: string) => Promise<void>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
+  registerPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
   getIdToken: () => Promise<string | null>;
 }
@@ -90,6 +93,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await checkAuth();
     } catch (error) {
       console.error("Sign in error:", error);
+      throw error;
+    }
+  };
+
+  const handleSignInWithWebAuthn = async (email: string) => {
+    try {
+      await signIn({
+        username: email,
+        options: {
+          authFlowType: "USER_AUTH",
+          preferredChallenge: "WEB_AUTHN",
+        },
+      });
+      await checkAuth();
+    } catch (error) {
+      console.error("Passkey sign in error:", error);
+      throw error;
+    }
+  };
+
+  const handleRegisterPasskey = async (): Promise<void> => {
+    try {
+      await associateWebAuthnCredential();
+    } catch (error) {
+      console.error("Register passkey error:", error);
       throw error;
     }
   };
@@ -156,8 +184,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         signIn: handleSignIn,
+        signInWithWebAuthn: handleSignInWithWebAuthn,
         signUp: handleSignUp,
         confirmSignUp: handleConfirmSignUp,
+        registerPasskey: handleRegisterPasskey,
         signOut: handleSignOut,
         getIdToken,
       }}
