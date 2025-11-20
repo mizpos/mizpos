@@ -18,6 +18,7 @@ import { Route as PublishersRouteImport } from './routes/publishers'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as EventsRouteImport } from './routes/events'
 import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as IndexRouteImport } from './routes/index'
@@ -67,6 +68,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChangePasswordRoute = ChangePasswordRouteImport.update({
   id: '/change-password',
   path: '/change-password',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
+  '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/products': typeof ProductsRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
+  '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/products': typeof ProductsRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
+  '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/products': typeof ProductsRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/change-password'
+    | '/events'
     | '/login'
     | '/logout'
     | '/products'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/change-password'
+    | '/events'
     | '/login'
     | '/logout'
     | '/products'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/change-password'
+    | '/events'
     | '/login'
     | '/logout'
     | '/products'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CallbackRoute: typeof CallbackRoute
   ChangePasswordRoute: typeof ChangePasswordRoute
+  EventsRoute: typeof EventsRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   ProductsRoute: typeof ProductsRoute
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/change-password': {
       id: '/change-password'
       path: '/change-password'
@@ -279,6 +299,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CallbackRoute: CallbackRoute,
   ChangePasswordRoute: ChangePasswordRoute,
+  EventsRoute: EventsRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   ProductsRoute: ProductsRoute,

@@ -19,6 +19,7 @@ STOCK_HISTORY_TABLE = os.environ.get(
 PUBLISHERS_TABLE = os.environ.get(
     "PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers"
 )
+EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
 CDN_BUCKET_NAME = os.environ.get("CDN_BUCKET_NAME", f"{ENVIRONMENT}-mizpos-cdn-assets")
 CDN_DOMAIN = os.environ.get("CDN_DOMAIN", "")
 
@@ -27,6 +28,7 @@ dynamodb = boto3.resource("dynamodb")
 stock_table = dynamodb.Table(STOCK_TABLE)
 stock_history_table = dynamodb.Table(STOCK_HISTORY_TABLE)
 publishers_table = dynamodb.Table(PUBLISHERS_TABLE)
+events_table = dynamodb.Table(EVENTS_TABLE)
 
 # S3クライアント（Presigned URL生成用）
 s3_client = boto3.client("s3", config=Config(signature_version="s3v4"))
@@ -188,6 +190,137 @@ def generate_presigned_upload_url(
         "object_key": object_key,
         "expires_in": expires_in,
     }
+
+
+# ==========================================
+# イベント管理関数
+# ==========================================
+
+
+def create_event(event_data: dict) -> dict:
+    """イベントを新規作成
+
+    Args:
+        event_data: イベント情報
+
+    Returns:
+        作成されたイベント
+    """
+    event_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+
+    item = {
+        "event_id": event_id,
+        "name": event_data["name"],
+        "description": event_data.get("description", ""),
+        "start_date": event_data.get("start_date"),
+        "end_date": event_data.get("end_date"),
+        "location": event_data.get("location", ""),
+        "publisher_id": event_data.get("publisher_id"),
+        "is_active": True,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    events_table.put_item(Item=item)
+    return dynamo_to_dict(item)
+
+
+def get_event(event_id: str) -> dict | None:
+    """イベント詳細を取得
+
+    Args:
+        event_id: イベントID
+
+    Returns:
+        イベント情報（存在しない場合はNone）
+    """
+    response = events_table.get_item(Key={"event_id": event_id})
+    item = response.get("Item")
+    return dynamo_to_dict(item) if item else None
+
+
+def list_events(publisher_id: str | None = None) -> list[dict]:
+    """イベント一覧を取得
+
+    Args:
+        publisher_id: サークルID（指定した場合はそのサークルのイベントのみ取得）
+
+    Returns:
+        イベントのリスト
+    """
+    if publisher_id:
+        # 特定のサークルのイベントのみ取得
+        response = events_table.scan(
+            FilterExpression="publisher_id = :pid",
+            ExpressionAttributeValues={":pid": publisher_id},
+        )
+    else:
+        # 全イベントを取得
+        response = events_table.scan()
+
+    items = response.get("Items", [])
+    return [dynamo_to_dict(item) for item in items]
+
+
+def update_event(event_id: str, update_data: dict) -> dict | None:
+    """イベント情報を更新
+
+    Args:
+        event_id: イベントID
+        update_data: 更新データ
+
+    Returns:
+        更新されたイベント（存在しない場合はNone）
+    """
+    now = datetime.now(timezone.utc).isoformat()
+
+    # 更新式を構築
+    update_expr_parts = []
+    expr_attr_values = {":updated_at": now}
+
+    for key, value in update_data.items():
+        if value is not None:
+            update_expr_parts.append(f"{key} = :{key}")
+            expr_attr_values[f":{key}"] = value
+
+    if not update_expr_parts:
+        # 更新するデータがない場合は現在の値を返す
+        return get_event(event_id)
+
+    update_expr_parts.append("updated_at = :updated_at")
+    update_expr = "SET " + ", ".join(update_expr_parts)
+
+    try:
+        response = events_table.update_item(
+            Key={"event_id": event_id},
+            UpdateExpression=update_expr,
+            ExpressionAttributeValues=expr_attr_values,
+            ReturnValues="ALL_NEW",
+        )
+        return dynamo_to_dict(response["Attributes"])
+    except ClientError:
+        return None
+
+
+def delete_event(event_id: str) -> bool:
+    """イベントを削除（論理削除）
+
+    Args:
+        event_id: イベントID
+
+    Returns:
+        削除成功の場合True
+    """
+    try:
+        events_table.update_item(
+            Key={"event_id": event_id},
+            UpdateExpression="SET is_active = :inactive",
+            ExpressionAttributeValues={":inactive": False},
+        )
+        return True
+    except ClientError:
+        return False
 
 
 # エクスポート

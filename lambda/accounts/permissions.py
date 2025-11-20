@@ -18,7 +18,11 @@ async def get_user_id_from_auth(current_user: dict = Depends(get_current_user)) 
     """認証されたユーザーのuser_idを取得
 
     CognitoのsubからDynamoDBのuser_idを取得する
+    ユーザーが存在しない場合は自動的に作成する
     """
+    import uuid
+    from datetime import datetime, timezone
+
     cognito_sub = current_user.get("sub")
     if not cognito_sub:
         raise HTTPException(
@@ -28,22 +32,45 @@ async def get_user_id_from_auth(current_user: dict = Depends(get_current_user)) 
 
     # EmailからUsersテーブルを検索
     email = current_user.get("email")
-    if email:
-        response = users_table.query(
-            IndexName="EmailIndex",
-            KeyConditionExpression="email = :email",
-            ExpressionAttributeValues={":email": email},
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email not found in token",
         )
-        items = response.get("Items", [])
-        if items:
-            return items[0]["user_id"]
 
-    # subでもう一度検索してみる（cognito_user_idで保存されている場合）
-    # TODO: ここは実装次第で調整が必要
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="User not found in database",
+    response = users_table.query(
+        IndexName="EmailIndex",
+        KeyConditionExpression="email = :email",
+        ExpressionAttributeValues={":email": email},
     )
+    items = response.get("Items", [])
+    if items:
+        return items[0]["user_id"]
+
+    # ユーザーが存在しない場合は自動的に作成
+    user_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+
+    # display_nameを生成（emailのローカル部分を使用）
+    display_name = email.split("@")[0]
+
+    user_item = {
+        "user_id": user_id,
+        "cognito_user_id": cognito_sub,
+        "email": email,
+        "display_name": display_name,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    try:
+        users_table.put_item(Item=user_item)
+        return user_id
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user: {str(e)}",
+        )
 
 
 async def require_system_admin(
