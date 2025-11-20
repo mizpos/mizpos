@@ -6,6 +6,7 @@ import {
   signInWithRedirect,
   signOut,
 } from "aws-amplify/auth";
+import { Hub } from "aws-amplify/utils";
 import type React from "react";
 import {
   createContext,
@@ -41,8 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
+      console.log("Checking auth...");
       const currentUser = await getCurrentUser();
+      console.log("Current user:", currentUser);
       const attributes = await fetchUserAttributes();
+      console.log("User attributes:", attributes);
       setUser({
         username: currentUser.username,
         userId: currentUser.userId,
@@ -50,7 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: attributes.name,
         sub: attributes.sub || currentUser.userId,
       });
-    } catch {
+      console.log("User info set successfully");
+    } catch (error) {
+      console.error("checkAuth error:", error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -59,6 +65,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     checkAuth();
+
+    // Hub listenerを追加して、認証完了時にユーザー情報を再取得
+    const hubListener = Hub.listen("auth", (data) => {
+      console.log("AuthContext Hub event:", data.payload.event);
+      if (
+        data.payload.event === "signedIn" ||
+        data.payload.event === "signInWithRedirect"
+      ) {
+        console.log("User signed in, fetching user info...");
+        checkAuth();
+      } else if (data.payload.event === "signedOut") {
+        console.log("User signed out");
+        setUser(null);
+      }
+    });
+
+    return () => {
+      hubListener();
+    };
   }, [checkAuth]);
 
   const handleSignInWithHostedUI = async (): Promise<void> => {
