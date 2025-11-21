@@ -387,24 +387,21 @@ def can_assign_role(
     Returns:
         ロールを付与する権限がある場合True
     """
-    # TODO: 一時的に権限チェックを無効化（初期セットアップのため）
-    return True
-
     # システム管理者はすべてのロールを付与可能
-    # if is_system_admin(assigner_user_id):
-    #     return True
+    if is_system_admin(assigner_user_id):
+        return True
 
-    # # サークル管理者は自分のサークルのpublisher_admin/publisher_salesを付与可能
-    # if target_role_type in ["publisher_admin", "publisher_sales"]:
-    #     if publisher_id and is_publisher_admin(assigner_user_id, publisher_id):
-    #         return True
+    # サークル管理者は自分のサークルのpublisher_admin/publisher_salesを付与可能
+    if target_role_type in ["publisher_admin", "publisher_sales"]:
+        if publisher_id and is_publisher_admin(assigner_user_id, publisher_id):
+            return True
 
-    # # イベント管理者は自分のイベントのevent_admin/event_salesを付与可能
-    # if target_role_type in ["event_admin", "event_sales"]:
-    #     if event_id and has_role(assigner_user_id, "event_admin", event_id=event_id):
-    #         return True
+    # イベント管理者は自分のイベントのevent_admin/event_salesを付与可能
+    if target_role_type in ["event_admin", "event_sales"]:
+        if event_id and has_role(assigner_user_id, "event_admin", event_id=event_id):
+            return True
 
-    # return False
+    return False
 
 
 # 住所管理関数
