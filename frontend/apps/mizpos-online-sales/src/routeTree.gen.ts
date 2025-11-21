@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TosIndexRouteImport } from './routes/tos/index'
 import { Route as SetupProfileIndexRouteImport } from './routes/setup-profile/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
@@ -22,6 +23,8 @@ import { Route as DeliveryIndexRouteImport } from './routes/delivery/index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
 import { Route as CartIndexRouteImport } from './routes/cart/index'
 import { Route as CallbackIndexRouteImport } from './routes/callback/index'
+import { Route as TosSclRouteImport } from './routes/tos/scl'
+import { Route as TosPrivacyRouteImport } from './routes/tos/privacy'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -32,6 +35,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TosIndexRoute = TosIndexRouteImport.update({
+  id: '/tos/',
+  path: '/tos/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SetupProfileIndexRoute = SetupProfileIndexRouteImport.update({
@@ -89,6 +97,16 @@ const CallbackIndexRoute = CallbackIndexRouteImport.update({
   path: '/callback/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TosSclRoute = TosSclRouteImport.update({
+  id: '/tos/scl',
+  path: '/tos/scl',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TosPrivacyRoute = TosPrivacyRouteImport.update({
+  id: '/tos/privacy',
+  path: '/tos/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
   id: '/products/$productId',
   path: '/products/$productId',
@@ -99,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/products/$productId': typeof ProductsProductIdRoute
+  '/tos/privacy': typeof TosPrivacyRoute
+  '/tos/scl': typeof TosSclRoute
   '/callback': typeof CallbackIndexRoute
   '/cart': typeof CartIndexRoute
   '/checkout': typeof CheckoutIndexRoute
@@ -110,10 +130,13 @@ export interface FileRoutesByFullPath {
   '/products': typeof ProductsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/setup-profile': typeof SetupProfileIndexRoute
+  '/tos': typeof TosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/products/$productId': typeof ProductsProductIdRoute
+  '/tos/privacy': typeof TosPrivacyRoute
+  '/tos/scl': typeof TosSclRoute
   '/callback': typeof CallbackIndexRoute
   '/cart': typeof CartIndexRoute
   '/checkout': typeof CheckoutIndexRoute
@@ -125,12 +148,15 @@ export interface FileRoutesByTo {
   '/products': typeof ProductsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/setup-profile': typeof SetupProfileIndexRoute
+  '/tos': typeof TosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/products/$productId': typeof ProductsProductIdRoute
+  '/tos/privacy': typeof TosPrivacyRoute
+  '/tos/scl': typeof TosSclRoute
   '/callback/': typeof CallbackIndexRoute
   '/cart/': typeof CartIndexRoute
   '/checkout/': typeof CheckoutIndexRoute
@@ -142,6 +168,7 @@ export interface FileRoutesById {
   '/products/': typeof ProductsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/setup-profile/': typeof SetupProfileIndexRoute
+  '/tos/': typeof TosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -149,6 +176,8 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/products/$productId'
+    | '/tos/privacy'
+    | '/tos/scl'
     | '/callback'
     | '/cart'
     | '/checkout'
@@ -160,10 +189,13 @@ export interface FileRouteTypes {
     | '/products'
     | '/settings/'
     | '/setup-profile'
+    | '/tos'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/products/$productId'
+    | '/tos/privacy'
+    | '/tos/scl'
     | '/callback'
     | '/cart'
     | '/checkout'
@@ -175,11 +207,14 @@ export interface FileRouteTypes {
     | '/products'
     | '/settings'
     | '/setup-profile'
+    | '/tos'
   id:
     | '__root__'
     | '/'
     | '/settings'
     | '/products/$productId'
+    | '/tos/privacy'
+    | '/tos/scl'
     | '/callback/'
     | '/cart/'
     | '/checkout/'
@@ -191,12 +226,15 @@ export interface FileRouteTypes {
     | '/products/'
     | '/settings/'
     | '/setup-profile/'
+    | '/tos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   ProductsProductIdRoute: typeof ProductsProductIdRoute
+  TosPrivacyRoute: typeof TosPrivacyRoute
+  TosSclRoute: typeof TosSclRoute
   CallbackIndexRoute: typeof CallbackIndexRoute
   CartIndexRoute: typeof CartIndexRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
@@ -207,6 +245,7 @@ export interface RootRouteChildren {
   OrderCompleteIndexRoute: typeof OrderCompleteIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   SetupProfileIndexRoute: typeof SetupProfileIndexRoute
+  TosIndexRoute: typeof TosIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -223,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tos/': {
+      id: '/tos/'
+      path: '/tos'
+      fullPath: '/tos'
+      preLoaderRoute: typeof TosIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/setup-profile/': {
@@ -302,6 +348,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CallbackIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tos/scl': {
+      id: '/tos/scl'
+      path: '/tos/scl'
+      fullPath: '/tos/scl'
+      preLoaderRoute: typeof TosSclRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tos/privacy': {
+      id: '/tos/privacy'
+      path: '/tos/privacy'
+      fullPath: '/tos/privacy'
+      preLoaderRoute: typeof TosPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/$productId': {
       id: '/products/$productId'
       path: '/products/$productId'
@@ -328,6 +388,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRouteWithChildren,
   ProductsProductIdRoute: ProductsProductIdRoute,
+  TosPrivacyRoute: TosPrivacyRoute,
+  TosSclRoute: TosSclRoute,
   CallbackIndexRoute: CallbackIndexRoute,
   CartIndexRoute: CartIndexRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,
@@ -338,6 +400,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrderCompleteIndexRoute: OrderCompleteIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   SetupProfileIndexRoute: SetupProfileIndexRoute,
+  TosIndexRoute: TosIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
