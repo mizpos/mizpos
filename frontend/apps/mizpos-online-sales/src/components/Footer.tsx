@@ -167,7 +167,7 @@ export default function Footer({
             })}
           >
             <Link
-              to="/privacy"
+              to="/tos/privacy"
               className={css({
                 fontSize: { base: "11px", md: "12px" },
                 textDecoration: "none",
@@ -180,7 +180,7 @@ export default function Footer({
               プライバシーポリシー
             </Link>
             <Link
-              to="/terms"
+              to="/tos"
               className={css({
                 fontSize: { base: "11px", md: "12px" },
                 textDecoration: "none",
