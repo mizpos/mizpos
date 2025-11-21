@@ -26,7 +26,7 @@ env:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
@@ -285,3 +285,50 @@ jobs:
           echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Frontend URL**: ${{ steps.tf-outputs.outputs.frontend_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  create-release:
+    name: Create Release Tag
+    runs-on: ubuntu-slim
+    needs: [deploy-frontend]
+    if: |
+      always() &&
+      (needs.deploy-frontend.result == 'success' || needs.deploy-frontend.result == 'skipped')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate version tag
+        id: version
+        run: |
+          VERSION=v$(date -u '+%Y%m%d-%H%M%S')
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Production release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "Release ${{ steps.version.outputs.tag }}" \
+            --notes "Production deployment completed at ${{ steps.version.outputs.tag }}
+
+          **Deployment Type**: ${{ github.event.inputs.deploy_type }}
+          **Commit**: ${{ github.sha }}
+          **Triggered by**: @${{ github.actor }}"
+
+      - name: Release Summary
+        run: |
+          echo "## Production Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Created at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
