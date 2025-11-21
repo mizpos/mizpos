@@ -72,6 +72,38 @@ def create_cognito_user(
     return cognito_user_id
 
 
+def invite_cognito_user(email: str, display_name: str) -> str:
+    """Cognitoにユーザーを招待（メールアドレスのみ）
+
+    Cognitoが一時パスワードを生成し、招待メールを送信します。
+    ユーザーは初回ログイン時に新しいパスワードを設定します。
+    """
+    import secrets
+    import string
+
+    # 一時パスワードを生成（Cognito要件: 8文字以上、大小英数字+記号）
+    temp_password = "".join(
+        secrets.choice(string.ascii_letters + string.digits + "!@#$%^&*()")
+        for _ in range(12)
+    )
+
+    cognito_response = cognito.admin_create_user(
+        UserPoolId=USER_POOL_ID,
+        Username=email,
+        UserAttributes=[
+            {"Name": "email", "Value": email},
+            {"Name": "email_verified", "Value": "true"},
+            {"Name": "name", "Value": display_name},
+        ],
+        TemporaryPassword=temp_password,
+        # MessageActionを指定しないとCognitoが招待メールを送信
+        DesiredDeliveryMediums=["EMAIL"],
+    )
+
+    cognito_user_id = cognito_response["User"]["Username"]
+    return cognito_user_id
+
+
 def confirm_user_email(email: str, confirmation_code: str) -> None:
     """メールアドレスの確認コードを検証"""
     cognito.confirm_sign_up(
