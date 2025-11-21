@@ -93,24 +93,42 @@ def create_admin_user(
 
     # 3. DynamoDB にユーザー情報を登録
     print("  3. Creating DynamoDB user record...")
-    user_id = str(uuid.uuid4())
+
+    # メールアドレスの重複チェック
+    email_check = users_table.query(
+        IndexName="EmailIndex",
+        KeyConditionExpression="email = :email",
+        ExpressionAttributeValues={":email": email},
+    )
+    if email_check.get("Items"):
+        existing_user = email_check["Items"][0]
+        user_id = existing_user["user_id"]
+        print(
+            f"     User with email {email} already exists in DynamoDB: {user_id}"
+        )
+        print("     Skipping DynamoDB user creation")
+    else:
+        user_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+
+        user_item = {
+            "user_id": user_id,
+            "cognito_user_id": cognito_user_id,
+            "email": email,
+            "display_name": display_name,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        try:
+            users_table.put_item(Item=user_item)
+            print(f"     DynamoDB user created: {user_id}")
+        except ClientError as e:
+            print(f"     Error creating DynamoDB user: {e}")
+            raise
+
+    # nowを設定（ロール作成時に使用）
     now = datetime.now(timezone.utc).isoformat()
-
-    user_item = {
-        "user_id": user_id,
-        "cognito_user_id": cognito_user_id,
-        "email": email,
-        "display_name": display_name,
-        "created_at": now,
-        "updated_at": now,
-    }
-
-    try:
-        users_table.put_item(Item=user_item)
-        print(f"     DynamoDB user created: {user_id}")
-    except ClientError as e:
-        print(f"     Error creating DynamoDB user: {e}")
-        raise
 
     # 4. system_admin ロールを付与
     print("  4. Assigning system_admin role...")
