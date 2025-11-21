@@ -436,6 +436,110 @@ def can_assign_role(
     return False
 
 
+def get_user_publisher_ids(user_id: str) -> list[str]:
+    """ユーザーがアクセスできるpublisher_idのリストを取得
+
+    Args:
+        user_id: ユーザーID
+
+    Returns:
+        アクセス可能なpublisher_idのリスト
+    """
+    roles = get_user_roles(user_id)
+    publisher_ids = []
+
+    for role in roles:
+        if role["role_type"] in ["publisher_admin", "publisher_sales"]:
+            if "publisher_id" in role and role["publisher_id"]:
+                publisher_ids.append(role["publisher_id"])
+
+    return publisher_ids
+
+
+def get_user_event_ids(user_id: str) -> list[str]:
+    """ユーザーがアクセスできるevent_idのリストを取得
+
+    Args:
+        user_id: ユーザーID
+
+    Returns:
+        アクセス可能なevent_idのリスト
+    """
+    roles = get_user_roles(user_id)
+    event_ids = []
+
+    for role in roles:
+        if role["role_type"] in ["event_admin", "event_sales"]:
+            if "event_id" in role and role["event_id"]:
+                event_ids.append(role["event_id"])
+
+    return event_ids
+
+
+def get_accessible_user_ids(current_user_id: str) -> list[str]:
+    """現在のユーザーがアクセスできるユーザーIDのリストを取得
+
+    権限ルール:
+    - システム管理者: すべてのユーザーを表示
+    - サークル管理者/販売担当: 自分のサークルに所属するユーザーを表示
+    - イベント管理者/販売担当: 自分のイベントに所属するユーザーを表示
+
+    Args:
+        current_user_id: 現在のユーザーID
+
+    Returns:
+        アクセス可能なユーザーIDのリスト（空の場合は全ユーザーへのアクセスを示す）
+    """
+    # システム管理者はすべてのユーザーを見ることができる
+    if is_system_admin(current_user_id):
+        return []  # 空リスト = フィルタリングなし（全て表示）
+
+    accessible_user_ids = set()
+
+    # 自分のサークルに所属するユーザーを取得
+    publisher_ids = get_user_publisher_ids(current_user_id)
+    for publisher_id in publisher_ids:
+        roles = get_roles_by_publisher(publisher_id)
+        for role in roles:
+            accessible_user_ids.add(role["user_id"])
+
+    # 自分のイベントに所属するユーザーを取得
+    event_ids = get_user_event_ids(current_user_id)
+    for event_id in event_ids:
+        roles = get_roles_by_event(event_id)
+        for role in roles:
+            accessible_user_ids.add(role["user_id"])
+
+    # 自分自身も含める
+    accessible_user_ids.add(current_user_id)
+
+    return list(accessible_user_ids)
+
+
+def list_users(current_user_id: str) -> list[dict]:
+    """ユーザー一覧を取得（権限フィルタリング付き）
+
+    Args:
+        current_user_id: 現在のユーザーID
+
+    Returns:
+        アクセス可能なユーザーのリスト
+    """
+    # すべてのユーザーを取得
+    response = users_table.scan()
+    all_users = [dynamo_to_dict(item) for item in response.get("Items", [])]
+
+    # アクセス可能なユーザーIDを取得
+    accessible_user_ids = get_accessible_user_ids(current_user_id)
+
+    # システム管理者の場合（accessible_user_ids が空リスト）
+    if not accessible_user_ids:
+        return all_users
+
+    # フィルタリング
+    return [u for u in all_users if u["user_id"] in accessible_user_ids]
+
+
 # 住所管理関数
 def get_user_addresses(user_id: str) -> list[dict]:
     """ユーザーの住所一覧を取得"""

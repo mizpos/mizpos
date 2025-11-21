@@ -54,6 +54,7 @@ from services import (
     get_user_roles as get_user_roles_service,
     get_user_status,
     invite_cognito_user,
+    list_users as list_users_service,
     remove_role as remove_role_service,
     resend_confirmation_code,
     set_default_address,
@@ -110,10 +111,17 @@ router = APIRouter()
 # ユーザー管理エンドポイント
 @router.get("/users", response_model=dict)
 async def list_users(current_user: dict = Depends(get_current_user)):
-    """ユーザー一覧取得"""
+    """ユーザー一覧取得（権限フィルタリング付き）
+
+    権限ルール:
+    - システム管理者: すべてのユーザーを表示
+    - サークル管理者/販売担当: 自分のサークルに所属するユーザーを表示
+    - イベント管理者/販売担当: 自分のイベントに所属するユーザーを表示
+    - 権限なしユーザー: 自分自身のみ表示
+    """
     try:
-        response = users_table.scan()
-        users = [dynamo_to_dict(item) for item in response.get("Items", [])]
+        current_user_id = await get_user_id_from_auth(current_user)
+        users = list_users_service(current_user_id)
         return {"users": users}
     except DynamoDBClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
