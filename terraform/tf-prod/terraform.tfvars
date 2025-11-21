@@ -4,4 +4,6 @@
 
 domain_name          = "pos.miz.cab"
 frontend_url         = "https://app.pos.miz.cab"
-enable_custom_domain = true
+# 一時的にデフォルトドメインを使用（CNAME競合回避のため）
+# CloudFrontの削除が完了したら true に戻す
+enable_custom_domain = false
