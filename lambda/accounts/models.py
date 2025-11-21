@@ -15,6 +15,7 @@ class InviteUserRequest(BaseModel):
 
     パスワードはユーザー自身がCognitoで設定します。
     """
+
     email: EmailStr
     display_name: str = Field(..., min_length=1, max_length=100)
 

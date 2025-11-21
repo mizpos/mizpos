@@ -161,29 +161,39 @@ async def create_user(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/users/invite", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/users/invite", response_model=dict, status_code=status.HTTP_200_OK)
 async def invite_user(
     request: InviteUserRequest, current_user: dict = Depends(get_current_user)
 ):
-    """ユーザー招待（メールアドレスと表示名のみ）
+    """ユーザー招待またはロール付与用のユーザー取得
 
-    Cognitoにユーザーを作成し、招待メールを送信します。
-    ユーザーは初回ログイン時に自分でパスワードを設定します。
+    既存ユーザーの場合: ユーザー情報を返す（ロール付与に進む）
+    新規ユーザーの場合: Cognitoに招待してユーザー情報を返す
     """
     try:
-        # メールアドレスの重複チェック（DynamoDBレベル）
+        # メールアドレスで既存ユーザーをチェック
         email_check = users_table.query(
             IndexName="EmailIndex",
             KeyConditionExpression="email = :email",
             ExpressionAttributeValues={":email": request.email},
         )
-        if email_check.get("Items"):
-            raise HTTPException(
-                status_code=409, detail="Email address already exists in database"
-            )
 
-        # Cognitoユーザー招待
-        cognito_user_id = invite_cognito_user(request.email, request.display_name)
+        # 既存ユーザーがいる場合はそのユーザー情報を返す
+        if email_check.get("Items"):
+            existing_user = email_check["Items"][0]
+            return {
+                "user": dynamo_to_dict(existing_user),
+                "message": "User already exists. You can now assign roles.",
+                "is_new_user": False,
+            }
+
+        # 新規ユーザーの場合: Cognitoに招待
+        try:
+            cognito_user_id = invite_cognito_user(request.email, request.display_name)
+        except UsernameExistsException:
+            # Cognitoには存在するがDynamoDBにはいない場合
+            # Cognitoのユーザー名（email）をそのまま使用
+            cognito_user_id = request.email
 
         user_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
@@ -201,13 +211,10 @@ async def invite_user(
 
         return {
             "user": user_item,
-            "message": "Invitation email sent to user",
+            "message": "Invitation email sent to user. You can now assign roles.",
+            "is_new_user": True,
         }
 
-    except UsernameExistsException as e:
-        raise HTTPException(
-            status_code=409, detail="User already exists in Cognito"
-        ) from e
     except DynamoDBClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     except Exception as e:

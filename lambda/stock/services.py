@@ -206,9 +206,7 @@ def list_publishers(user_email: str | None = None) -> list[dict]:
 
     # 一般ユーザーは自分が所属するpublishersのみ
     accessible_publisher_ids = get_user_publisher_ids(user_id)
-    return [
-        p for p in all_publishers if p["publisher_id"] in accessible_publisher_ids
-    ]
+    return [p for p in all_publishers if p["publisher_id"] in accessible_publisher_ids]
 
 
 def generate_presigned_upload_url(
