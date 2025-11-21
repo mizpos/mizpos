@@ -104,7 +104,7 @@ export default function Header({
             })}
           >
             <img
-              src="/logo.png"
+              src="/logo.webp"
               alt="utteru 販売プラットフォーム"
               className={css({
                 height: { base: "20px", md: "26px", lg: "32px" },
