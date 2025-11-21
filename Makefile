@@ -4,6 +4,8 @@
 FRONTEND_DIR := frontend
 # バックエンドのディレクトリ
 BACKEND_DIR := lambda
+# Terraformのディレクトリ
+TERRAFORM_DIR := terraform
 
 help: ## このヘルプメッセージを表示
 	@echo "使用可能なコマンド:"
@@ -19,6 +21,8 @@ format: ## 全てのコードをフォーマット
 	cd $(FRONTEND_DIR) && pnpm run fix
 	@echo "🎨 Formatting backend code..."
 	uvx ruff format $(BACKEND_DIR)/
+	@echo "🎨 Formatting Terraform code..."
+	terraform fmt -recursive $(TERRAFORM_DIR)/
 	@echo "✅ All code formatted"
 
 lint: ## 全てのリントチェック
@@ -32,6 +36,8 @@ fix: ## 自動修正可能な全ての問題を修正
 	@echo "🔧 Fixing backend code..."
 	uvx ruff format $(BACKEND_DIR)/
 	uvx ruff check --fix $(BACKEND_DIR)/
+	@echo "🔧 Formatting Terraform code..."
+	terraform fmt -recursive $(TERRAFORM_DIR)/
 	@echo "✅ All auto-fixable issues fixed"
 
 check-types: ## TypeScriptの型チェック

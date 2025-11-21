@@ -24,6 +24,7 @@ from models import (
     ConfirmEmailRequest,
     CreateAddressRequest,
     CreateUserRequest,
+    InviteUserRequest,
     ResendConfirmationRequest,
     UpdateAddressRequest,
     UpdateUserRequest,
@@ -52,6 +53,8 @@ from services import (
     get_user_addresses,
     get_user_roles as get_user_roles_service,
     get_user_status,
+    invite_cognito_user,
+    list_users as list_users_service,
     remove_role as remove_role_service,
     resend_confirmation_code,
     set_default_address,
@@ -108,10 +111,17 @@ router = APIRouter()
 # ユーザー管理エンドポイント
 @router.get("/users", response_model=dict)
 async def list_users(current_user: dict = Depends(get_current_user)):
-    """ユーザー一覧取得"""
+    """ユーザー一覧取得（権限フィルタリング付き）
+
+    権限ルール:
+    - システム管理者: すべてのユーザーを表示
+    - サークル管理者/販売担当: 自分のサークルに所属するユーザーを表示
+    - イベント管理者/販売担当: 自分のイベントに所属するユーザーを表示
+    - 権限なしユーザー: 自分自身のみ表示
+    """
     try:
-        response = users_table.scan()
-        users = [dynamo_to_dict(item) for item in response.get("Items", [])]
+        current_user_id = await get_user_id_from_auth(current_user)
+        users = list_users_service(current_user_id)
         return {"users": users}
     except DynamoDBClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -156,6 +166,67 @@ async def create_user(
     except UsernameExistsException as e:
         raise HTTPException(status_code=409, detail="User already exists") from e
     except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/users/invite", response_model=dict, status_code=status.HTTP_200_OK)
+async def invite_user(
+    request: InviteUserRequest, current_user: dict = Depends(get_current_user)
+):
+    """ユーザー招待またはロール付与用のユーザー取得
+
+    既存ユーザーの場合: ユーザー情報を返す（ロール付与に進む）
+    新規ユーザーの場合: Cognitoに招待してユーザー情報を返す
+    """
+    try:
+        # メールアドレスで既存ユーザーをチェック
+        email_check = users_table.query(
+            IndexName="EmailIndex",
+            KeyConditionExpression="email = :email",
+            ExpressionAttributeValues={":email": request.email},
+        )
+
+        # 既存ユーザーがいる場合はそのユーザー情報を返す
+        if email_check.get("Items"):
+            existing_user = email_check["Items"][0]
+            return {
+                "user": dynamo_to_dict(existing_user),
+                "message": "User already exists. You can now assign roles.",
+                "is_new_user": False,
+            }
+
+        # 新規ユーザーの場合: Cognitoに招待
+        try:
+            cognito_user_id = invite_cognito_user(request.email, request.display_name)
+        except UsernameExistsException:
+            # Cognitoには存在するがDynamoDBにはいない場合
+            # Cognitoのユーザー名（email）をそのまま使用
+            cognito_user_id = request.email
+
+        user_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+
+        user_item = {
+            "user_id": user_id,
+            "cognito_user_id": cognito_user_id,
+            "email": request.email,
+            "display_name": request.display_name,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        users_table.put_item(Item=user_item)
+
+        return {
+            "user": user_item,
+            "message": "Invitation email sent to user. You can now assign roles.",
+            "is_new_user": True,
+        }
+
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error inviting user: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

@@ -20,6 +20,8 @@ PUBLISHERS_TABLE = os.environ.get(
     "PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers"
 )
 EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
+ROLES_TABLE = os.environ.get("ROLES_TABLE", f"{ENVIRONMENT}-mizpos-roles")
+USERS_TABLE = os.environ.get("USERS_TABLE", f"{ENVIRONMENT}-mizpos-users")
 CDN_BUCKET_NAME = os.environ.get("CDN_BUCKET_NAME", f"{ENVIRONMENT}-mizpos-cdn-assets")
 CDN_DOMAIN = os.environ.get("CDN_DOMAIN", "")
 
@@ -29,6 +31,8 @@ stock_table = dynamodb.Table(STOCK_TABLE)
 stock_history_table = dynamodb.Table(STOCK_HISTORY_TABLE)
 publishers_table = dynamodb.Table(PUBLISHERS_TABLE)
 events_table = dynamodb.Table(EVENTS_TABLE)
+roles_table = dynamodb.Table(ROLES_TABLE)
+users_table = dynamodb.Table(USERS_TABLE)
 
 # S3クライアント（Presigned URL生成用）
 s3_client = boto3.client("s3", config=Config(signature_version="s3v4"))
@@ -126,10 +130,83 @@ def get_publisher(publisher_id: str) -> dict | None:
         return None
 
 
-def list_publishers() -> list[dict]:
-    """全出版社/サークル一覧を取得"""
+def get_user_id_from_email(email: str) -> str | None:
+    """メールアドレスからユーザーIDを取得"""
+    if not email:
+        return None
+
+    response = users_table.query(
+        IndexName="EmailIndex",
+        KeyConditionExpression="email = :email",
+        ExpressionAttributeValues={":email": email},
+    )
+    items = response.get("Items", [])
+    return items[0]["user_id"] if items else None
+
+
+def is_system_admin(user_id: str) -> bool:
+    """ユーザーがシステム管理者かチェック"""
+    response = roles_table.query(
+        KeyConditionExpression="user_id = :user_id",
+        FilterExpression="role_type = :role_type",
+        ExpressionAttributeValues={
+            ":user_id": user_id,
+            ":role_type": "system_admin",
+        },
+    )
+    return len(response.get("Items", [])) > 0
+
+
+def get_user_publisher_ids(user_id: str) -> list[str]:
+    """ユーザーがアクセスできるpublisher_idのリストを取得"""
+    response = roles_table.query(
+        KeyConditionExpression="user_id = :user_id",
+        FilterExpression="role_type IN (:admin, :sales)",
+        ExpressionAttributeValues={
+            ":user_id": user_id,
+            ":admin": "publisher_admin",
+            ":sales": "publisher_sales",
+        },
+    )
+
+    publisher_ids = []
+    for role in response.get("Items", []):
+        if "publisher_id" in role and role["publisher_id"]:
+            publisher_ids.append(role["publisher_id"])
+
+    return publisher_ids
+
+
+def list_publishers(user_email: str | None = None) -> list[dict]:
+    """
+    出版社/サークル一覧を取得（権限フィルタリング付き）
+
+    Args:
+        user_email: ユーザーのメールアドレス（権限チェック用）
+
+    Returns:
+        アクセス可能なpublishersのリスト
+    """
+    # 全publishersを取得
     response = publishers_table.scan()
-    return [dynamo_to_dict(item) for item in response.get("Items", [])]
+    all_publishers = [dynamo_to_dict(item) for item in response.get("Items", [])]
+
+    # メールアドレスがない場合は空リストを返す
+    if not user_email:
+        return []
+
+    # ユーザーIDを取得
+    user_id = get_user_id_from_email(user_email)
+    if not user_id:
+        return []
+
+    # システム管理者は全て見える
+    if is_system_admin(user_id):
+        return all_publishers
+
+    # 一般ユーザーは自分が所属するpublishersのみ
+    accessible_publisher_ids = get_user_publisher_ids(user_id)
+    return [p for p in all_publishers if p["publisher_id"] in accessible_publisher_ids]
 
 
 def generate_presigned_upload_url(

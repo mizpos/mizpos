@@ -10,6 +10,16 @@ class CreateUserRequest(UserBase):
     password: str = Field(..., min_length=8)
 
 
+class InviteUserRequest(BaseModel):
+    """ユーザー招待リクエスト（メールアドレスと表示名のみ）
+
+    パスワードはユーザー自身がCognitoで設定します。
+    """
+
+    email: EmailStr
+    display_name: str = Field(..., min_length=1, max_length=100)
+
+
 class UpdateUserRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100)
 

@@ -315,9 +315,10 @@ async def list_categories(current_user: dict = Depends(get_current_user)):
 # 出版社/サークル管理エンドポイント
 @router.get("/publishers", response_model=dict)
 async def list_publishers_endpoint(current_user: dict = Depends(get_current_user)):
-    """出版社/サークル一覧取得"""
+    """出版社/サークル一覧取得（権限フィルタリング付き）"""
     try:
-        publishers = list_publishers()
+        user_email = current_user.get("email")
+        publishers = list_publishers(user_email=user_email)
         return {"publishers": publishers}
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
