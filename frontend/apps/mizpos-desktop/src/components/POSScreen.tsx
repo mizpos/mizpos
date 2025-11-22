@@ -10,11 +10,13 @@ import {
 import { useAuthStore } from "../stores/auth";
 import { useCartStore } from "../stores/cart";
 import { useNetworkStore } from "../stores/network";
+import { usePrinterStore } from "../stores/printer";
 import type { Product } from "../types";
 import { Cart } from "./Cart";
 import { CheckoutModal } from "./CheckoutModal";
 import { ProductGrid } from "./ProductGrid";
 import { ReceiptModal } from "./ReceiptModal";
+import { SettingsScreen } from "./SettingsScreen";
 import { StatusBar } from "./StatusBar";
 
 const styles = {
@@ -128,6 +130,7 @@ export function POSScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCheckout, setShowCheckout] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -135,6 +138,11 @@ export function POSScreen() {
   const { addItem } = useCartStore();
   const { status } = useNetworkStore();
   const { lastSale, clearLastSale } = useCartStore();
+  const { initialize: initPrinter } = usePrinterStore();
+
+  useEffect(() => {
+    initPrinter();
+  }, [initPrinter]);
 
   // 商品データの読み込み
   const loadProducts = useCallback(async () => {
@@ -251,7 +259,7 @@ export function POSScreen() {
 
   return (
     <div className={styles.screen}>
-      <StatusBar />
+      <StatusBar onOpenSettings={() => setShowSettings(true)} />
 
       <div className={styles.content}>
         {/* 左側: 商品一覧 */}
@@ -308,6 +316,11 @@ export function POSScreen() {
       {/* レシートモーダル */}
       {showReceipt && lastSale && (
         <ReceiptModal sale={lastSale} onClose={handleReceiptClose} />
+      )}
+
+      {/* 設定画面 */}
+      {showSettings && (
+        <SettingsScreen onClose={() => setShowSettings(false)} />
       )}
     </div>
   );
