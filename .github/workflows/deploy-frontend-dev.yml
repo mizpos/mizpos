@@ -62,6 +62,10 @@ jobs:
         working-directory: frontend
         run: pnpm generate-api-types
 
+      - name: Generate Styled System
+        working-directory: frontend
+        run: pnpm generate-styled-system
+
       - name: Type Check
         working-directory: frontend
         run: pnpm check-types
