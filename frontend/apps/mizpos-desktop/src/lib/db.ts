@@ -66,8 +66,8 @@ export async function searchProducts(query: string): Promise<Product[]> {
     .filter(
       (product) =>
         product.title.toLowerCase().includes(lowerQuery) ||
-        product.barcode?.includes(query) ||
-        product.isdn?.includes(query),
+        (product.barcode?.includes(query) ?? false) ||
+        (product.isdn?.includes(query) ?? false),
     )
     .toArray();
 }
