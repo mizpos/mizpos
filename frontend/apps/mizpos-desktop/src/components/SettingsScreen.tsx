@@ -1,12 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
+import type { BluetoothDevice, UsbDevice } from "../lib/printer";
 import { type PaperWidth, usePrinterStore } from "../stores/printer";
 
-interface DeviceInfo {
-  vendor_id: number;
-  device_id: number;
-  name: string;
+type Device = UsbDevice | BluetoothDevice;
+
+function isUsbDevice(device: Device): device is UsbDevice {
+  return "vendor_id" in device;
+}
+
+function isBluetoothDevice(device: Device): device is BluetoothDevice {
+  return "address" in device;
 }
 
 interface SettingsScreenProps {
@@ -65,6 +69,22 @@ const styles = {
     fontWeight: 600,
     color: "#333",
     marginBottom: "12px",
+  }),
+  platformBadge: css({
+    display: "inline-block",
+    padding: "4px 8px",
+    borderRadius: "4px",
+    fontSize: "12px",
+    fontWeight: 600,
+    marginLeft: "8px",
+  }),
+  platformDesktop: css({
+    background: "#e3f2fd",
+    color: "#1565c0",
+  }),
+  platformAndroid: css({
+    background: "#e8f5e9",
+    color: "#2e7d32",
   }),
   deviceList: css({
     display: "flex",
@@ -139,6 +159,13 @@ const styles = {
       background: "#eeeeee",
     },
   }),
+  dangerButton: css({
+    background: "#ffebee",
+    color: "#c62828",
+    _hover: {
+      background: "#ffcdd2",
+    },
+  }),
   buttonGroup: css({
     display: "flex",
     gap: "12px",
@@ -192,6 +219,23 @@ const styles = {
     fontWeight: 600,
     color: "#333",
   }),
+  connectionStatus: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "8px",
+  }),
+  statusDot: css({
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+  }),
+  statusConnected: css({
+    background: "#4caf50",
+  }),
+  statusDisconnected: css({
+    background: "#f44336",
+  }),
   paperWidthSelector: css({
     display: "flex",
     gap: "12px",
@@ -228,33 +272,55 @@ const styles = {
 };
 
 export function SettingsScreen({ onClose }: SettingsScreenProps) {
-  const [devices, setDevices] = useState<DeviceInfo[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const {
+    platform,
     printerConfig,
-    setPrinterConfig,
+    isConnected,
     terminalId,
     paperWidth,
     setPaperWidth,
+    refreshDevices,
+    selectUsbPrinter,
+    selectBluetoothPrinter,
+    disconnect,
+    clearPrinterConfig,
+    testPrint,
+    initialize,
   } = usePrinterStore();
-  const [selectedDevice, setSelectedDevice] = useState<DeviceInfo | null>(
-    printerConfig,
-  );
+
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [selectedPaperWidth, setSelectedPaperWidth] =
     useState<PaperWidth>(paperWidth);
+
+  // Initialize printer store on mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   const loadDevices = useCallback(async () => {
     setIsLoading(true);
     setMessage(null);
     try {
-      const deviceList = await invoke<DeviceInfo[]>("get_usb_devices");
+      const deviceList = await refreshDevices();
       setDevices(deviceList);
+      if (deviceList.length === 0) {
+        setMessage({
+          type: "error",
+          text:
+            platform === "android"
+              ? "ペアリング済みのBluetoothデバイスが見つかりません。Androidの設定からプリンターをペアリングしてください。"
+              : "USBデバイスが見つかりません",
+        });
+      }
     } catch (error) {
       setMessage({
         type: "error",
@@ -263,7 +329,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [refreshDevices, platform]);
 
   useEffect(() => {
     loadDevices();
@@ -271,36 +337,81 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
 
   const handleSave = useCallback(async () => {
     if (!selectedDevice) return;
+    setIsConnecting(true);
+    setMessage(null);
+
     try {
-      await setPrinterConfig(selectedDevice);
-      setPaperWidth(selectedPaperWidth);
-      setMessage({
-        type: "success",
-        text: "プリンター設定を保存しました",
-      });
+      if (isUsbDevice(selectedDevice)) {
+        selectUsbPrinter(selectedDevice);
+        setPaperWidth(selectedPaperWidth);
+        setMessage({
+          type: "success",
+          text: "プリンター設定を保存しました",
+        });
+      } else if (isBluetoothDevice(selectedDevice)) {
+        const result = await selectBluetoothPrinter(selectedDevice);
+        if (result.success) {
+          setPaperWidth(selectedPaperWidth);
+          setMessage({
+            type: "success",
+            text: "Bluetoothプリンターに接続しました",
+          });
+        } else {
+          setMessage({
+            type: "error",
+            text: `接続エラー: ${result.error}`,
+          });
+        }
+      }
     } catch (error) {
       setMessage({
         type: "error",
         text: `保存エラー: ${error}`,
       });
+    } finally {
+      setIsConnecting(false);
     }
-  }, [selectedDevice, setPrinterConfig, selectedPaperWidth, setPaperWidth]);
+  }, [
+    selectedDevice,
+    selectUsbPrinter,
+    selectBluetoothPrinter,
+    selectedPaperWidth,
+    setPaperWidth,
+  ]);
+
+  const handleDisconnect = useCallback(async () => {
+    await disconnect();
+    setMessage({
+      type: "success",
+      text: "プリンターを切断しました",
+    });
+  }, [disconnect]);
+
+  const handleClear = useCallback(() => {
+    clearPrinterConfig();
+    setSelectedDevice(null);
+    setMessage({
+      type: "success",
+      text: "プリンター設定をクリアしました",
+    });
+  }, [clearPrinterConfig]);
 
   const handleTestPrint = useCallback(async () => {
-    if (!selectedDevice) return;
     setIsPrinting(true);
     setMessage(null);
     try {
-      await invoke("welcome_print", {
-        vendorId: selectedDevice.vendor_id,
-        deviceId: selectedDevice.device_id,
-        id: terminalId || "TERMINAL-TEST",
-        paperWidth: selectedPaperWidth,
-      });
-      setMessage({
-        type: "success",
-        text: "テスト印刷が完了しました",
-      });
+      const result = await testPrint();
+      if (result.success) {
+        setMessage({
+          type: "success",
+          text: "テスト印刷が完了しました",
+        });
+      } else {
+        setMessage({
+          type: "error",
+          text: `印刷エラー: ${result.error}`,
+        });
+      }
     } catch (error) {
       setMessage({
         type: "error",
@@ -309,7 +420,63 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
     } finally {
       setIsPrinting(false);
     }
-  }, [selectedDevice, terminalId, selectedPaperWidth]);
+  }, [testPrint]);
+
+  const getDeviceKey = (device: Device): string => {
+    if (isUsbDevice(device)) {
+      return `usb-${device.vendor_id}-${device.device_id}`;
+    }
+    return `bt-${device.address}`;
+  };
+
+  const isDeviceSelected = (device: Device): boolean => {
+    if (!selectedDevice) return false;
+    if (isUsbDevice(device) && isUsbDevice(selectedDevice)) {
+      return (
+        device.vendor_id === selectedDevice.vendor_id &&
+        device.device_id === selectedDevice.device_id
+      );
+    }
+    if (isBluetoothDevice(device) && isBluetoothDevice(selectedDevice)) {
+      return device.address === selectedDevice.address;
+    }
+    return false;
+  };
+
+  const renderCurrentDevice = () => {
+    if (!printerConfig) return null;
+
+    if (printerConfig.type === "usb") {
+      return (
+        <div className={styles.currentDevice}>
+          <div className={styles.currentDeviceLabel}>現在の設定 (USB)</div>
+          <div className={styles.currentDeviceValue}>
+            {printerConfig.name || "不明なデバイス"} (
+            {printerConfig.vendor_id.toString(16).padStart(4, "0")}:
+            {printerConfig.device_id.toString(16).padStart(4, "0")})
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.currentDevice}>
+        <div className={styles.currentDeviceLabel}>現在の設定 (Bluetooth)</div>
+        <div className={styles.currentDeviceValue}>
+          {printerConfig.name || "不明なデバイス"}
+        </div>
+        <div className={styles.deviceId}>{printerConfig.address}</div>
+        <div className={styles.connectionStatus}>
+          <span
+            className={`${styles.statusDot} ${isConnected ? styles.statusConnected : styles.statusDisconnected}`}
+          />
+          <span style={{ fontSize: "12px", color: "#666" }}>
+            {isConnected ? "接続中" : "未接続"}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: モーダルオーバーレイの背景クリックで閉じる標準的なパターン
@@ -327,7 +494,14 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
         role="dialog"
       >
         <div className={styles.header}>
-          <h2 className={styles.title}>設定</h2>
+          <h2 className={styles.title}>
+            設定
+            <span
+              className={`${styles.platformBadge} ${platform === "android" ? styles.platformAndroid : styles.platformDesktop}`}
+            >
+              {platform === "android" ? "Android" : "Desktop"}
+            </span>
+          </h2>
           <button
             type="button"
             className={styles.closeButton}
@@ -338,18 +512,12 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
         </div>
 
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>レシートプリンター</h3>
+          <h3 className={styles.sectionTitle}>
+            レシートプリンター
+            {platform === "android" ? " (Bluetooth)" : " (USB)"}
+          </h3>
 
-          {printerConfig && (
-            <div className={styles.currentDevice}>
-              <div className={styles.currentDeviceLabel}>現在の設定</div>
-              <div className={styles.currentDeviceValue}>
-                {printerConfig.name || "不明なデバイス"} (
-                {printerConfig.vendor_id.toString(16).padStart(4, "0")}:
-                {printerConfig.device_id.toString(16).padStart(4, "0")})
-              </div>
-            </div>
-          )}
+          {renderCurrentDevice()}
 
           <div
             style={{
@@ -360,7 +528,9 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
             }}
           >
             <span style={{ fontSize: "14px", color: "#666" }}>
-              USBデバイス一覧
+              {platform === "android"
+                ? "ペアリング済みデバイス"
+                : "USBデバイス一覧"}
             </span>
             <button
               type="button"
@@ -377,18 +547,18 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
               <div className={styles.emptyState}>
                 {isLoading
                   ? "デバイスを検索中..."
-                  : "USBデバイスが見つかりません"}
+                  : platform === "android"
+                    ? "Bluetoothデバイスが見つかりません"
+                    : "USBデバイスが見つかりません"}
               </div>
             ) : (
               devices.map((device) => {
-                const isSelected =
-                  selectedDevice?.vendor_id === device.vendor_id &&
-                  selectedDevice?.device_id === device.device_id;
+                const selected = isDeviceSelected(device);
                 return (
                   <button
                     type="button"
-                    key={`${device.vendor_id}-${device.device_id}`}
-                    className={`${styles.deviceItem} ${isSelected ? styles.deviceItemSelected : ""}`}
+                    key={getDeviceKey(device)}
+                    className={`${styles.deviceItem} ${selected ? styles.deviceItemSelected : ""}`}
                     onClick={() => setSelectedDevice(device)}
                   >
                     <div className={styles.deviceInfo}>
@@ -396,11 +566,12 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
                         {device.name || "不明なデバイス"}
                       </span>
                       <span className={styles.deviceId}>
-                        VID: {device.vendor_id.toString(16).padStart(4, "0")} /
-                        PID: {device.device_id.toString(16).padStart(4, "0")}
+                        {isUsbDevice(device)
+                          ? `VID: ${device.vendor_id.toString(16).padStart(4, "0")} / PID: ${device.device_id.toString(16).padStart(4, "0")}`
+                          : device.address}
                       </span>
                     </div>
-                    {isSelected && (
+                    {selected && (
                       <span className={styles.selectedBadge}>選択中</span>
                     )}
                   </button>
@@ -414,19 +585,45 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
               type="button"
               className={`${styles.button} ${styles.primaryButton}`}
               onClick={handleSave}
-              disabled={!selectedDevice}
+              disabled={!selectedDevice || isConnecting}
             >
-              保存
+              {isConnecting
+                ? "接続中..."
+                : platform === "android"
+                  ? "接続"
+                  : "保存"}
             </button>
             <button
               type="button"
               className={`${styles.button} ${styles.secondaryButton}`}
               onClick={handleTestPrint}
-              disabled={!selectedDevice || isPrinting}
+              disabled={!printerConfig || isPrinting || !isConnected}
             >
               {isPrinting ? "印刷中..." : "テスト印刷"}
             </button>
+            {platform === "android" && isConnected && (
+              <button
+                type="button"
+                className={`${styles.button} ${styles.dangerButton}`}
+                onClick={handleDisconnect}
+              >
+                切断
+              </button>
+            )}
           </div>
+
+          {printerConfig && (
+            <div style={{ marginTop: "12px" }}>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.dangerButton}`}
+                onClick={handleClear}
+                style={{ width: "100%" }}
+              >
+                プリンター設定をクリア
+              </button>
+            </div>
+          )}
 
           {message && (
             <div
@@ -456,6 +653,16 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
               <div className={styles.paperWidthLabel}>80mm</div>
               <div className={styles.paperWidthDesc}>48文字/行</div>
             </button>
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>端末情報</h3>
+          <div className={styles.currentDevice}>
+            <div className={styles.currentDeviceLabel}>ターミナルID</div>
+            <div className={styles.currentDeviceValue}>
+              {terminalId || "未設定"}
+            </div>
           </div>
         </div>
       </div>
