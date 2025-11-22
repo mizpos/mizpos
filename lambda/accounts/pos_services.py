@@ -620,12 +620,14 @@ def save_offline_sale_to_db(sale_data: dict) -> dict:
             if "product" in item:
                 unit_price = item["product"].get("price", 0)
 
-        sale_items.append({
-            "product_id": product_id,
-            "quantity": quantity,
-            "unit_price": Decimal(str(unit_price)),
-            "subtotal": Decimal(str(unit_price * quantity)),
-        })
+        sale_items.append(
+            {
+                "product_id": product_id,
+                "quantity": quantity,
+                "unit_price": Decimal(str(unit_price)),
+                "subtotal": Decimal(str(unit_price * quantity)),
+            }
+        )
 
     # 販売レコードを作成
     sale_item = {

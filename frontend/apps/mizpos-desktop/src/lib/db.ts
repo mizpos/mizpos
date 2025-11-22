@@ -67,7 +67,9 @@ export const db = new PosDatabase();
  * 古い形式（name, stock_quantity）から新しい形式（title, quantity）への変換
  * 後方互換性のため、両方の形式をサポート
  */
-function normalizeProduct(product: Product & { name?: string; stock_quantity?: number }): Product {
+function normalizeProduct(
+  product: Product & { name?: string; stock_quantity?: number },
+): Product {
   return {
     ...product,
     title: product.title || product.name || "",
@@ -94,18 +96,20 @@ export async function syncProducts(products: Product[]): Promise<void> {
 export async function searchProducts(query: string): Promise<Product[]> {
   const lowerQuery = query.toLowerCase();
   const results = await db.products
-    .filter(
-      (product) => {
-        const normalized = normalizeProduct(product as Product & { name?: string; stock_quantity?: number });
-        return (
-          normalized.title?.toLowerCase().includes(lowerQuery) ||
-          (product.barcode?.includes(query) ?? false) ||
-          (product.isdn?.includes(query) ?? false)
-        );
-      },
-    )
+    .filter((product) => {
+      const normalized = normalizeProduct(
+        product as Product & { name?: string; stock_quantity?: number },
+      );
+      return (
+        normalized.title?.toLowerCase().includes(lowerQuery) ||
+        (product.barcode?.includes(query) ?? false) ||
+        (product.isdn?.includes(query) ?? false)
+      );
+    })
     .toArray();
-  return results.map((p) => normalizeProduct(p as Product & { name?: string; stock_quantity?: number }));
+  return results.map((p) =>
+    normalizeProduct(p as Product & { name?: string; stock_quantity?: number }),
+  );
 }
 
 /**
@@ -116,7 +120,9 @@ export async function findProductByBarcode(
 ): Promise<Product | undefined> {
   const product = await db.products.where("barcode").equals(barcode).first();
   if (!product) return undefined;
-  return normalizeProduct(product as Product & { name?: string; stock_quantity?: number });
+  return normalizeProduct(
+    product as Product & { name?: string; stock_quantity?: number },
+  );
 }
 
 /**
@@ -125,8 +131,13 @@ export async function findProductByBarcode(
 export async function getProductsByCategory(
   category: string,
 ): Promise<Product[]> {
-  const products = await db.products.where("category").equals(category).toArray();
-  return products.map((p) => normalizeProduct(p as Product & { name?: string; stock_quantity?: number }));
+  const products = await db.products
+    .where("category")
+    .equals(category)
+    .toArray();
+  return products.map((p) =>
+    normalizeProduct(p as Product & { name?: string; stock_quantity?: number }),
+  );
 }
 
 /**
@@ -134,7 +145,9 @@ export async function getProductsByCategory(
  */
 export async function getAllProducts(): Promise<Product[]> {
   const products = await db.products.toArray();
-  return products.map((p) => normalizeProduct(p as Product & { name?: string; stock_quantity?: number }));
+  return products.map((p) =>
+    normalizeProduct(p as Product & { name?: string; stock_quantity?: number }),
+  );
 }
 
 /**
@@ -145,7 +158,9 @@ export async function getProductById(
 ): Promise<Product | undefined> {
   const product = await db.products.get(productId);
   if (!product) return undefined;
-  return normalizeProduct(product as Product & { name?: string; stock_quantity?: number });
+  return normalizeProduct(
+    product as Product & { name?: string; stock_quantity?: number },
+  );
 }
 
 // ==========================================

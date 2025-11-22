@@ -115,11 +115,17 @@ export const useNetworkStore = create<NetworkState>()((set, get) => ({
   syncPendingSales: async () => {
     const { syncStatus, status } = get();
 
-    console.log("[Sync] Starting sync check...", { status, isSyncing: syncStatus.isSyncing });
+    console.log("[Sync] Starting sync check...", {
+      status,
+      isSyncing: syncStatus.isSyncing,
+    });
 
     // 既に同期中、またはオフラインならスキップ
     if (syncStatus.isSyncing || status !== "online") {
-      console.log("[Sync] Skipping sync:", syncStatus.isSyncing ? "already syncing" : "offline");
+      console.log(
+        "[Sync] Skipping sync:",
+        syncStatus.isSyncing ? "already syncing" : "offline",
+      );
       return;
     }
 
@@ -129,12 +135,23 @@ export const useNetworkStore = create<NetworkState>()((set, get) => ({
 
     try {
       // デバッグ: 全キューアイテムを確認
-      const allQueueItems = await import("../lib/db").then(m => m.db.offlineQueue.toArray());
+      const allQueueItems = await import("../lib/db").then((m) =>
+        m.db.offlineQueue.toArray(),
+      );
       console.log("[Sync] All queue items:", allQueueItems);
-      console.log("[Sync] Queue statuses:", allQueueItems.map(item => ({ queue_id: item.queue_id, sync_status: item.sync_status })));
+      console.log(
+        "[Sync] Queue statuses:",
+        allQueueItems.map((item) => ({
+          queue_id: item.queue_id,
+          sync_status: item.sync_status,
+        })),
+      );
 
       const pendingItems = await getPendingOfflineQueue();
-      console.log("[Sync] Pending items (status=pending):", pendingItems.length);
+      console.log(
+        "[Sync] Pending items (status=pending):",
+        pendingItems.length,
+      );
 
       if (pendingItems.length === 0) {
         set({
@@ -155,7 +172,10 @@ export const useNetworkStore = create<NetworkState>()((set, get) => ({
         created_at: item.created_at,
         sale_data: item.sale_data,
       }));
-      console.log("[Sync] Sending to server:", JSON.stringify(salesData, null, 2));
+      console.log(
+        "[Sync] Sending to server:",
+        JSON.stringify(salesData, null, 2),
+      );
 
       // サーバーに同期
       const result = await syncOfflineSales(terminalId, salesData);

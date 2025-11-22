@@ -20,7 +20,9 @@ import "./POSScreen.css";
 export function POSScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState("商品を読み込んでいます...");
+  const [loadingMessage, setLoadingMessage] = useState(
+    "商品を読み込んでいます...",
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [showCheckout, setShowCheckout] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -49,7 +51,9 @@ export function POSScreen() {
             // 画像をバックグラウンドでキャッシュ
             setLoadingMessage("商品画像をキャッシュ中...");
             await cacheProductImages(serverProducts, (current, total) => {
-              setLoadingMessage(`商品画像をキャッシュ中... (${current}/${total})`);
+              setLoadingMessage(
+                `商品画像をキャッシュ中... (${current}/${total})`,
+              );
             });
           }
         } catch (error) {
