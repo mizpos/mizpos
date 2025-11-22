@@ -3,6 +3,7 @@
  * タッチパネルで選択しやすい商品カード一覧
  */
 
+import { useCachedImage } from "../hooks/useCachedImage";
 import { formatPrice, useCartStore } from "../stores/cart";
 import type { Product } from "../types";
 import "./ProductGrid.css";
@@ -34,6 +35,7 @@ interface ProductCardProps {
 
 function ProductCard({ product, onSelect }: ProductCardProps) {
   const isOutOfStock = product.quantity <= 0;
+  const cachedImageUrl = useCachedImage(product.image_url);
 
   return (
     <button
@@ -42,9 +44,9 @@ function ProductCard({ product, onSelect }: ProductCardProps) {
       onClick={onSelect}
       disabled={isOutOfStock}
     >
-      {product.image_url ? (
+      {cachedImageUrl ? (
         <img
-          src={product.image_url}
+          src={cachedImageUrl}
           alt={product.title}
           className="product-image"
           loading="lazy"
