@@ -202,3 +202,40 @@ resource "aws_s3_bucket_policy" "cdn_assets" {
     ]
   })
 }
+
+# Desktop App Deploy Policy (GitHub Actions用)
+resource "aws_iam_policy" "desktop_app_deploy" {
+  name        = "${var.project_name}-${var.environment}-desktop-app-deploy"
+  description = "Policy for deploying desktop app binaries to CDN S3 and invalidating CloudFront cache"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "S3Access"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:CopyObject"
+        ]
+        Resource = [
+          aws_s3_bucket.cdn_assets.arn,
+          "${aws_s3_bucket.cdn_assets.arn}/*"
+        ]
+      },
+      {
+        Sid    = "CloudFrontInvalidation"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation",
+          "cloudfront:ListInvalidations"
+        ]
+        Resource = [aws_cloudfront_distribution.cdn_assets.arn]
+      }
+    ]
+  })
+}

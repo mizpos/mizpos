@@ -1,0 +1,316 @@
+name: build-android-dev
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/apps/mizpos-desktop/**"
+      - "frontend/packages/**"
+      - ".github/workflows/build-android-dev.yml"
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_DEV }}
+  TF_STATE_BUCKET: mizphses-opensource-mizpos-dev
+  TF_STATE_KEY: mizpos/dev/terraform.tfstate
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10"
+  JAVA_VERSION: "17"
+  ANDROID_SIGNING_SECRET: mizpos/android-signing
+  CDN_BUCKET: dev-mizpos-cdn-assets
+  CDN_DISTRIBUTION_ID: E195S6TD7VY00
+  CDN_DOMAIN: https://d1o5hbbhoeegz0.cloudfront.net
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    name: Build Android App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;27.1.12297006"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.1.12297006" >> $GITHUB_ENV
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/apps/mizpos-desktop/src-tauri -> target
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate API Types
+        working-directory: frontend
+        run: pnpm generate-api-types
+
+      - name: Generate Styled System
+        working-directory: frontend
+        run: pnpm generate-styled-system
+
+      - name: Initialize Android project
+        working-directory: frontend/apps/mizpos-desktop
+        run: pnpm tauri android init
+
+      - name: Build Android App (unsigned)
+        working-directory: frontend/apps/mizpos-desktop
+        run: pnpm tauri android build --target aarch64
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get signing key from Secrets Manager
+        id: signing
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id ${{ env.ANDROID_SIGNING_SECRET }} \
+            --query SecretString \
+            --output text)
+
+          # Extract values
+          KEYSTORE_BASE64=$(echo $SECRET_JSON | jq -r '.keystore_base64')
+          KEYSTORE_PASSWORD=$(echo $SECRET_JSON | jq -r '.keystore_password')
+          KEY_ALIAS=$(echo $SECRET_JSON | jq -r '.key_alias')
+          KEY_PASSWORD=$(echo $SECRET_JSON | jq -r '.key_password')
+
+          # Decode keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > /tmp/release.keystore
+
+          # Set outputs (masked)
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          echo "keystore_path=/tmp/release.keystore" >> $GITHUB_OUTPUT
+          echo "keystore_password=$KEYSTORE_PASSWORD" >> $GITHUB_OUTPUT
+          echo "key_alias=$KEY_ALIAS" >> $GITHUB_OUTPUT
+          echo "key_password=$KEY_PASSWORD" >> $GITHUB_OUTPUT
+
+      - name: Sign APK
+        env:
+          KEYSTORE_PATH: ${{ steps.signing.outputs.keystore_path }}
+          KEYSTORE_PASSWORD: ${{ steps.signing.outputs.keystore_password }}
+          KEY_ALIAS: ${{ steps.signing.outputs.key_alias }}
+          KEY_PASSWORD: ${{ steps.signing.outputs.key_password }}
+        run: |
+          # Find unsigned APK
+          UNSIGNED_APK=$(find frontend/apps/mizpos-desktop/src-tauri/gen/android \
+            -name "*-unsigned.apk" -type f | head -1)
+
+          if [ -z "$UNSIGNED_APK" ]; then
+            echo "Error: Unsigned APK not found"
+            exit 1
+          fi
+
+          echo "Found unsigned APK: $UNSIGNED_APK"
+
+          # Get build tools path
+          BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)"
+
+          # Align APK
+          ALIGNED_APK="${UNSIGNED_APK%.apk}-aligned.apk"
+          $BUILD_TOOLS_DIR/zipalign -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+
+          # Sign APK
+          SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
+          $BUILD_TOOLS_DIR/apksigner sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            --out "$SIGNED_APK" \
+            "$ALIGNED_APK"
+
+          # Verify signature
+          $BUILD_TOOLS_DIR/apksigner verify --verbose "$SIGNED_APK"
+
+          echo "signed_apk=$SIGNED_APK" >> $GITHUB_OUTPUT
+
+          # Copy to known location
+          mkdir -p artifacts
+          cp "$SIGNED_APK" artifacts/mizpos-desktop-signed.apk
+
+      - name: Sign AAB
+        env:
+          KEYSTORE_PATH: ${{ steps.signing.outputs.keystore_path }}
+          KEYSTORE_PASSWORD: ${{ steps.signing.outputs.keystore_password }}
+          KEY_ALIAS: ${{ steps.signing.outputs.key_alias }}
+          KEY_PASSWORD: ${{ steps.signing.outputs.key_password }}
+        run: |
+          # Find AAB
+          AAB_FILE=$(find frontend/apps/mizpos-desktop/src-tauri/gen/android \
+            -name "*.aab" -type f | head -1)
+
+          if [ -z "$AAB_FILE" ]; then
+            echo "Warning: AAB not found, skipping"
+            exit 0
+          fi
+
+          echo "Found AAB: $AAB_FILE"
+
+          # Sign AAB with jarsigner
+          SIGNED_AAB="artifacts/mizpos-desktop-signed.aab"
+          cp "$AAB_FILE" "$SIGNED_AAB"
+
+          jarsigner -verbose \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            "$SIGNED_AAB" \
+            "$KEY_ALIAS"
+
+          # Verify
+          jarsigner -verify -verbose "$SIGNED_AAB"
+
+      - name: Cleanup signing key
+        if: always()
+        run: rm -f /tmp/release.keystore
+
+      - name: Get app version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' frontend/apps/mizpos-desktop/src-tauri/tauri.conf.json)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "App version: ${VERSION}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ steps.version.outputs.version }}
+          path: artifacts/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to CDN
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get app version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' frontend/apps/mizpos-desktop/src-tauri/tauri.conf.json)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-${{ steps.version.outputs.version }}
+          path: artifacts/android
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Prepare and upload artifacts
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TIMESTAMP: ${{ steps.version.outputs.timestamp }}
+          S3_BUCKET: ${{ env.CDN_BUCKET }}
+        run: |
+          mkdir -p upload/app
+
+          # Copy Android artifacts
+          echo "=== Android Artifacts ==="
+
+          # APK
+          if [ -f artifacts/android/mizpos-desktop-signed.apk ]; then
+            versioned_apk="mizpos-desktop_${VERSION}_${TIMESTAMP}_android.apk"
+            cp artifacts/android/mizpos-desktop-signed.apk "upload/app/${versioned_apk}"
+            cp artifacts/android/mizpos-desktop-signed.apk "upload/app/android-latest.apk"
+            echo "Copied: ${versioned_apk}"
+          fi
+
+          # AAB
+          if [ -f artifacts/android/mizpos-desktop-signed.aab ]; then
+            versioned_aab="mizpos-desktop_${VERSION}_${TIMESTAMP}_android.aab"
+            cp artifacts/android/mizpos-desktop-signed.aab "upload/app/${versioned_aab}"
+            cp artifacts/android/mizpos-desktop-signed.aab "upload/app/android-latest.aab"
+            echo "Copied: ${versioned_aab}"
+          fi
+
+          # List files
+          echo "=== Files to upload ==="
+          ls -la upload/app/
+
+          # Upload to S3
+          aws s3 sync upload/ s3://${S3_BUCKET}/ \
+            --cache-control "public, max-age=3600" \
+            --metadata "version=${VERSION},timestamp=${TIMESTAMP}"
+
+          # Upload latest with shorter cache
+          for file in upload/app/*-latest.*; do
+            if [ -f "$file" ]; then
+              aws s3 cp "$file" "s3://${S3_BUCKET}/app/$(basename $file)" \
+                --cache-control "public, max-age=60, must-revalidate" \
+                --metadata "version=${VERSION},timestamp=${TIMESTAMP}"
+            fi
+          done
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CDN_DISTRIBUTION_ID }} \
+            --paths "/app/*"
+
+      - name: Deployment Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "## Android App Deployment Successful (Dev)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Version: ${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Download Links" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Android" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest APK: ${{ env.CDN_DOMAIN }}/app/android-latest.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest AAB: ${{ env.CDN_DOMAIN }}/app/android-latest.aab" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **S3 Bucket**: ${{ env.CDN_BUCKET }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudFront Distribution**: ${{ env.CDN_DISTRIBUTION_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

@@ -171,9 +171,30 @@ const styles = {
     minWidth: "60px",
     textAlign: "right",
   }),
+  settingsButton: css({
+    padding: "6px 12px",
+    fontSize: "12px",
+    fontWeight: 500,
+    color: "white",
+    background: "rgba(255, 255, 255, 0.2)",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    _hover: {
+      background: "rgba(255, 255, 255, 0.3)",
+    },
+  }),
 };
 
-export function StatusBar() {
+interface StatusBarProps {
+  onOpenSettings?: () => void;
+}
+
+export function StatusBar({ onOpenSettings }: StatusBarProps) {
   const { session, logout } = useAuthStore();
   const { status, syncStatus, lastOnlineTime, queueWarning } =
     useNetworkStore();
@@ -314,6 +335,17 @@ export function StatusBar() {
               </button>
             )}
           </div>
+        )}
+
+        {/* 設定ボタン */}
+        {onOpenSettings && (
+          <button
+            type="button"
+            className={styles.settingsButton}
+            onClick={onOpenSettings}
+          >
+            設定
+          </button>
         )}
 
         {/* 現在時刻 */}
