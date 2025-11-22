@@ -29,6 +29,7 @@ interface Sale {
   subtotal: number;
   discount: number;
   total: number;
+  total_amount?: number; // POS販売用
   payment_method: "stripe_online" | "stripe_terminal" | "cash";
   status: "pending" | "completed" | "shipped" | "cancelled";
   stripe_payment_status?: string;
@@ -52,6 +53,10 @@ interface Sale {
   shipped_at?: string;
   created_at: string;
   completed_at?: string;
+  // POS販売用フィールド
+  employee_number?: string;
+  terminal_id?: string;
+  source?: "pos" | "pos_offline" | "online";
 }
 
 function SalesPage() {
@@ -287,7 +292,16 @@ function SalesPage() {
     {
       key: "total",
       header: "合計金額",
-      render: (item: Sale) => `¥${(item.total ?? 0).toLocaleString()}`,
+      render: (item: Sale) => `¥${(item.total ?? item.total_amount ?? 0).toLocaleString()}`,
+    },
+    {
+      key: "employee_number",
+      header: "担当者",
+      render: (item: Sale) => (
+        <span className={css({ fontSize: "xs", fontFamily: "monospace" })}>
+          {item.employee_number || "-"}
+        </span>
+      ),
     },
     {
       key: "payment_method",
@@ -322,7 +336,7 @@ function SalesPage() {
 
   const totalRevenue = filteredSales
     .filter((s) => s.status === "completed")
-    .reduce((sum, s) => sum + (s.total ?? 0), 0);
+    .reduce((sum, s) => sum + (s.total ?? s.total_amount ?? 0), 0);
 
   const totalOrders = filteredSales.filter(
     (s) => s.status === "completed",
@@ -631,6 +645,66 @@ function SalesPage() {
                   <p className={css({ fontSize: "sm" })}>
                     {selectedSale.customer_email}
                   </p>
+                </div>
+              )}
+              {/* POS販売担当者情報 */}
+              {selectedSale.employee_number && (
+                <div>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginBottom: "1",
+                    })}
+                  >
+                    販売担当者
+                  </p>
+                  <p className={css({ fontSize: "sm", fontFamily: "monospace" })}>
+                    {selectedSale.employee_number}
+                  </p>
+                </div>
+              )}
+              {selectedSale.terminal_id && (
+                <div>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginBottom: "1",
+                    })}
+                  >
+                    端末ID
+                  </p>
+                  <p className={css({ fontSize: "xs", fontFamily: "monospace" })}>
+                    {selectedSale.terminal_id}
+                  </p>
+                </div>
+              )}
+              {selectedSale.source && (
+                <div>
+                  <p
+                    className={css({
+                      fontSize: "xs",
+                      color: "gray.500",
+                      marginBottom: "1",
+                    })}
+                  >
+                    販売チャネル
+                  </p>
+                  <span
+                    className={css({
+                      display: "inline-flex",
+                      paddingX: "2",
+                      paddingY: "0.5",
+                      borderRadius: "full",
+                      fontSize: "xs",
+                      fontWeight: "medium",
+                      backgroundColor: selectedSale.source === "online" ? "blue.100" : "green.100",
+                      color: selectedSale.source === "online" ? "blue.800" : "green.800",
+                    })}
+                  >
+                    {selectedSale.source === "online" ? "オンライン" : selectedSale.source === "pos" ? "POS (リアルタイム)" : "POS (オフライン同期)"}
+                  </span>
                 </div>
               )}
             </div>
