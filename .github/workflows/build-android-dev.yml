@@ -18,6 +18,9 @@ env:
   PNPM_VERSION: "10"
   JAVA_VERSION: "17"
   ANDROID_SIGNING_SECRET: mizpos/android-signing
+  CDN_BUCKET: dev-mizpos-cdn-assets
+  CDN_DISTRIBUTION_ID: E195S6TD7VY00
+  CDN_DOMAIN: https://d1o5hbbhoeegz0.cloudfront.net
 
 permissions:
   id-token: write
@@ -242,26 +245,11 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get Infrastructure Values from Terraform State
-        id: tf-outputs
-        run: |
-          CDN_BUCKET=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
-            jq -r ".outputs.cdn_bucket_name.value")
-          echo "cdn_bucket=${CDN_BUCKET}" >> $GITHUB_OUTPUT
-
-          CDN_DIST_ID=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
-            jq -r ".outputs.cdn_cloudfront_distribution_id.value")
-          echo "cdn_distribution_id=${CDN_DIST_ID}" >> $GITHUB_OUTPUT
-
-          CDN_DOMAIN=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
-            jq -r ".outputs.cdn_domain.value")
-          echo "cdn_domain=${CDN_DOMAIN}" >> $GITHUB_OUTPUT
-
       - name: Prepare and upload artifacts
         env:
           VERSION: ${{ steps.version.outputs.version }}
           TIMESTAMP: ${{ steps.version.outputs.timestamp }}
-          S3_BUCKET: ${{ steps.tf-outputs.outputs.cdn_bucket }}
+          S3_BUCKET: ${{ env.CDN_BUCKET }}
         run: |
           mkdir -p upload/app
 
@@ -305,13 +293,12 @@ jobs:
       - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ steps.tf-outputs.outputs.cdn_distribution_id }} \
+            --distribution-id ${{ env.CDN_DISTRIBUTION_ID }} \
             --paths "/app/*"
 
       - name: Deployment Summary
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          CDN_DOMAIN: ${{ steps.tf-outputs.outputs.cdn_domain }}
         run: |
           echo "## Android App Deployment Successful (Dev)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -320,10 +307,10 @@ jobs:
           echo "### Download Links" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Android" >> $GITHUB_STEP_SUMMARY
-          echo "- Latest APK: ${CDN_DOMAIN}/app/android-latest.apk" >> $GITHUB_STEP_SUMMARY
-          echo "- Latest AAB: ${CDN_DOMAIN}/app/android-latest.aab" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest APK: ${{ env.CDN_DOMAIN }}/app/android-latest.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest AAB: ${{ env.CDN_DOMAIN }}/app/android-latest.aab" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **S3 Bucket**: ${{ steps.tf-outputs.outputs.cdn_bucket }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cdn_distribution_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **S3 Bucket**: ${{ env.CDN_BUCKET }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudFront Distribution**: ${{ env.CDN_DISTRIBUTION_ID }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
