@@ -50,6 +50,15 @@ export function StatusBar() {
             <span className="sync-icon">⏳</span>
             <span>未同期: {syncStatus.pendingCount}件</span>
             {syncStatus.isSyncing && <span className="syncing">同期中...</span>}
+            {!syncStatus.isSyncing && status === "online" && (
+              <button
+                type="button"
+                className="sync-button"
+                onClick={() => useNetworkStore.getState().syncPendingSales()}
+              >
+                今すぐ同期
+              </button>
+            )}
           </div>
         )}
 

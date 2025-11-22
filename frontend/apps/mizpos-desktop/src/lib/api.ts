@@ -12,8 +12,8 @@ const API_BASE_URL =
 const ACCOUNTS_API = `${API_BASE_URL}/accounts`;
 const STOCK_API = `${API_BASE_URL}/stock`;
 
-// リクエストタイムアウト（ミリ秒）
-const REQUEST_TIMEOUT = 10000;
+// リクエストタイムアウト（ミリ秒）- Lambda cold start考慮で30秒に延長
+const REQUEST_TIMEOUT = 30000;
 
 /**
  * タイムアウト付きfetch
@@ -32,6 +32,11 @@ async function fetchWithTimeout(
       signal: controller.signal,
     });
     return response;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Request timeout after ${timeout}ms: ${url}`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }

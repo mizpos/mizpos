@@ -338,10 +338,10 @@ export async function clearAllData(): Promise<void> {
 }
 
 /**
- * オフラインキューのサイズを確認
+ * 未同期（pending）のオフラインキューのサイズを確認
  */
 export async function getOfflineQueueSize(): Promise<number> {
-  return db.offlineQueue.count();
+  return db.offlineQueue.where("sync_status").equals("pending").count();
 }
 
 /**

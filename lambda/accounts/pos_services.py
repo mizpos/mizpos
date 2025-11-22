@@ -576,6 +576,85 @@ def mark_offline_sale_failed(queue_id: str, created_at: int, error: str) -> None
     )
 
 
+def save_offline_sale_to_db(sale_data: dict) -> dict:
+    """オフライン販売データをDBに保存
+
+    Args:
+        sale_data: POS端末からの販売データ
+            {
+                sale_id, timestamp, items, total_amount,
+                payment_method, employee_number, event_id, terminal_id
+            }
+
+    Returns:
+        保存された販売レコード
+    """
+    sale_id = sale_data.get("sale_id")
+    if not sale_id:
+        sale_id = str(uuid.uuid4())
+
+    timestamp = sale_data.get("timestamp")
+    if not timestamp:
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # itemsをDynamoDB用に変換
+    sale_items = []
+    for item in sale_data.get("items", []):
+        # product情報が含まれている場合はproduct_idを抽出
+        product_id = item.get("product_id")
+        if not product_id and "product" in item:
+            product_id = item["product"].get("product_id")
+
+        quantity = item.get("quantity", 1)
+
+        # unit_priceまたはsubtotal/quantityから計算
+        unit_price = item.get("unit_price")
+        if unit_price is None:
+            subtotal = item.get("subtotal", 0)
+            unit_price = subtotal // quantity if quantity > 0 else 0
+
+        # productオブジェクトから価格を取得
+        if unit_price is None or unit_price == 0:
+            if "product" in item:
+                unit_price = item["product"].get("price", 0)
+
+        sale_items.append({
+            "product_id": product_id,
+            "quantity": quantity,
+            "unit_price": Decimal(str(unit_price)),
+            "subtotal": Decimal(str(unit_price * quantity)),
+        })
+
+    # 販売レコードを作成
+    sale_item = {
+        "sale_id": sale_id,
+        "timestamp": timestamp,
+        "items": sale_items,
+        "total_amount": Decimal(str(sale_data.get("total_amount", 0))),
+        "payment_method": sale_data.get("payment_method", "cash"),
+        "status": "completed",
+        "employee_number": sale_data.get("employee_number", "unknown"),
+        "terminal_id": sale_data.get("terminal_id"),
+        "source": "pos_offline",  # オフライン同期からの販売を識別
+        "created_at": now_iso,
+        "synced_at": now_iso,
+    }
+
+    if sale_data.get("event_id"):
+        sale_item["event_id"] = sale_data["event_id"]
+
+    sales_table.put_item(Item=sale_item)
+
+    return {
+        "sale_id": sale_id,
+        "timestamp": timestamp,
+        "total_amount": int(sale_data.get("total_amount", 0)),
+        "status": "completed",
+    }
+
+
 # ==========================================
 # POS販売記録（リアルタイム）
 # ==========================================

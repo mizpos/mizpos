@@ -51,6 +51,7 @@ from pos_services import (
     mark_offline_sale_synced,
     record_pos_sale,
     refresh_pos_session,
+    save_offline_sale_to_db,
     update_pos_employee,
     verify_pos_session,
 )
@@ -1019,7 +1020,7 @@ async def create_pos_sale(request: Request, sale_request: PosSaleRequest):
 async def sync_offline_sales(request: OfflineSalesSyncRequest):
     """オフライン販売データを同期
 
-    オフラインで記録された販売データをサーバーに送信
+    オフラインで記録された販売データをサーバーに送信し、DBに保存
     """
     try:
         synced_count = 0
@@ -1027,17 +1028,28 @@ async def sync_offline_sales(request: OfflineSalesSyncRequest):
 
         for sale in request.sales:
             try:
-                # TODO: 実際の販売処理をSales Lambdaに委譲
-                # ここでは販売キューのステータス更新のみ
                 queue_id = sale.get("queue_id")
                 created_at = sale.get("created_at")
+                sale_data = sale.get("sale_data", {})
 
+                if not sale_data:
+                    logger.warning(f"Empty sale_data for queue_id: {queue_id}")
+                    continue
+
+                # 販売データをDBに保存
+                logger.info(f"Saving offline sale: {queue_id}")
+                save_offline_sale_to_db(sale_data)
+
+                # キューのステータスを更新
                 if queue_id and created_at:
                     mark_offline_sale_synced(queue_id, created_at)
-                    synced_count += 1
+
+                synced_count += 1
+                logger.info(f"Successfully synced sale: {queue_id}")
 
             except Exception as e:
                 logger.error(f"Error syncing sale {sale.get('queue_id')}: {e}")
+                logger.error(f"Sale data: {sale}")
                 failed_items.append({"queue_id": sale.get("queue_id"), "error": str(e)})
                 if sale.get("queue_id") and sale.get("created_at"):
                     mark_offline_sale_failed(
