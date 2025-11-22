@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "fix": "biome check --write",
     "check-types": "tsc --noEmit",
+    "codegen": "panda codegen",
     "prepare": "panda codegen"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import {
   IconEdit,
   IconGift,
-  IconPercent,
+  IconPercentage,
   IconPlus,
   IconSearch,
   IconTrash,
@@ -192,7 +192,7 @@ function CouponsPage() {
           method: "PUT",
           headers,
           body: JSON.stringify(body),
-        },
+        }
       );
       if (!response.ok) {
         const error = await response.json();
@@ -215,7 +215,7 @@ function CouponsPage() {
         {
           method: "DELETE",
           headers,
-        },
+        }
       );
       if (!response.ok) throw new Error("Failed to delete coupon");
     },
@@ -227,7 +227,7 @@ function CouponsPage() {
   const filteredCoupons = coupons.filter(
     (coupon) =>
       coupon.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      coupon.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      coupon.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatDiscount = (coupon: Coupon) => {
@@ -273,7 +273,7 @@ function CouponsPage() {
           {item.discount_type === "fixed" ? (
             <IconGift size={16} />
           ) : (
-            <IconPercent size={16} />
+            <IconPercentage size={16} />
           )}
           {formatDiscount(item)}
         </span>

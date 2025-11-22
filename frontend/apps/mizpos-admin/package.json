@@ -12,7 +12,8 @@
     "lint": "biome lint",
     "check": "biome check",
     "fix": "biome check --write",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "prepare": "panda codegen"
   },
   "dependencies": {
     "@mizpos/api": "workspace:*",
