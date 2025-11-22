@@ -64,6 +64,10 @@ jobs:
         working-directory: frontend
         run: pnpm generate-api-types
 
+      - name: Build API Package
+        working-directory: frontend
+        run: pnpm --filter @mizpos/api build
+
       - name: Generate Styled System
         if: matrix.app != 'mizpos-website'
         working-directory: frontend
