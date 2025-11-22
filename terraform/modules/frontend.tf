@@ -3,6 +3,12 @@
 
 locals {
   frontend_apps_map = { for app in var.frontend_apps : app.name => app }
+
+  # ドメイン名を計算（subdomainが空の場合はルートドメイン）
+  frontend_domain_names = {
+    for app_key, app in local.frontend_apps_map :
+    app_key => app.subdomain == "" ? var.domain_name : "${app.subdomain}.${var.domain_name}"
+  }
 }
 
 # CloudFront用のACM証明書（us-east-1リージョンが必須）
@@ -10,7 +16,7 @@ resource "aws_acm_certificate" "frontend" {
   for_each = local.frontend_apps_map
   provider = aws.us_east_1
 
-  domain_name       = "${each.value.subdomain}.${var.domain_name}"
+  domain_name       = local.frontend_domain_names[each.key]
   validation_method = "DNS"
 
   lifecycle {
@@ -98,7 +104,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   comment             = "${var.project_name} ${var.environment} ${each.key}"
   price_class         = "PriceClass_200" # アジア・北米・ヨーロッパ
 
-  aliases = var.enable_custom_domain ? ["${each.value.subdomain}.${var.domain_name}"] : []
+  aliases = var.enable_custom_domain ? [local.frontend_domain_names[each.key]] : []
 
   origin {
     domain_name              = aws_s3_bucket.frontend[each.key].bucket_regional_domain_name
@@ -234,7 +240,7 @@ resource "aws_route53_record" "frontend" {
   for_each = var.enable_custom_domain ? local.frontend_apps_map : {}
 
   zone_id = data.aws_route53_zone.main[0].zone_id
-  name    = "${each.value.subdomain}.${var.domain_name}"
+  name    = local.frontend_domain_names[each.key]
   type    = "A"
 
   alias {

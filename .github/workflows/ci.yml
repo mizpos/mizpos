@@ -56,8 +56,8 @@ jobs:
       - name: Build API package (force rebuild after type generation)
         run: pnpm turbo run build --filter=@mizpos/api --force
 
-      - name: Run fix (format & lint)
-        run: pnpm run fix
+      - name: Run check (format & lint)
+        run: pnpm run check
 
       - name: Run TypeScript check
         run: pnpm run check-types

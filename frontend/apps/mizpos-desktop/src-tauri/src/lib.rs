@@ -17,16 +17,12 @@ mod desktop_printer {
 
     #[tauri::command]
     pub async fn get_usb_devices() -> Result<Vec<DeviceInfo>, String> {
-        println!("[get_usb_devices] Starting...");
-
         let device_list = nusb::list_devices()
             .await
             .map_err(|e| {
-                println!("[get_usb_devices] Error listing devices: {}", e);
                 e.to_string()
             })?;
 
-        println!("[get_usb_devices] Got device list, collecting...");
 
         let devices: Vec<DeviceInfo> = device_list
             .map(|device_info| {
@@ -36,7 +32,6 @@ mod desktop_printer {
                     .product_string()
                     .map(|s| s.to_string())
                     .unwrap_or_default();
-                println!("[get_usb_devices] Found: {:04x}:{:04x} - {}", vendor_id, product_id, name);
                 DeviceInfo {
                     vendor_id,
                     device_id: product_id,
@@ -45,7 +40,6 @@ mod desktop_printer {
             })
             .collect();
 
-        println!("[get_usb_devices] Done, found {} devices", devices.len());
         Ok(devices)
     }
 

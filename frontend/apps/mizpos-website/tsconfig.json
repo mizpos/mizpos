@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.vite-react.json",
+  "compilerOptions": {
+    "baseUrl": "."
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "build"]
+}

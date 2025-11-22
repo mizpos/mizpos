@@ -182,6 +182,10 @@ jobs:
         working-directory: frontend
         run: pnpm generate-api-types:prod
 
+      - name: Build API Package
+        working-directory: frontend
+        run: pnpm --filter @mizpos/api build
+
       - name: Generate Styled System
         working-directory: frontend
         run: pnpm generate-styled-system
