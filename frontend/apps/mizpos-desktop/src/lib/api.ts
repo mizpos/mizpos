@@ -150,6 +150,43 @@ export async function posLogout(sessionId: string): Promise<void> {
 // ==========================================
 
 /**
+ * バックエンドAPIのレスポンスをフロントエンドの型に変換
+ */
+interface ApiProductResponse {
+  product_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  stock_quantity: number;
+  category?: string;
+  barcode?: string;
+  isdn?: string;
+  image_url?: string;
+  publisher_id?: string;
+  event_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapApiProductToProduct(apiProduct: ApiProductResponse): Product {
+  return {
+    product_id: apiProduct.product_id,
+    title: apiProduct.name,
+    description: apiProduct.description,
+    price: apiProduct.price,
+    quantity: apiProduct.stock_quantity,
+    category: apiProduct.category,
+    barcode: apiProduct.barcode,
+    isdn: apiProduct.isdn,
+    image_url: apiProduct.image_url,
+    publisher_id: apiProduct.publisher_id,
+    event_id: apiProduct.event_id,
+    created_at: apiProduct.created_at,
+    updated_at: apiProduct.updated_at,
+  };
+}
+
+/**
  * 商品一覧を取得（ログイン時にダウンロード）
  */
 export async function fetchProducts(eventId?: string): Promise<Product[]> {
@@ -168,7 +205,8 @@ export async function fetchProducts(eventId?: string): Promise<Product[]> {
   }
 
   const data = await response.json();
-  return data.products || [];
+  const apiProducts: ApiProductResponse[] = data.products || [];
+  return apiProducts.map(mapApiProductToProduct);
 }
 
 // ==========================================
