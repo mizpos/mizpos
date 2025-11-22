@@ -5,6 +5,7 @@
 
 import {
   IconEdit,
+  IconLink,
   IconPlus,
   IconSearch,
   IconTrash,
@@ -35,9 +36,16 @@ interface PosEmployee {
   display_name: string;
   event_id?: string;
   publisher_id?: string;
+  user_id?: string;
   active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface MizposUser {
+  user_id: string;
+  email: string;
+  display_name: string;
 }
 
 interface CreatePosEmployeeForm {
@@ -46,6 +54,7 @@ interface CreatePosEmployeeForm {
   display_name: string;
   event_id?: string;
   publisher_id?: string;
+  user_id?: string;
 }
 
 interface UpdatePosEmployeeForm {
@@ -54,6 +63,7 @@ interface UpdatePosEmployeeForm {
   event_id?: string;
   publisher_id?: string;
   active?: boolean;
+  user_id?: string;
 }
 
 const initialCreateForm: CreatePosEmployeeForm = {
@@ -62,6 +72,7 @@ const initialCreateForm: CreatePosEmployeeForm = {
   display_name: "",
   event_id: "",
   publisher_id: "",
+  user_id: "",
 };
 
 function PosEmployeesPage() {
@@ -72,6 +83,22 @@ function PosEmployeesPage() {
   const [createFormData, setCreateFormData] =
     useState<CreatePosEmployeeForm>(initialCreateForm);
   const [editFormData, setEditFormData] = useState<UpdatePosEmployeeForm>({});
+
+  // ユーザー一覧取得（紐付け用）
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE}/accounts/users`, {
+        headers,
+      });
+      if (!response.ok) {
+        return [];
+      }
+      const data = await response.json();
+      return (data.users || []) as MizposUser[];
+    },
+  });
 
   // 従業員一覧取得
   const {
@@ -106,6 +133,7 @@ function PosEmployeesPage() {
           display_name: data.display_name,
           event_id: data.event_id || undefined,
           publisher_id: data.publisher_id || undefined,
+          user_id: data.user_id || undefined,
         }),
       });
       if (!response.ok) {
@@ -189,9 +217,43 @@ function PosEmployeesPage() {
     });
   };
 
+  // user_idからユーザー情報を取得するヘルパー
+  const getUserById = (userId: string | undefined) =>
+    users.find((u) => u.user_id === userId);
+
   const columns = [
     { key: "employee_number", header: "従業員番号" },
     { key: "display_name", header: "表示名" },
+    {
+      key: "user_id",
+      header: "紐付けアカウント",
+      render: (item: PosEmployee) => {
+        const linkedUser = getUserById(item.user_id);
+        return linkedUser ? (
+          <span
+            className={css({
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "1",
+              color: "blue.600",
+              fontSize: "sm",
+            })}
+          >
+            <IconLink size={14} />
+            {linkedUser.display_name}
+          </span>
+        ) : (
+          <span
+            className={css({
+              color: "gray.400",
+              fontSize: "sm",
+            })}
+          >
+            -
+          </span>
+        );
+      },
+    },
     {
       key: "active",
       header: "状態",
@@ -243,6 +305,7 @@ function PosEmployeesPage() {
                 display_name: item.display_name,
                 event_id: item.event_id,
                 publisher_id: item.publisher_id,
+                user_id: item.user_id,
                 active: item.active,
               });
             }}
@@ -552,6 +615,38 @@ function PosEmployeesPage() {
                 placeholder="紐付けるサークルID"
               />
             </div>
+            <div>
+              <label htmlFor="create-user-id" className={labelClass}>
+                mizposアカウント紐付け（オプション）
+              </label>
+              <select
+                id="create-user-id"
+                value={createFormData.user_id || ""}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    user_id: e.target.value || undefined,
+                  })
+                }
+                className={inputClass}
+              >
+                <option value="">紐付けなし</option>
+                {users.map((user) => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.display_name} ({user.email})
+                  </option>
+                ))}
+              </select>
+              <p
+                className={css({
+                  fontSize: "xs",
+                  color: "gray.500",
+                  marginTop: "1",
+                })}
+              >
+                mizposの登録ユーザーと紐付けることができます
+              </p>
+            </div>
           </div>
 
           {createMutation.error && (
@@ -699,6 +794,38 @@ function PosEmployeesPage() {
                   })}
                 >
                   無効にすると、この従業員はPOS端末にログインできなくなります
+                </p>
+              </div>
+              <div>
+                <label htmlFor="edit-user-id" className={labelClass}>
+                  mizposアカウント紐付け
+                </label>
+                <select
+                  id="edit-user-id"
+                  value={editFormData.user_id || ""}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      user_id: e.target.value || undefined,
+                    })
+                  }
+                  className={inputClass}
+                >
+                  <option value="">紐付けなし</option>
+                  {users.map((user) => (
+                    <option key={user.user_id} value={user.user_id}>
+                      {user.display_name} ({user.email})
+                    </option>
+                  ))}
+                </select>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginTop: "1",
+                  })}
+                >
+                  mizposの登録ユーザーと紐付けることができます
                 </p>
               </div>
             </div>

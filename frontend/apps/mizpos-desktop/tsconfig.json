@@ -7,8 +7,11 @@
     "useDefineForClassFields": true,
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "styled-system/*": ["./styled-system/*"]
+    }
   },
-  "include": ["src"],
+  "include": ["src", "styled-system"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

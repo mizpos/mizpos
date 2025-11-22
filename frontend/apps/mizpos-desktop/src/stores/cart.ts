@@ -3,28 +3,33 @@
  */
 
 import { create } from "zustand";
-import { recordSale } from "../lib/api";
+import { applyCoupon as applyCouponApi, recordSale } from "../lib/api";
 import { addSale, addToOfflineQueue, getTerminalId } from "../lib/db";
-import type { CartItem, Product, SaleRecord } from "../types";
+import type { AppliedCoupon, CartItem, Product, SaleRecord } from "../types";
 import { useAuthStore } from "./auth";
 import { useNetworkStore } from "./network";
 
 interface CartState {
   // 状態
   items: CartItem[];
+  appliedCoupon: AppliedCoupon | null;
+  discountAmount: number;
   isProcessing: boolean;
   lastSale: SaleRecord | null;
   error: string | null;
 
   // 計算プロパティ
   totalItems: number;
-  totalAmount: number;
+  subtotal: number; // 割引前
+  totalAmount: number; // 割引後
 
   // アクション
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  applyCoupon: (code: string) => Promise<boolean>;
+  removeCoupon: () => void;
   checkout: (
     paymentMethod: "cash" | "card" | "other",
   ) => Promise<SaleRecord | null>;
@@ -35,6 +40,8 @@ interface CartState {
 export const useCartStore = create<CartState>()((set, get) => ({
   // 初期状態
   items: [],
+  appliedCoupon: null,
+  discountAmount: 0,
   isProcessing: false,
   lastSale: null,
   error: null,
@@ -44,8 +51,13 @@ export const useCartStore = create<CartState>()((set, get) => ({
     return get().items.reduce((sum, item) => sum + item.quantity, 0);
   },
 
-  get totalAmount() {
+  get subtotal() {
     return get().items.reduce((sum, item) => sum + item.subtotal, 0);
+  },
+
+  get totalAmount() {
+    const { subtotal, discountAmount } = get();
+    return Math.max(0, subtotal - discountAmount);
   },
 
   // 商品をカートに追加
@@ -113,12 +125,63 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
   // カートをクリア
   clearCart: () => {
-    set({ items: [], error: null });
+    set({ items: [], appliedCoupon: null, discountAmount: 0, error: null });
+  },
+
+  // クーポン適用
+  applyCoupon: async (code: string) => {
+    const session = useAuthStore.getState().session;
+    const networkStatus = useNetworkStore.getState().status;
+    const { subtotal } = get();
+
+    if (!session) {
+      set({ error: "ログインが必要です" });
+      return false;
+    }
+
+    if (networkStatus !== "online") {
+      set({ error: "クーポン適用にはインターネット接続が必要です" });
+      return false;
+    }
+
+    if (subtotal === 0) {
+      set({ error: "カートに商品がありません" });
+      return false;
+    }
+
+    try {
+      const result = await applyCouponApi(session.session_id, code, subtotal);
+
+      set({
+        appliedCoupon: {
+          coupon_id: result.coupon_id,
+          code: result.code,
+          name: result.name,
+          discount_type: result.discount_type,
+          discount_value: result.discount_value,
+          discount_amount: result.discount_amount,
+        },
+        discountAmount: result.discount_amount,
+        error: null,
+      });
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "クーポンの適用に失敗しました";
+      set({ error: message });
+      return false;
+    }
+  },
+
+  // クーポン解除
+  removeCoupon: () => {
+    set({ appliedCoupon: null, discountAmount: 0 });
   },
 
   // チェックアウト（販売処理）
   checkout: async (paymentMethod: "cash" | "card" | "other") => {
-    const { items } = get();
+    const { items, appliedCoupon, discountAmount, subtotal, totalAmount } =
+      get();
     const session = useAuthStore.getState().session;
     const networkStatus = useNetworkStore.getState().status;
     const isOnline = networkStatus === "online";
@@ -144,7 +207,6 @@ export const useCartStore = create<CartState>()((set, get) => ({
     try {
       const terminalId = await getTerminalId();
       const timestamp = Date.now();
-      const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
 
       // オンラインの場合: サーバーで決済処理を先に行う
       if (isOnline) {
@@ -166,13 +228,17 @@ export const useCartStore = create<CartState>()((set, get) => ({
             sale_id: serverResponse.sale_id,
             timestamp,
             items,
+            subtotal,
+            discount_amount: discountAmount,
             total_amount: totalAmount,
+            received_amount: totalAmount, // 満額受領として記録
             payment_method: paymentMethod,
             employee_number: session.employee_number,
             event_id: session.event_id,
             terminal_id: terminalId,
             synced: true,
             created_at: timestamp,
+            coupon: appliedCoupon || undefined,
           };
 
           // ローカルにも保存（履歴参照用）
@@ -180,6 +246,8 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
           set({
             items: [],
+            appliedCoupon: null,
+            discountAmount: 0,
             isProcessing: false,
             lastSale: saleRecord,
             error: null,
@@ -212,8 +280,12 @@ export const useCartStore = create<CartState>()((set, get) => ({
         sale_id: saleId,
         timestamp,
         items,
+        subtotal,
+        discount_amount: discountAmount,
         total_amount: totalAmount,
+        received_amount: totalAmount, // 満額受領として記録
         payment_method: paymentMethod,
+        coupon: appliedCoupon || undefined,
         employee_number: session.employee_number,
         event_id: session.event_id,
         terminal_id: terminalId,
@@ -228,6 +300,8 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
       set({
         items: [],
+        appliedCoupon: null,
+        discountAmount: 0,
         isProcessing: false,
         lastSale: saleRecord,
         error: null,

@@ -1,13 +1,6 @@
-/**
- * キャッシュ画像を使用するカスタムフック
- */
-
 import { useEffect, useState } from "react";
 import { getCachedImage } from "../lib/db";
 
-/**
- * 画像URLからキャッシュ優先でObject URLを取得するフック
- */
 export function useCachedImage(url: string | undefined): string | undefined {
   const [imageUrl, setImageUrl] = useState<string | undefined>(url);
 

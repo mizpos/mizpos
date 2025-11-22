@@ -10,6 +10,8 @@ from botocore.exceptions import ClientError
 
 from models import VariantType
 
+import random
+
 # 環境変数
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
@@ -274,6 +276,33 @@ def generate_presigned_upload_url(
 # ==========================================
 
 
+def generate_unique_event_code() -> str:
+    """重複しない4桁のイベントコードを生成
+
+    0000は通期スタッフ用に予約されているため、0001-9999の範囲で生成
+
+    Returns:
+        4桁のイベントコード（文字列）
+    """
+    # 既存のevent_codeを取得
+    response = events_table.scan(ProjectionExpression="event_code")
+    existing_codes = {
+        item.get("event_code")
+        for item in response.get("Items", [])
+        if item.get("event_code")
+    }
+
+    # 最大1000回試行
+    for _ in range(1000):
+        # 0001-9999の範囲でランダム生成（0000は通期スタッフ用に予約）
+        code = f"{random.randint(1, 9999):04d}"
+        if code not in existing_codes:
+            return code
+
+    # 全て使用済みの場合はエラー（通常ありえない）
+    raise ValueError("No available event codes")
+
+
 def create_event(event_data: dict) -> dict:
     """イベントを新規作成
 
@@ -284,10 +313,12 @@ def create_event(event_data: dict) -> dict:
         作成されたイベント
     """
     event_id = str(uuid.uuid4())
+    event_code = generate_unique_event_code()
     now = datetime.now(timezone.utc).isoformat()
 
     item = {
         "event_id": event_id,
+        "event_code": event_code,
         "name": event_data["name"],
         "description": event_data.get("description", ""),
         "start_date": event_data.get("start_date"),

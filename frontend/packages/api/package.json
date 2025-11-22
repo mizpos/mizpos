@@ -11,13 +11,16 @@
       "import": "./dist/index.js"
     },
     "./accounts": {
-      "types": "./generated/accounts.ts"
+      "types": "./dist/generated/accounts.d.ts",
+      "import": "./dist/generated/accounts.js"
     },
     "./stock": {
-      "types": "./generated/stock.ts"
+      "types": "./dist/generated/stock.d.ts",
+      "import": "./dist/generated/stock.js"
     },
     "./sales": {
-      "types": "./generated/sales.ts"
+      "types": "./dist/generated/sales.d.ts",
+      "import": "./dist/generated/sales.js"
     }
   },
   "scripts": {

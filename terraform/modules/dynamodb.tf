@@ -292,6 +292,11 @@ resource "aws_dynamodb_table" "pos_employees" {
     type = "S"
   }
 
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
   global_secondary_index {
     name            = "EventIndex"
     hash_key        = "event_id"
@@ -301,6 +306,13 @@ resource "aws_dynamodb_table" "pos_employees" {
   global_secondary_index {
     name            = "PublisherIndex"
     hash_key        = "publisher_id"
+    projection_type = "ALL"
+  }
+
+  # mizposアカウントとの紐付け用
+  global_secondary_index {
+    name            = "UserIndex"
+    hash_key        = "user_id"
     projection_type = "ALL"
   }
 
@@ -403,5 +415,67 @@ resource "aws_dynamodb_table" "offline_sales_queue" {
 
   tags = {
     Name = "${var.environment}-mizpos-offline-sales-queue"
+  }
+}
+
+# Coupons table - クーポン管理
+# クーポンタイプ:
+#   - fixed: 固定金額割引（例: ¥500引き）- 売上計算上マイナス円の商品として扱う
+#   - percentage: 割引率（例: 10%引き）
+# スコープ:
+#   - publisher_id指定あり: そのサークルの商品にのみ適用
+#   - publisher_id指定なし: 全商品に適用可能
+resource "aws_dynamodb_table" "coupons" {
+  name         = "${var.environment}-mizpos-coupons"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "coupon_id"
+
+  attribute {
+    name = "coupon_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "code"
+    type = "S"
+  }
+
+  attribute {
+    name = "publisher_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "event_id"
+    type = "S"
+  }
+
+  # クーポンコードでの検索用（ユニークコード入力時）
+  global_secondary_index {
+    name            = "CodeIndex"
+    hash_key        = "code"
+    projection_type = "ALL"
+  }
+
+  # サークル別クーポン一覧取得用
+  global_secondary_index {
+    name            = "PublisherIndex"
+    hash_key        = "publisher_id"
+    projection_type = "ALL"
+  }
+
+  # イベント別クーポン一覧取得用
+  global_secondary_index {
+    name            = "EventIndex"
+    hash_key        = "event_id"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-coupons"
   }
 }
