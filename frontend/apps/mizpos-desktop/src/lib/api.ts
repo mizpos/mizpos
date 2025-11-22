@@ -11,10 +11,9 @@ const API_BASE_URL =
   "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
 const ACCOUNTS_API = `${API_BASE_URL}/accounts`;
 const STOCK_API = `${API_BASE_URL}/stock`;
-const SALES_API = `${API_BASE_URL}/sales`;
 
-// リクエストタイムアウト（ミリ秒）
-const REQUEST_TIMEOUT = 10000;
+// リクエストタイムアウト（ミリ秒）- Lambda cold start考慮で30秒に延長
+const REQUEST_TIMEOUT = 30000;
 
 /**
  * タイムアウト付きfetch
@@ -33,6 +32,11 @@ async function fetchWithTimeout(
       signal: controller.signal,
     });
     return response;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Request timeout after ${timeout}ms: ${url}`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -151,6 +155,43 @@ export async function posLogout(sessionId: string): Promise<void> {
 // ==========================================
 
 /**
+ * バックエンドAPIのレスポンスをフロントエンドの型に変換
+ */
+interface ApiProductResponse {
+  product_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  stock_quantity: number;
+  category?: string;
+  barcode?: string;
+  isdn?: string;
+  image_url?: string;
+  publisher_id?: string;
+  event_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapApiProductToProduct(apiProduct: ApiProductResponse): Product {
+  return {
+    product_id: apiProduct.product_id,
+    title: apiProduct.name,
+    description: apiProduct.description,
+    price: apiProduct.price,
+    quantity: apiProduct.stock_quantity,
+    category: apiProduct.category,
+    barcode: apiProduct.barcode,
+    isdn: apiProduct.isdn,
+    image_url: apiProduct.image_url,
+    publisher_id: apiProduct.publisher_id,
+    event_id: apiProduct.event_id,
+    created_at: apiProduct.created_at,
+    updated_at: apiProduct.updated_at,
+  };
+}
+
+/**
  * 商品一覧を取得（ログイン時にダウンロード）
  */
 export async function fetchProducts(eventId?: string): Promise<Product[]> {
@@ -169,7 +210,8 @@ export async function fetchProducts(eventId?: string): Promise<Product[]> {
   }
 
   const data = await response.json();
-  return data.products || [];
+  const apiProducts: ApiProductResponse[] = data.products || [];
+  return apiProducts.map(mapApiProductToProduct);
 }
 
 // ==========================================
@@ -214,7 +256,7 @@ export async function syncOfflineSales(
 }
 
 /**
- * 販売を記録
+ * 販売を記録（POS専用エンドポイント）
  */
 export async function recordSale(
   sessionId: string,
@@ -227,9 +269,10 @@ export async function recordSale(
     total_amount: number;
     payment_method: string;
     event_id?: string;
+    terminal_id?: string;
   },
 ): Promise<{ sale_id: string }> {
-  const response = await fetchWithTimeout(`${SALES_API}/sales`, {
+  const response = await fetchWithTimeout(`${ACCOUNTS_API}/pos/sales`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -239,7 +282,14 @@ export async function recordSale(
   });
 
   if (!response.ok) {
-    throw new ApiError("Failed to record sale", response.status);
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Sale recording failed" }));
+    throw new ApiError(
+      error.detail || "Failed to record sale",
+      response.status,
+      error.detail,
+    );
   }
 
   return response.json();

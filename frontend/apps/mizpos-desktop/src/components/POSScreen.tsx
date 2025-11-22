@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchProducts } from "../lib/api";
-import { getAllProducts, syncProducts } from "../lib/db";
+import { cacheProductImages, getAllProducts, syncProducts } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 import { useCartStore } from "../stores/cart";
 import { useNetworkStore } from "../stores/network";
@@ -20,6 +20,9 @@ import "./POSScreen.css";
 export function POSScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState(
+    "商品を読み込んでいます...",
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [showCheckout, setShowCheckout] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -31,6 +34,7 @@ export function POSScreen() {
   // 商品データの読み込み
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
+    setLoadingMessage("商品を読み込んでいます...");
 
     try {
       // まずローカルから読み込み
@@ -43,6 +47,14 @@ export function POSScreen() {
           if (serverProducts.length > 0) {
             await syncProducts(serverProducts);
             localProducts = serverProducts;
+
+            // 画像をバックグラウンドでキャッシュ
+            setLoadingMessage("商品画像をキャッシュ中...");
+            await cacheProductImages(serverProducts, (current, total) => {
+              setLoadingMessage(
+                `商品画像をキャッシュ中... (${current}/${total})`,
+              );
+            });
           }
         } catch (error) {
           console.error("Failed to fetch products from server:", error);
@@ -72,10 +84,11 @@ export function POSScreen() {
 
   // 検索フィルタリング
   const filteredProducts = products.filter((product) => {
+    if (!product) return false;
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      product.title.toLowerCase().includes(query) ||
+      product.title?.toLowerCase().includes(query) ||
       product.barcode?.includes(searchQuery) ||
       product.isdn?.includes(searchQuery)
     );
@@ -113,7 +126,7 @@ export function POSScreen() {
 
           {isLoading ? (
             <div className="loading-state">
-              <p>商品を読み込んでいます...</p>
+              <p>{loadingMessage}</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="empty-state">

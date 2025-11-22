@@ -28,6 +28,7 @@ from models import (
     InviteUserRequest,
     OfflineSalesSyncRequest,
     PosLoginRequest,
+    PosSaleRequest,
     PosSessionRefreshRequest,
     ResendConfirmationRequest,
     UpdateAddressRequest,
@@ -48,7 +49,9 @@ from pos_services import (
     list_pos_employees,
     mark_offline_sale_failed,
     mark_offline_sale_synced,
+    record_pos_sale,
     refresh_pos_session,
+    save_offline_sale_to_db,
     update_pos_employee,
     verify_pos_session,
 )
@@ -983,12 +986,41 @@ async def pos_verify_session(session_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+# POS販売記録（リアルタイム）
+@router.post("/pos/sales", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_pos_sale(request: Request, sale_request: PosSaleRequest):
+    """POS端末からの販売を記録
+
+    X-POS-Session ヘッダーでセッションIDを指定
+    リアルタイムで販売を処理し、在庫を減らす
+    """
+    session_id = request.headers.get("X-POS-Session")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing POS session")
+
+    try:
+        result = record_pos_sale(
+            session_id=session_id,
+            items=[item.model_dump() for item in sale_request.items],
+            total_amount=sale_request.total_amount,
+            payment_method=sale_request.payment_method,
+            event_id=sale_request.event_id,
+            terminal_id=sale_request.terminal_id,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error recording POS sale: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 # オフライン販売同期
 @router.post("/pos/sync/sales", response_model=dict)
 async def sync_offline_sales(request: OfflineSalesSyncRequest):
     """オフライン販売データを同期
 
-    オフラインで記録された販売データをサーバーに送信
+    オフラインで記録された販売データをサーバーに送信し、DBに保存
     """
     try:
         synced_count = 0
@@ -996,17 +1028,28 @@ async def sync_offline_sales(request: OfflineSalesSyncRequest):
 
         for sale in request.sales:
             try:
-                # TODO: 実際の販売処理をSales Lambdaに委譲
-                # ここでは販売キューのステータス更新のみ
                 queue_id = sale.get("queue_id")
                 created_at = sale.get("created_at")
+                sale_data = sale.get("sale_data", {})
 
+                if not sale_data:
+                    logger.warning(f"Empty sale_data for queue_id: {queue_id}")
+                    continue
+
+                # 販売データをDBに保存
+                logger.info(f"Saving offline sale: {queue_id}")
+                save_offline_sale_to_db(sale_data)
+
+                # キューのステータスを更新
                 if queue_id and created_at:
                     mark_offline_sale_synced(queue_id, created_at)
-                    synced_count += 1
+
+                synced_count += 1
+                logger.info(f"Successfully synced sale: {queue_id}")
 
             except Exception as e:
                 logger.error(f"Error syncing sale {sale.get('queue_id')}: {e}")
+                logger.error(f"Sale data: {sale}")
                 failed_items.append({"queue_id": sale.get("queue_id"), "error": str(e)})
                 if sale.get("queue_id") and sale.get("created_at"):
                     mark_offline_sale_failed(
@@ -1063,7 +1106,7 @@ def handler(event, context):
                 "headers": {
                     "Access-Control-Allow-Origin": "*",
                     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-POS-Session",
                     "Access-Control-Max-Age": "300",
                 },
                 "body": "",

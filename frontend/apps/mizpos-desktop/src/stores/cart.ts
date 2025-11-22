@@ -121,6 +121,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
     const { items } = get();
     const session = useAuthStore.getState().session;
     const networkStatus = useNetworkStore.getState().status;
+    const isOnline = networkStatus === "online";
 
     if (items.length === 0) {
       set({ error: "カートが空です" });
@@ -132,16 +133,81 @@ export const useCartStore = create<CartState>()((set, get) => ({
       return null;
     }
 
+    // カード決済はオンライン必須
+    if (paymentMethod === "card" && !isOnline) {
+      set({ error: "カード決済にはインターネット接続が必要です" });
+      return null;
+    }
+
     set({ isProcessing: true, error: null });
 
     try {
       const terminalId = await getTerminalId();
-      const saleId = crypto.randomUUID();
       const timestamp = Date.now();
-
       const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
 
-      // 販売レコードを作成
+      // オンラインの場合: サーバーで決済処理を先に行う
+      if (isOnline) {
+        try {
+          const serverResponse = await recordSale(session.session_id, {
+            items: items.map((item) => ({
+              product_id: item.product_id,
+              quantity: item.quantity,
+              unit_price: item.product.price,
+            })),
+            total_amount: totalAmount,
+            payment_method: paymentMethod,
+            event_id: session.event_id,
+            terminal_id: terminalId,
+          });
+
+          // サーバーから返されたsale_idを使用（クレジット決済の追跡用）
+          const saleRecord: SaleRecord = {
+            sale_id: serverResponse.sale_id,
+            timestamp,
+            items,
+            total_amount: totalAmount,
+            payment_method: paymentMethod,
+            employee_number: session.employee_number,
+            event_id: session.event_id,
+            terminal_id: terminalId,
+            synced: true,
+            created_at: timestamp,
+          };
+
+          // ローカルにも保存（履歴参照用）
+          await addSale(saleRecord);
+
+          set({
+            items: [],
+            isProcessing: false,
+            lastSale: saleRecord,
+            error: null,
+          });
+
+          useNetworkStore.getState().updateSyncStatus();
+          return saleRecord;
+        } catch (apiError) {
+          // カード決済の場合はサーバーエラーで中断
+          if (paymentMethod === "card") {
+            const message =
+              apiError instanceof Error
+                ? apiError.message
+                : "カード決済処理に失敗しました";
+            set({ isProcessing: false, error: message });
+            return null;
+          }
+
+          // 現金・その他の場合はオフラインモードにフォールバック
+          console.warn(
+            "Server unavailable, falling back to offline mode:",
+            apiError,
+          );
+        }
+      }
+
+      // オフラインモード（現金・その他のみ）
+      const saleId = crypto.randomUUID();
       const saleRecord: SaleRecord = {
         sale_id: saleId,
         timestamp,
@@ -157,33 +223,9 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
       // ローカルに保存
       await addSale(saleRecord);
+      // オフラインキューに追加
+      await addToOfflineQueue(saleRecord);
 
-      // オンラインの場合はサーバーに送信
-      if (networkStatus === "online") {
-        try {
-          await recordSale(session.session_id, {
-            items: items.map((item) => ({
-              product_id: item.product_id,
-              quantity: item.quantity,
-              unit_price: item.product.price,
-            })),
-            total_amount: totalAmount,
-            payment_method: paymentMethod,
-            event_id: session.event_id,
-          });
-
-          saleRecord.synced = true;
-        } catch (apiError) {
-          console.error("Failed to sync sale to server:", apiError);
-          // オフラインキューに追加
-          await addToOfflineQueue(saleRecord);
-        }
-      } else {
-        // オフラインの場合はキューに追加
-        await addToOfflineQueue(saleRecord);
-      }
-
-      // カートをクリアして結果を設定
       set({
         items: [],
         isProcessing: false,
@@ -191,9 +233,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
         error: null,
       });
 
-      // 同期状態を更新
       useNetworkStore.getState().updateSyncStatus();
-
       return saleRecord;
     } catch (error) {
       const message =

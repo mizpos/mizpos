@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { formatPrice, useCartStore } from "../stores/cart";
+import { useNetworkStore } from "../stores/network";
 import { NumericKeypad } from "./NumericKeypad";
 import "./CheckoutModal.css";
 
@@ -14,6 +15,8 @@ interface CheckoutModalProps {
 
 export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { items, checkout, isProcessing, error, clearError } = useCartStore();
+  const networkStatus = useNetworkStore((state) => state.status);
+  const isOnline = networkStatus === "online";
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "other">(
     "cash",
   );
@@ -81,10 +84,13 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
               </button>
               <button
                 type="button"
-                className={`payment-button ${paymentMethod === "card" ? "active" : ""}`}
-                onClick={() => setPaymentMethod("card")}
+                className={`payment-button ${paymentMethod === "card" ? "active" : ""} ${!isOnline ? "disabled" : ""}`}
+                onClick={() => isOnline && setPaymentMethod("card")}
+                disabled={!isOnline}
+                title={!isOnline ? "オフライン時はカード決済できません" : ""}
               >
                 カード
+                {!isOnline && <span className="offline-badge">オフライン</span>}
               </button>
               <button
                 type="button"

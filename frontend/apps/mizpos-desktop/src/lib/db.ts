@@ -11,6 +11,13 @@ import type {
   SaleRecord,
 } from "../types";
 
+// 画像キャッシュの型
+interface CachedImage {
+  url: string; // 元のURL（キー）
+  blob: Blob; // 画像データ
+  cached_at: number;
+}
+
 // データベーススキーマ
 class PosDatabase extends Dexie {
   // テーブル定義
@@ -19,6 +26,7 @@ class PosDatabase extends Dexie {
   offlineQueue!: EntityTable<OfflineSaleQueue, "queue_id">;
   sessions!: EntityTable<PosSession & { id?: number }, "id">;
   config!: EntityTable<{ key: string; value: unknown }, "key">;
+  imageCache!: EntityTable<CachedImage, "url">;
 
   constructor() {
     super("mizpos-desktop");
@@ -35,6 +43,16 @@ class PosDatabase extends Dexie {
       // アプリ設定
       config: "key",
     });
+
+    // バージョン2: 画像キャッシュテーブル追加
+    this.version(2).stores({
+      products: "product_id, category, barcode, isdn, publisher_id, event_id",
+      sales: "sale_id, timestamp, synced, employee_number, event_id",
+      offlineQueue: "queue_id, created_at, sync_status",
+      sessions: "++id, session_id, employee_number, expires_at",
+      config: "key",
+      imageCache: "url, cached_at",
+    });
   }
 }
 
@@ -46,14 +64,29 @@ export const db = new PosDatabase();
 // ==========================================
 
 /**
+ * 古い形式（name, stock_quantity）から新しい形式（title, quantity）への変換
+ * 後方互換性のため、両方の形式をサポート
+ */
+function normalizeProduct(
+  product: Product & { name?: string; stock_quantity?: number },
+): Product {
+  return {
+    ...product,
+    title: product.title || product.name || "",
+    quantity: product.quantity ?? product.stock_quantity ?? 0,
+  };
+}
+
+/**
  * 商品マスタを一括更新（ログイン時）
  */
 export async function syncProducts(products: Product[]): Promise<void> {
   await db.transaction("rw", db.products, async () => {
     // 既存のデータをクリア
     await db.products.clear();
-    // 新しいデータを一括挿入
-    await db.products.bulkAdd(products);
+    // 新しいデータを一括挿入（正規化してから保存）
+    const normalizedProducts = products.map(normalizeProduct);
+    await db.products.bulkAdd(normalizedProducts);
   });
 }
 
@@ -62,14 +95,21 @@ export async function syncProducts(products: Product[]): Promise<void> {
  */
 export async function searchProducts(query: string): Promise<Product[]> {
   const lowerQuery = query.toLowerCase();
-  return db.products
-    .filter(
-      (product) =>
-        product.title.toLowerCase().includes(lowerQuery) ||
+  const results = await db.products
+    .filter((product) => {
+      const normalized = normalizeProduct(
+        product as Product & { name?: string; stock_quantity?: number },
+      );
+      return (
+        normalized.title?.toLowerCase().includes(lowerQuery) ||
         (product.barcode?.includes(query) ?? false) ||
-        (product.isdn?.includes(query) ?? false),
-    )
+        (product.isdn?.includes(query) ?? false)
+      );
+    })
     .toArray();
+  return results.map((p) =>
+    normalizeProduct(p as Product & { name?: string; stock_quantity?: number }),
+  );
 }
 
 /**
@@ -78,7 +118,11 @@ export async function searchProducts(query: string): Promise<Product[]> {
 export async function findProductByBarcode(
   barcode: string,
 ): Promise<Product | undefined> {
-  return db.products.where("barcode").equals(barcode).first();
+  const product = await db.products.where("barcode").equals(barcode).first();
+  if (!product) return undefined;
+  return normalizeProduct(
+    product as Product & { name?: string; stock_quantity?: number },
+  );
 }
 
 /**
@@ -87,14 +131,23 @@ export async function findProductByBarcode(
 export async function getProductsByCategory(
   category: string,
 ): Promise<Product[]> {
-  return db.products.where("category").equals(category).toArray();
+  const products = await db.products
+    .where("category")
+    .equals(category)
+    .toArray();
+  return products.map((p) =>
+    normalizeProduct(p as Product & { name?: string; stock_quantity?: number }),
+  );
 }
 
 /**
  * 全商品を取得
  */
 export async function getAllProducts(): Promise<Product[]> {
-  return db.products.toArray();
+  const products = await db.products.toArray();
+  return products.map((p) =>
+    normalizeProduct(p as Product & { name?: string; stock_quantity?: number }),
+  );
 }
 
 /**
@@ -103,7 +156,11 @@ export async function getAllProducts(): Promise<Product[]> {
 export async function getProductById(
   productId: string,
 ): Promise<Product | undefined> {
-  return db.products.get(productId);
+  const product = await db.products.get(productId);
+  if (!product) return undefined;
+  return normalizeProduct(
+    product as Product & { name?: string; stock_quantity?: number },
+  );
 }
 
 // ==========================================
@@ -296,10 +353,10 @@ export async function clearAllData(): Promise<void> {
 }
 
 /**
- * オフラインキューのサイズを確認
+ * 未同期（pending）のオフラインキューのサイズを確認
  */
 export async function getOfflineQueueSize(): Promise<number> {
-  return db.offlineQueue.count();
+  return db.offlineQueue.where("sync_status").equals("pending").count();
 }
 
 /**
@@ -313,4 +370,109 @@ export const OFFLINE_QUEUE_WARNING_THRESHOLD = 100;
 export async function isOfflineQueueNearCapacity(): Promise<boolean> {
   const count = await getOfflineQueueSize();
   return count >= OFFLINE_QUEUE_WARNING_THRESHOLD;
+}
+
+// ==========================================
+// 画像キャッシュ操作
+// ==========================================
+
+/**
+ * 画像をキャッシュに保存
+ */
+export async function cacheImage(url: string, blob: Blob): Promise<void> {
+  await db.imageCache.put({
+    url,
+    blob,
+    cached_at: Date.now(),
+  });
+}
+
+/**
+ * キャッシュから画像を取得
+ */
+export async function getCachedImage(url: string): Promise<Blob | undefined> {
+  const cached = await db.imageCache.get(url);
+  return cached?.blob;
+}
+
+/**
+ * 画像URLからBlobを取得（キャッシュ優先）
+ */
+export async function getImageWithCache(url: string): Promise<string> {
+  // キャッシュをチェック
+  const cached = await getCachedImage(url);
+  if (cached) {
+    return URL.createObjectURL(cached);
+  }
+
+  // キャッシュになければダウンロードしてキャッシュ
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const blob = await response.blob();
+      await cacheImage(url, blob);
+      return URL.createObjectURL(blob);
+    }
+  } catch (error) {
+    console.error("Failed to fetch image:", url, error);
+  }
+
+  // 失敗した場合は元のURLを返す
+  return url;
+}
+
+/**
+ * 商品の画像を一括キャッシュ（商品同期時に呼び出す）
+ */
+export async function cacheProductImages(
+  products: Product[],
+  onProgress?: (current: number, total: number) => void,
+): Promise<void> {
+  const imageUrls = products
+    .filter((p) => p.image_url)
+    .map((p) => p.image_url as string);
+
+  let completed = 0;
+  const total = imageUrls.length;
+
+  // 並列でダウンロード（最大5つ同時）
+  const batchSize = 5;
+  for (let i = 0; i < imageUrls.length; i += batchSize) {
+    const batch = imageUrls.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (url) => {
+        try {
+          // 既にキャッシュ済みならスキップ
+          const existing = await getCachedImage(url);
+          if (!existing) {
+            const response = await fetch(url);
+            if (response.ok) {
+              const blob = await response.blob();
+              await cacheImage(url, blob);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to cache image:", url, error);
+        } finally {
+          completed++;
+          onProgress?.(completed, total);
+        }
+      }),
+    );
+  }
+}
+
+/**
+ * 古い画像キャッシュをクリア
+ */
+export async function clearOldImageCache(olderThanDays = 30): Promise<void> {
+  const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+  await db.imageCache.where("cached_at").below(cutoffTime).delete();
+}
+
+/**
+ * 画像キャッシュを完全にクリア
+ */
+export async function clearAllImageCache(): Promise<void> {
+  await db.imageCache.clear();
 }

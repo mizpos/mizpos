@@ -103,6 +103,46 @@
   font-size: 12px;
 }
 
+.sync-button {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  background: rgba(76, 175, 80, 0.8);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sync-button:hover {
+  background: rgba(76, 175, 80, 1);
+}
+
+/* 本日の売上サマリー */
+.today-sales {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.sales-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sales-count {
+  font-weight: 500;
+}
+
+.sales-total {
+  font-weight: 700;
+  color: #81c784;
+}
+
 .last-online {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
@@ -138,6 +178,53 @@
 
 .logout-button:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* ログアウト確認 */
+.logout-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(244, 67, 54, 0.2);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.logout-confirm-yes,
+.logout-confirm-no {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-confirm-yes {
+  color: white;
+  background: #f44336;
+  border: none;
+}
+
+.logout-confirm-yes:hover:not(:disabled) {
+  background: #d32f2f;
+}
+
+.logout-confirm-no {
+  color: white;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.logout-confirm-no:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.logout-confirm-yes:disabled,
+.logout-confirm-no:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 時計 */

@@ -110,7 +110,11 @@ resource "aws_iam_role_policy" "lambda_accounts" {
           aws_dynamodb_table.pos_sessions.arn,
           "${aws_dynamodb_table.pos_sessions.arn}/index/*",
           aws_dynamodb_table.offline_sales_queue.arn,
-          "${aws_dynamodb_table.offline_sales_queue.arn}/index/*"
+          "${aws_dynamodb_table.offline_sales_queue.arn}/index/*",
+          aws_dynamodb_table.sales.arn,
+          "${aws_dynamodb_table.sales.arn}/index/*",
+          aws_dynamodb_table.stock.arn,
+          "${aws_dynamodb_table.stock.arn}/index/*"
         ]
       },
       {
@@ -192,7 +196,9 @@ resource "aws_iam_role_policy" "lambda_stock" {
           aws_dynamodb_table.stock_history.arn,
           "${aws_dynamodb_table.stock_history.arn}/index/*",
           aws_dynamodb_table.publishers.arn,
-          "${aws_dynamodb_table.publishers.arn}/index/*"
+          "${aws_dynamodb_table.publishers.arn}/index/*",
+          aws_dynamodb_table.events.arn,
+          "${aws_dynamodb_table.events.arn}/index/*"
         ]
       },
       {

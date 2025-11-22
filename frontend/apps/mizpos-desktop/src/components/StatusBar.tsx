@@ -1,9 +1,12 @@
 /**
  * ステータスバー
- * ネットワーク状態、ログイン情報、同期状態を表示
+ * ネットワーク状態、ログイン情報、同期状態、本日の売上を表示
  */
 
+import { useEffect, useState } from "react";
+import { getTodaySales } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
+import { useCartStore } from "../stores/cart";
 import { formatLastOnlineTime, useNetworkStore } from "../stores/network";
 import "./StatusBar.css";
 
@@ -11,10 +14,31 @@ export function StatusBar() {
   const { session, logout } = useAuthStore();
   const { status, syncStatus, lastOnlineTime, queueWarning } =
     useNetworkStore();
+  const { lastSale } = useCartStore();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [todaySales, setTodaySales] = useState({ count: 0, total: 0 });
+
+  // 本日の売上を取得・更新
+  useEffect(() => {
+    const updateTodaySales = async () => {
+      const sales = await getTodaySales();
+      const total = sales.reduce((sum, sale) => sum + sale.total_amount, 0);
+      setTodaySales({ count: sales.length, total });
+    };
+
+    lastSale && updateTodaySales();
+  }, [lastSale]);
 
   const handleLogout = async () => {
-    if (confirm("ログアウトしますか？")) {
+    setIsLoggingOut(true);
+    try {
       await logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
     }
   };
 
@@ -32,6 +56,15 @@ export function StatusBar() {
             {status === "checking" && "確認中..."}
           </span>
         </div>
+
+        {/* 本日の売上サマリー */}
+        <div className="today-sales">
+          <span className="sales-label">本日:</span>
+          <span className="sales-count">{todaySales.count}件</span>
+          <span className="sales-total">
+            ¥{todaySales.total.toLocaleString()}
+          </span>
+        </div>
       </div>
 
       <div className="status-bar-center">
@@ -41,6 +74,15 @@ export function StatusBar() {
             <span className="sync-icon">⏳</span>
             <span>未同期: {syncStatus.pendingCount}件</span>
             {syncStatus.isSyncing && <span className="syncing">同期中...</span>}
+            {!syncStatus.isSyncing && status === "online" && (
+              <button
+                type="button"
+                className="sync-button"
+                onClick={() => useNetworkStore.getState().syncPendingSales()}
+              >
+                今すぐ同期
+              </button>
+            )}
           </div>
         )}
 
@@ -57,13 +99,35 @@ export function StatusBar() {
           <div className="user-info">
             <span className="user-name">{session.display_name}</span>
             <span className="user-id">({session.employee_number})</span>
-            <button
-              type="button"
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              ログアウト
-            </button>
+            {showLogoutConfirm ? (
+              <div className="logout-confirm">
+                <span>ログアウトしますか？</span>
+                <button
+                  type="button"
+                  className="logout-confirm-yes"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "処理中..." : "はい"}
+                </button>
+                <button
+                  type="button"
+                  className="logout-confirm-no"
+                  onClick={() => setShowLogoutConfirm(false)}
+                  disabled={isLoggingOut}
+                >
+                  いいえ
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="logout-button"
+                onClick={() => setShowLogoutConfirm(true)}
+              >
+                ログアウト
+              </button>
+            )}
           </div>
         )}
 
