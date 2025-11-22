@@ -16,13 +16,16 @@ resource "aws_lambda_function" "accounts" {
 
   environment {
     variables = {
-      ENVIRONMENT           = var.environment
-      USERS_TABLE           = aws_dynamodb_table.users.name
-      ROLES_TABLE           = aws_dynamodb_table.roles.name
-      USER_POOL_ID          = aws_cognito_user_pool.main.id
-      COGNITO_CLIENT_ID     = aws_cognito_user_pool_client.main.id
-      SES_SENDER_EMAIL      = var.ses_sender_email
-      SES_CONFIGURATION_SET = aws_ses_configuration_set.main.name
+      ENVIRONMENT               = var.environment
+      USERS_TABLE               = aws_dynamodb_table.users.name
+      ROLES_TABLE               = aws_dynamodb_table.roles.name
+      POS_EMPLOYEES_TABLE       = aws_dynamodb_table.pos_employees.name
+      POS_SESSIONS_TABLE        = aws_dynamodb_table.pos_sessions.name
+      OFFLINE_SALES_QUEUE_TABLE = aws_dynamodb_table.offline_sales_queue.name
+      USER_POOL_ID              = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID         = aws_cognito_user_pool_client.main.id
+      SES_SENDER_EMAIL          = var.ses_sender_email
+      SES_CONFIGURATION_SET     = aws_ses_configuration_set.main.name
     }
   }
 
