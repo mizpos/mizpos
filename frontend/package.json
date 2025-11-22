@@ -8,6 +8,7 @@
     "check-types": "turbo run check-types",
     "test": "turbo run test",
     "fix": "turbo run fix",
+    "check": "turbo run check",
     "generate-api-types": "pnpm --filter @mizpos/api generate",
     "generate-api-types:prod": "pnpm --filter @mizpos/api generate:prod",
     "generate-styled-system": "turbo run codegen"

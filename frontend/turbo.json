@@ -23,6 +23,9 @@
     "fix": {
       "cache": false
     },
+    "check": {
+      "cache": false
+    },
     "generate": {
       "cache": false,
       "outputs": ["*.ts"]
