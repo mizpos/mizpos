@@ -6,8 +6,8 @@
 import { useEffect, useState } from "react";
 import { getTodaySales } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
-import { formatLastOnlineTime, useNetworkStore } from "../stores/network";
 import { useCartStore } from "../stores/cart";
+import { formatLastOnlineTime, useNetworkStore } from "../stores/network";
 import "./StatusBar.css";
 
 export function StatusBar() {
@@ -27,8 +27,7 @@ export function StatusBar() {
       setTodaySales({ count: sales.length, total });
     };
 
-    updateTodaySales();
-    // lastSaleが変わったら更新（新しい売上があった時）
+    lastSale && updateTodaySales();
   }, [lastSale]);
 
   const handleLogout = async () => {
@@ -62,7 +61,9 @@ export function StatusBar() {
         <div className="today-sales">
           <span className="sales-label">本日:</span>
           <span className="sales-count">{todaySales.count}件</span>
-          <span className="sales-total">¥{todaySales.total.toLocaleString()}</span>
+          <span className="sales-total">
+            ¥{todaySales.total.toLocaleString()}
+          </span>
         </div>
       </div>
 
