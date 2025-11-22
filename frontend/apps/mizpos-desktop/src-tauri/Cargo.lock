@@ -2099,6 +2099,7 @@ dependencies = [
  "encoding_rs",
  "escpos",
  "glib 0.21.4",
+ "jni",
  "nusb",
  "serde",
  "serde_json",

@@ -193,3 +193,9 @@ output "ses_sender_email" {
   description = "SES sender email address"
   value       = aws_sesv2_email_identity.sender.email_identity
 }
+
+# Desktop App Deploy Outputs
+output "desktop_app_deploy_policy_arn" {
+  description = "IAM Policy ARN for desktop app deployment"
+  value       = aws_iam_policy.desktop_app_deploy.arn
+}

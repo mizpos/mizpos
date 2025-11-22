@@ -1,0 +1,285 @@
+name: build-desktop-prod
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g., v1.0.0)"
+        required: false
+        type: string
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_PROD }}
+  TF_STATE_BUCKET: mizphses-opensource-mizpos-prod
+  TF_STATE_KEY: mizpos/prod/terraform.tfstate
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10"
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  build:
+    name: Build Desktop App (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            os_name: windows
+            artifact_ext: ".exe,.msi"
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            os_name: linux
+            artifact_ext: ".AppImage,.deb"
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/apps/mizpos-desktop/src-tauri -> target
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os_name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libglib2.0-dev \
+            libusb-1.0-0-dev \
+            libudev-dev
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate API Types (Production)
+        working-directory: frontend
+        run: pnpm generate-api-types:prod
+
+      - name: Generate Styled System
+        working-directory: frontend
+        run: pnpm generate-styled-system
+
+      - name: Build Tauri App (Production)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: frontend/apps/mizpos-desktop
+
+      - name: Get app version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(jq -r '.version' frontend/apps/mizpos-desktop/src-tauri/tauri.conf.json)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "App version: ${VERSION}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os_name }}-${{ steps.version.outputs.version }}
+          path: |
+            frontend/apps/mizpos-desktop/src-tauri/target/release/bundle/**/*
+          retention-days: 30
+
+  deploy:
+    name: Deploy to CDN (Production)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get app version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' frontend/apps/mizpos-desktop/src-tauri/tauri.conf.json)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+          # Use release tag if available, otherwise use version from config
+          if [ "${{ github.event_name }}" == "release" ]; then
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+            echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          else
+            echo "release_tag=v${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows-${{ steps.version.outputs.version }}
+          path: artifacts/windows
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-${{ steps.version.outputs.version }}
+          path: artifacts/linux
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get Infrastructure Values from Terraform State
+        id: tf-outputs
+        run: |
+          CDN_BUCKET=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r ".outputs.cdn_bucket_name.value")
+          echo "cdn_bucket=${CDN_BUCKET}" >> $GITHUB_OUTPUT
+
+          CDN_DIST_ID=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r ".outputs.cdn_cloudfront_distribution_id.value")
+          echo "cdn_distribution_id=${CDN_DIST_ID}" >> $GITHUB_OUTPUT
+
+          CDN_DOMAIN=$(aws s3 cp s3://${{ env.TF_STATE_BUCKET }}/${{ env.TF_STATE_KEY }} - | \
+            jq -r ".outputs.cdn_domain.value")
+          echo "cdn_domain=${CDN_DOMAIN}" >> $GITHUB_OUTPUT
+
+      - name: Prepare and upload artifacts
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+          TIMESTAMP: ${{ steps.version.outputs.timestamp }}
+          S3_BUCKET: ${{ steps.tf-outputs.outputs.cdn_bucket }}
+        run: |
+          # Create directory structure
+          mkdir -p upload/app
+
+          # Find and copy Windows artifacts
+          echo "=== Windows Artifacts ==="
+          find artifacts/windows -type f \( -name "*.exe" -o -name "*.msi" \) | while read file; do
+            filename=$(basename "$file")
+            ext="${filename##*.}"
+
+            # Version-specific file (with release tag)
+            versioned_name="mizpos-desktop_${RELEASE_TAG}_windows.${ext}"
+            cp "$file" "upload/app/${versioned_name}"
+            echo "Copied: ${versioned_name}"
+
+            # Latest alias
+            latest_name="windows-latest.${ext}"
+            cp "$file" "upload/app/${latest_name}"
+            echo "Latest: ${latest_name}"
+          done
+
+          # Find and copy Linux artifacts
+          echo "=== Linux Artifacts ==="
+          find artifacts/linux -type f \( -name "*.AppImage" -o -name "*.deb" \) | while read file; do
+            filename=$(basename "$file")
+            ext="${filename##*.}"
+
+            # Version-specific file (with release tag)
+            versioned_name="mizpos-desktop_${RELEASE_TAG}_linux.${ext}"
+            cp "$file" "upload/app/${versioned_name}"
+            echo "Copied: ${versioned_name}"
+
+            # Latest alias
+            latest_name="linux-latest.${ext}"
+            cp "$file" "upload/app/${latest_name}"
+            echo "Latest: ${latest_name}"
+          done
+
+          # List all files to upload
+          echo "=== Files to upload ==="
+          ls -la upload/app/
+
+          # Upload versioned files with long cache
+          aws s3 sync upload/ s3://${S3_BUCKET}/ \
+            --cache-control "public, max-age=31536000, immutable" \
+            --metadata "version=${VERSION},release_tag=${RELEASE_TAG},timestamp=${TIMESTAMP}" \
+            --exclude "*-latest.*"
+
+          # Upload latest files with shorter cache
+          for file in upload/app/*-latest.*; do
+            if [ -f "$file" ]; then
+              aws s3 cp "$file" "s3://${S3_BUCKET}/app/$(basename $file)" \
+                --cache-control "public, max-age=300, must-revalidate" \
+                --metadata "version=${VERSION},release_tag=${RELEASE_TAG},timestamp=${TIMESTAMP}"
+            fi
+          done
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.tf-outputs.outputs.cdn_distribution_id }} \
+            --paths "/app/*-latest.*"
+
+      - name: Upload release assets
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+        run: |
+          # Upload artifacts to GitHub Release
+          for file in upload/app/mizpos-desktop_${RELEASE_TAG}_*; do
+            if [ -f "$file" ]; then
+              echo "Uploading: $(basename $file)"
+              gh release upload "${RELEASE_TAG}" "$file" --clobber || true
+            fi
+          done
+
+      - name: Deployment Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+          CDN_DOMAIN: ${{ steps.tf-outputs.outputs.cdn_domain }}
+        run: |
+          echo "## Desktop App Deployment Successful (Production)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Version: ${VERSION} (${RELEASE_TAG})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Download Links" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Windows" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest (exe): ${CDN_DOMAIN}/app/windows-latest.exe" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest (msi): ${CDN_DOMAIN}/app/windows-latest.msi" >> $GITHUB_STEP_SUMMARY
+          echo "- Version (exe): ${CDN_DOMAIN}/app/mizpos-desktop_${RELEASE_TAG}_windows.exe" >> $GITHUB_STEP_SUMMARY
+          echo "- Version (msi): ${CDN_DOMAIN}/app/mizpos-desktop_${RELEASE_TAG}_windows.msi" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Linux" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest (AppImage): ${CDN_DOMAIN}/app/linux-latest.AppImage" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest (deb): ${CDN_DOMAIN}/app/linux-latest.deb" >> $GITHUB_STEP_SUMMARY
+          echo "- Version (AppImage): ${CDN_DOMAIN}/app/mizpos-desktop_${RELEASE_TAG}_linux.AppImage" >> $GITHUB_STEP_SUMMARY
+          echo "- Version (deb): ${CDN_DOMAIN}/app/mizpos-desktop_${RELEASE_TAG}_linux.deb" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **S3 Bucket**: ${{ steps.tf-outputs.outputs.cdn_bucket }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cdn_distribution_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
