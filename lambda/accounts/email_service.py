@@ -104,7 +104,9 @@ def send_verification_email(email: str, verification_code: str) -> bool:
     """
     subject = "【みずPOS】メールアドレス認証"
 
-    body_html = render_template("verification.html", verification_code=verification_code)
+    body_html = render_template(
+        "verification.html", verification_code=verification_code
+    )
     body_text = render_template("verification.txt", verification_code=verification_code)
 
     return send_email(email, subject, body_html, body_text)

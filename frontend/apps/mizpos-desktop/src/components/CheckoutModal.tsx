@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useCartStore, formatPrice } from "../stores/cart";
+import { formatPrice, useCartStore } from "../stores/cart";
 import { NumericKeypad } from "./NumericKeypad";
 import "./CheckoutModal.css";
 
@@ -14,7 +14,9 @@ interface CheckoutModalProps {
 
 export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { items, checkout, isProcessing, error, clearError } = useCartStore();
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "other">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "other">(
+    "cash",
+  );
   const [receivedAmount, setReceivedAmount] = useState("");
 
   const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
@@ -39,10 +41,21 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="checkout-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <button
+        type="button"
+        className="modal-backdrop"
+        onClick={onClose}
+        aria-label="モーダルを閉じる"
+      />
+      <div
+        className="checkout-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="checkout-modal-title"
+      >
         <div className="modal-header">
-          <h2>会計</h2>
+          <h2 id="checkout-modal-title">会計</h2>
           <button type="button" className="close-button" onClick={onClose}>
             ×
           </button>
@@ -132,11 +145,7 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
           )}
 
           {/* エラー表示 */}
-          {error && (
-            <div className="checkout-error">
-              {error}
-            </div>
-          )}
+          {error && <div className="checkout-error">{error}</div>}
         </div>
 
         <div className="modal-footer">

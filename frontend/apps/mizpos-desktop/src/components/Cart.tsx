@@ -3,7 +3,7 @@
  * 選択した商品の一覧と合計を表示
  */
 
-import { useCartStore, formatPrice } from "../stores/cart";
+import { formatPrice, useCartStore } from "../stores/cart";
 import "./Cart.css";
 
 interface CartProps {
@@ -37,9 +37,7 @@ export function Cart({ onCheckout }: CartProps) {
             <p>商品を選択してください</p>
           </div>
         ) : (
-          items.map((item) => (
-            <CartItemRow key={item.product_id} item={item} />
-          ))
+          items.map((item) => <CartItemRow key={item.product_id} item={item} />)
         )}
       </div>
 

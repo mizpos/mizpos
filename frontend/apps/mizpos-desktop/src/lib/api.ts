@@ -6,7 +6,9 @@
 import type { LoginRequest, PosSession, Product } from "../types";
 
 // 環境変数からAPIエンドポイントを取得
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
 const ACCOUNTS_API = `${API_BASE_URL}/accounts`;
 const STOCK_API = `${API_BASE_URL}/stock`;
 const SALES_API = `${API_BASE_URL}/sales`;
@@ -20,7 +22,7 @@ const REQUEST_TIMEOUT = 10000;
 async function fetchWithTimeout(
   url: string,
   options: RequestInit = {},
-  timeout: number = REQUEST_TIMEOUT
+  timeout: number = REQUEST_TIMEOUT,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -43,7 +45,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public statusCode: number,
-    public detail?: string
+    public detail?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -67,11 +69,13 @@ export async function posLogin(request: LoginRequest): Promise<PosSession> {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Unknown error" }));
     throw new ApiError(
       error.detail || "Login failed",
       response.status,
-      error.detail
+      error.detail,
     );
   }
 
@@ -81,12 +85,14 @@ export async function posLogin(request: LoginRequest): Promise<PosSession> {
 /**
  * セッション検証
  */
-export async function verifySession(sessionId: string): Promise<{ valid: boolean; session?: PosSession }> {
+export async function verifySession(
+  sessionId: string,
+): Promise<{ valid: boolean; session?: PosSession }> {
   const response = await fetchWithTimeout(
     `${ACCOUNTS_API}/pos/auth/verify?session_id=${encodeURIComponent(sessionId)}`,
     {
       method: "GET",
-    }
+    },
   );
 
   if (!response.ok) {
@@ -112,11 +118,13 @@ export async function refreshSession(sessionId: string): Promise<PosSession> {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Unknown error" }));
     throw new ApiError(
       error.detail || "Session refresh failed",
       response.status,
-      error.detail
+      error.detail,
     );
   }
 
@@ -185,7 +193,7 @@ interface SyncResult {
  */
 export async function syncOfflineSales(
   terminalId: string,
-  sales: OfflineSale[]
+  sales: OfflineSale[],
 ): Promise<SyncResult> {
   const response = await fetchWithTimeout(`${ACCOUNTS_API}/pos/sync/sales`, {
     method: "POST",
@@ -219,7 +227,7 @@ export async function recordSale(
     total_amount: number;
     payment_method: string;
     event_id?: string;
-  }
+  },
 ): Promise<{ sale_id: string }> {
   const response = await fetchWithTimeout(`${SALES_API}/sales`, {
     method: "POST",
@@ -246,9 +254,13 @@ export async function recordSale(
  */
 export async function checkApiHealth(): Promise<boolean> {
   try {
-    const response = await fetchWithTimeout(`${STOCK_API}/products?limit=1`, {
-      method: "GET",
-    }, 5000); // 5秒タイムアウト
+    const response = await fetchWithTimeout(
+      `${STOCK_API}/products?limit=1`,
+      {
+        method: "GET",
+      },
+      5000,
+    ); // 5秒タイムアウト
     return response.ok;
   } catch {
     return false;

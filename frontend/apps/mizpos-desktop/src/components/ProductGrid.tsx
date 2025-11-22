@@ -3,7 +3,7 @@
  * タッチパネルで選択しやすい商品カード一覧
  */
 
-import { useCartStore, formatPrice } from "../stores/cart";
+import { formatPrice, useCartStore } from "../stores/cart";
 import type { Product } from "../types";
 import "./ProductGrid.css";
 

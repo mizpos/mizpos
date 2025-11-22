@@ -3,10 +3,15 @@
  */
 
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import type { PosSession } from "../types";
-import { clearSession, getStoredSession, getTerminalId, saveSession } from "../lib/db";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { posLogin, posLogout, refreshSession, verifySession } from "../lib/api";
+import {
+  clearSession,
+  getStoredSession,
+  getTerminalId,
+  saveSession,
+} from "../lib/db";
+import type { PosSession } from "../types";
 
 interface AuthState {
   // 状態
@@ -70,7 +75,8 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           set({
             isLoading: false,
-            error: error instanceof Error ? error.message : "初期化に失敗しました",
+            error:
+              error instanceof Error ? error.message : "初期化に失敗しました",
           });
         }
       },
@@ -184,8 +190,8 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         terminalId: state.terminalId,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // セッションの有効期限が近いかチェック（30分前）

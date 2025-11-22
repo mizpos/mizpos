@@ -457,7 +457,9 @@ function PosEmployeesPage() {
                 onChange={(e) =>
                   setCreateFormData({
                     ...createFormData,
-                    employee_number: e.target.value.replace(/\D/g, "").slice(0, 7),
+                    employee_number: e.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 7),
                   })
                 }
                 className={inputClass}

@@ -3,9 +3,9 @@
  * 従業員番号（7桁）とPIN（3桁以上）でログイン
  */
 
-import { useState, useCallback } from "react";
-import { NumericKeypad } from "./NumericKeypad";
+import { useCallback, useState } from "react";
 import { useAuthStore } from "../stores/auth";
+import { NumericKeypad } from "./NumericKeypad";
 import "./LoginScreen.css";
 
 type InputField = "employee" | "pin";
@@ -36,7 +36,7 @@ export function LoginScreen() {
         }
       }
     },
-    [activeField, clearError]
+    [activeField, clearError],
   );
 
   const handleLogin = useCallback(async () => {
@@ -59,7 +59,7 @@ export function LoginScreen() {
       clearError();
       setActiveField(field);
     },
-    [clearError]
+    [clearError],
   );
 
   const currentValue = activeField === "employee" ? employeeNumber : pin;
@@ -82,9 +82,7 @@ export function LoginScreen() {
               className={`input-display ${activeField === "employee" ? "active" : ""}`}
               onClick={() => handleFieldFocus("employee")}
             >
-              <span className="input-value">
-                {employeeNumber || "0000000"}
-              </span>
+              <span className="input-value">{employeeNumber || "0000000"}</span>
               <span className="input-hint">7桁</span>
             </button>
           </div>
@@ -104,11 +102,7 @@ export function LoginScreen() {
             </button>
           </div>
 
-          {error && (
-            <div className="login-error">
-              {error}
-            </div>
-          )}
+          {error && <div className="login-error">{error}</div>}
 
           <NumericKeypad
             value={currentValue}

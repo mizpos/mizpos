@@ -40,21 +40,21 @@ export function NumericKeypad({
         }
       }
     },
-    [value, onChange, maxLength, onEnter]
+    [value, onChange, maxLength, onEnter],
   );
 
-  const keys = [
-    ["1", "2", "3"],
-    ["4", "5", "6"],
-    ["7", "8", "9"],
-    [showDecimal ? "." : "clear", "0", "backspace"],
+  const keys: Array<{ rowId: string; keys: string[] }> = [
+    { rowId: "row-123", keys: ["1", "2", "3"] },
+    { rowId: "row-456", keys: ["4", "5", "6"] },
+    { rowId: "row-789", keys: ["7", "8", "9"] },
+    { rowId: "row-0", keys: [showDecimal ? "." : "clear", "0", "backspace"] },
   ];
 
   return (
     <div className="numeric-keypad">
-      {keys.map((row, rowIndex) => (
-        <div key={rowIndex} className="keypad-row">
-          {row.map((key) => (
+      {keys.map((row) => (
+        <div key={row.rowId} className="keypad-row">
+          {row.keys.map((key) => (
             <button
               key={key}
               type="button"

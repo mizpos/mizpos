@@ -37,6 +37,21 @@ from models import (
 from permissions import (
     get_user_id_from_auth,
 )
+from pos_services import (
+    authenticate_pos_employee,
+    create_pos_employee,
+    delete_pos_employee,
+    get_pending_offline_sales,
+    get_pos_employee,
+    invalidate_employee_sessions,
+    invalidate_session,
+    list_pos_employees,
+    mark_offline_sale_failed,
+    mark_offline_sale_synced,
+    refresh_pos_session,
+    update_pos_employee,
+    verify_pos_session,
+)
 from services import (
     DynamoDBClientError,
     UsernameExistsException,
@@ -780,22 +795,6 @@ async def set_address_as_default(
 # POS従業員管理エンドポイント（mizpos-desktop用）
 # ==========================================
 
-from pos_services import (
-    authenticate_pos_employee,
-    create_pos_employee,
-    delete_pos_employee,
-    get_pending_offline_sales,
-    get_pos_employee,
-    invalidate_employee_sessions,
-    invalidate_session,
-    list_pos_employees,
-    mark_offline_sale_failed,
-    mark_offline_sale_synced,
-    refresh_pos_session,
-    update_pos_employee,
-    verify_pos_session,
-)
-
 
 # POS従業員管理（管理者用）
 @router.get("/pos/employees", response_model=dict)
@@ -816,9 +815,7 @@ async def list_pos_employees_endpoint(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post(
-    "/pos/employees", response_model=dict, status_code=status.HTTP_201_CREATED
-)
+@router.post("/pos/employees", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_pos_employee_endpoint(
     request: CreatePosEmployeeRequest, current_user: dict = Depends(get_current_user)
 ):
@@ -1010,9 +1007,7 @@ async def sync_offline_sales(request: OfflineSalesSyncRequest):
 
             except Exception as e:
                 logger.error(f"Error syncing sale {sale.get('queue_id')}: {e}")
-                failed_items.append(
-                    {"queue_id": sale.get("queue_id"), "error": str(e)}
-                )
+                failed_items.append({"queue_id": sale.get("queue_id"), "error": str(e)})
                 if sale.get("queue_id") and sale.get("created_at"):
                     mark_offline_sale_failed(
                         sale["queue_id"], sale["created_at"], str(e)

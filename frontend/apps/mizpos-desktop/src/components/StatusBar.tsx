@@ -4,12 +4,13 @@
  */
 
 import { useAuthStore } from "../stores/auth";
-import { useNetworkStore, formatLastOnlineTime } from "../stores/network";
+import { formatLastOnlineTime, useNetworkStore } from "../stores/network";
 import "./StatusBar.css";
 
 export function StatusBar() {
   const { session, logout } = useAuthStore();
-  const { status, syncStatus, lastOnlineTime, queueWarning } = useNetworkStore();
+  const { status, syncStatus, lastOnlineTime, queueWarning } =
+    useNetworkStore();
 
   const handleLogout = async () => {
     if (confirm("ログアウトしますか？")) {

@@ -3,9 +3,9 @@
  */
 
 import { create } from "zustand";
-import type { CartItem, Product, SaleRecord } from "../types";
-import { addSale, addToOfflineQueue, getTerminalId } from "../lib/db";
 import { recordSale } from "../lib/api";
+import { addSale, addToOfflineQueue, getTerminalId } from "../lib/db";
+import type { CartItem, Product, SaleRecord } from "../types";
 import { useAuthStore } from "./auth";
 import { useNetworkStore } from "./network";
 
@@ -25,7 +25,9 @@ interface CartState {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
-  checkout: (paymentMethod: "cash" | "card" | "other") => Promise<SaleRecord | null>;
+  checkout: (
+    paymentMethod: "cash" | "card" | "other",
+  ) => Promise<SaleRecord | null>;
   clearLastSale: () => void;
   clearError: () => void;
 }
@@ -50,7 +52,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
   addItem: (product: Product, quantity = 1) => {
     set((state) => {
       const existingItem = state.items.find(
-        (item) => item.product_id === product.product_id
+        (item) => item.product_id === product.product_id,
       );
 
       if (existingItem) {
@@ -63,7 +65,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
                   quantity: item.quantity + quantity,
                   subtotal: (item.quantity + quantity) * product.price,
                 }
-              : item
+              : item,
           ),
         };
       }
@@ -104,7 +106,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
               quantity,
               subtotal: quantity * item.product.price,
             }
-          : item
+          : item,
       ),
     }));
   },

@@ -16,6 +16,7 @@ import { Route as SalesRouteImport } from './routes/sales'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PublishersRouteImport } from './routes/publishers'
 import { Route as ProductsRouteImport } from './routes/products'
+import { Route as PosEmployeesRouteImport } from './routes/pos-employees'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as EventsRouteImport } from './routes/events'
@@ -58,6 +59,11 @@ const ProductsRoute = ProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PosEmployeesRoute = PosEmployeesRouteImport.update({
+  id: '/pos-employees',
+  path: '/pos-employees',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/pos-employees': typeof PosEmployeesRoute
   '/products': typeof ProductsRoute
   '/publishers': typeof PublishersRoute
   '/reports': typeof ReportsRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/pos-employees': typeof PosEmployeesRoute
   '/products': typeof ProductsRoute
   '/publishers': typeof PublishersRoute
   '/reports': typeof ReportsRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/pos-employees': typeof PosEmployeesRoute
   '/products': typeof ProductsRoute
   '/publishers': typeof PublishersRoute
   '/reports': typeof ReportsRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/login'
     | '/logout'
+    | '/pos-employees'
     | '/products'
     | '/publishers'
     | '/reports'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/login'
     | '/logout'
+    | '/pos-employees'
     | '/products'
     | '/publishers'
     | '/reports'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/login'
     | '/logout'
+    | '/pos-employees'
     | '/products'
     | '/publishers'
     | '/reports'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   EventsRoute: typeof EventsRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  PosEmployeesRoute: typeof PosEmployeesRoute
   ProductsRoute: typeof ProductsRoute
   PublishersRoute: typeof PublishersRoute
   ReportsRoute: typeof ReportsRoute
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pos-employees': {
+      id: '/pos-employees'
+      path: '/pos-employees'
+      fullPath: '/pos-employees'
+      preLoaderRoute: typeof PosEmployeesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/logout': {
       id: '/logout'
       path: '/logout'
@@ -302,6 +322,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsRoute: EventsRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  PosEmployeesRoute: PosEmployeesRoute,
   ProductsRoute: ProductsRoute,
   PublishersRoute: PublishersRoute,
   ReportsRoute: ReportsRoute,

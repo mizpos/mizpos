@@ -4,17 +4,17 @@
  */
 
 import { create } from "zustand";
-import type { NetworkStatus, SyncStatus } from "../types";
 import { checkNetworkConnectivity, syncOfflineSales } from "../lib/api";
 import {
+  cleanupSyncedQueue,
+  getOfflineQueueSize,
   getPendingOfflineQueue,
-  markQueueItemSynced,
-  markQueueItemFailed,
   getTerminalId,
   isOfflineQueueNearCapacity,
-  getOfflineQueueSize,
-  cleanupSyncedQueue,
+  markQueueItemFailed,
+  markQueueItemSynced,
 } from "../lib/db";
+import type { NetworkStatus, SyncStatus } from "../types";
 
 // 監視間隔（ミリ秒）
 const NETWORK_CHECK_INTERVAL = 30000; // 30秒
@@ -145,12 +145,14 @@ export const useNetworkStore = create<NetworkState>()((set, get) => ({
           queue_id: item.queue_id,
           created_at: item.created_at,
           sale_data: item.sale_data,
-        }))
+        })),
       );
 
       // 成功したものをマーク
       for (const item of pendingItems) {
-        const failed = result.failed_items.find((f) => f.queue_id === item.queue_id);
+        const failed = result.failed_items.find(
+          (f) => f.queue_id === item.queue_id,
+        );
         if (failed) {
           await markQueueItemFailed(item.queue_id, failed.error);
         } else {

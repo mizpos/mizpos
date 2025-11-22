@@ -6,7 +6,6 @@ mizpos-desktop専用の簡易認証システム
 import hashlib
 import hmac
 import os
-import secrets
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal

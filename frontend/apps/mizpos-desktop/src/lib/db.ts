@@ -4,7 +4,12 @@
  */
 
 import Dexie, { type EntityTable } from "dexie";
-import type { OfflineSaleQueue, PosSession, Product, SaleRecord } from "../types";
+import type {
+  OfflineSaleQueue,
+  PosSession,
+  Product,
+  SaleRecord,
+} from "../types";
 
 // データベーススキーマ
 class PosDatabase extends Dexie {
@@ -62,7 +67,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
       (product) =>
         product.title.toLowerCase().includes(lowerQuery) ||
         product.barcode?.includes(query) ||
-        product.isdn?.includes(query)
+        product.isdn?.includes(query),
     )
     .toArray();
 }
@@ -71,7 +76,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
  * バーコードで商品を検索
  */
 export async function findProductByBarcode(
-  barcode: string
+  barcode: string,
 ): Promise<Product | undefined> {
   return db.products.where("barcode").equals(barcode).first();
 }
@@ -80,7 +85,7 @@ export async function findProductByBarcode(
  * カテゴリで商品を取得
  */
 export async function getProductsByCategory(
-  category: string
+  category: string,
 ): Promise<Product[]> {
   return db.products.where("category").equals(category).toArray();
 }
@@ -96,7 +101,7 @@ export async function getAllProducts(): Promise<Product[]> {
  * 商品IDで取得
  */
 export async function getProductById(
-  productId: string
+  productId: string,
 ): Promise<Product | undefined> {
   return db.products.get(productId);
 }
@@ -145,7 +150,7 @@ export async function getTodaySales(): Promise<SaleRecord[]> {
  * オフライン販売をキューに追加
  */
 export async function addToOfflineQueue(
-  sale: SaleRecord
+  sale: SaleRecord,
 ): Promise<OfflineSaleQueue> {
   const queueItem: OfflineSaleQueue = {
     queue_id: sale.sale_id,
@@ -177,7 +182,7 @@ export async function markQueueItemSynced(queueId: string): Promise<void> {
  */
 export async function markQueueItemFailed(
   queueId: string,
-  error: string
+  error: string,
 ): Promise<void> {
   await db.offlineQueue.update(queueId, {
     sync_status: "failed",
@@ -277,13 +282,17 @@ export async function getTerminalId(): Promise<string> {
  * データベースを完全にクリア（ログアウト時など）
  */
 export async function clearAllData(): Promise<void> {
-  await db.transaction("rw", [db.products, db.sales, db.offlineQueue, db.sessions], async () => {
-    await db.products.clear();
-    await db.sales.clear();
-    await db.offlineQueue.clear();
-    await db.sessions.clear();
-    // configは端末IDなどがあるのでクリアしない
-  });
+  await db.transaction(
+    "rw",
+    [db.products, db.sales, db.offlineQueue, db.sessions],
+    async () => {
+      await db.products.clear();
+      await db.sales.clear();
+      await db.offlineQueue.clear();
+      await db.sessions.clear();
+      // configは端末IDなどがあるのでクリアしない
+    },
+  );
 }
 
 /**

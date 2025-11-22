@@ -3,18 +3,18 @@
  * 商品選択、カート、会計を行うメイン画面
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { StatusBar } from "./StatusBar";
-import { ProductGrid } from "./ProductGrid";
-import { Cart } from "./Cart";
-import { CheckoutModal } from "./CheckoutModal";
-import { ReceiptModal } from "./ReceiptModal";
+import { useCallback, useEffect, useState } from "react";
+import { fetchProducts } from "../lib/api";
+import { getAllProducts, syncProducts } from "../lib/db";
+import { useAuthStore } from "../stores/auth";
 import { useCartStore } from "../stores/cart";
 import { useNetworkStore } from "../stores/network";
-import { getAllProducts, syncProducts } from "../lib/db";
-import { fetchProducts } from "../lib/api";
-import { useAuthStore } from "../stores/auth";
 import type { Product } from "../types";
+import { Cart } from "./Cart";
+import { CheckoutModal } from "./CheckoutModal";
+import { ProductGrid } from "./ProductGrid";
+import { ReceiptModal } from "./ReceiptModal";
+import { StatusBar } from "./StatusBar";
 import "./POSScreen.css";
 
 export function POSScreen() {
@@ -131,9 +131,7 @@ export function POSScreen() {
       </div>
 
       {/* 会計モーダル */}
-      {showCheckout && (
-        <CheckoutModal onClose={() => setShowCheckout(false)} />
-      )}
+      {showCheckout && <CheckoutModal onClose={() => setShowCheckout(false)} />}
 
       {/* レシートモーダル */}
       {showReceipt && lastSale && (

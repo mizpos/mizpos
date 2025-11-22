@@ -21,12 +21,23 @@ export function ReceiptModal({ sale, onClose }: ReceiptModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="receipt-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <button
+        type="button"
+        className="modal-backdrop"
+        onClick={onClose}
+        aria-label="モーダルを閉じる"
+      />
+      <div
+        className="receipt-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="receipt-modal-title"
+      >
         <div className="receipt-content">
           {/* レシートヘッダー */}
           <div className="receipt-header">
-            <h2>mizPOS</h2>
+            <h2 id="receipt-modal-title">mizPOS</h2>
             <p className="receipt-subtitle">ご購入ありがとうございます</p>
           </div>
 
@@ -35,7 +46,11 @@ export function ReceiptModal({ sale, onClose }: ReceiptModalProps) {
             <div className="info-row">
               <span>日時</span>
               <span>
-                {saleDate.toLocaleDateString("ja-JP")} {saleDate.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}
+                {saleDate.toLocaleDateString("ja-JP")}{" "}
+                {saleDate.toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </span>
             </div>
             <div className="info-row">
@@ -73,7 +88,9 @@ export function ReceiptModal({ sale, onClose }: ReceiptModalProps) {
                     </span>
                   )}
                 </div>
-                <span className="item-subtotal">{formatPrice(item.subtotal)}</span>
+                <span className="item-subtotal">
+                  {formatPrice(item.subtotal)}
+                </span>
               </div>
             ))}
           </div>
@@ -81,7 +98,9 @@ export function ReceiptModal({ sale, onClose }: ReceiptModalProps) {
           {/* 合計 */}
           <div className="receipt-total">
             <span>合計</span>
-            <span className="total-amount">{formatPrice(sale.total_amount)}</span>
+            <span className="total-amount">
+              {formatPrice(sale.total_amount)}
+            </span>
           </div>
 
           {/* フッター */}
