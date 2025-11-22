@@ -1,50 +1,25 @@
-/**
- * API クライアント
- * POS端末からバックエンドAPIへのリクエストを処理
- */
+import type { paths as AccountsPaths } from "@mizpos/api/accounts";
+import type { paths as StockPaths } from "@mizpos/api/stock";
+import createClient from "openapi-fetch";
+import type {
+  AppliedCoupon,
+  LoginRequest,
+  PosSession,
+  Product,
+} from "../types";
 
-import type { LoginRequest, PosSession, Product } from "../types";
-
-// 環境変数からAPIエンドポイントを取得
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
-const ACCOUNTS_API = `${API_BASE_URL}/accounts`;
-const STOCK_API = `${API_BASE_URL}/stock`;
 
-// リクエストタイムアウト（ミリ秒）- Lambda cold start考慮で30秒に延長
-const REQUEST_TIMEOUT = 30000;
+export const accountsClient = createClient<AccountsPaths>({
+  baseUrl: `${API_BASE_URL}/accounts`,
+});
 
-/**
- * タイムアウト付きfetch
- */
-async function fetchWithTimeout(
-  url: string,
-  options: RequestInit = {},
-  timeout: number = REQUEST_TIMEOUT,
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+export const stockClient = createClient<StockPaths>({
+  baseUrl: `${API_BASE_URL}/stock`,
+});
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    return response;
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Request timeout after ${timeout}ms: ${url}`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-/**
- * APIエラー
- */
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -56,46 +31,33 @@ export class ApiError extends Error {
   }
 }
 
-// ==========================================
-// POS認証API
-// ==========================================
-
-/**
- * POS端末ログイン
- */
 export async function posLogin(request: LoginRequest): Promise<PosSession> {
-  const response = await fetchWithTimeout(`${ACCOUNTS_API}/pos/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const { data, error, response } = await accountsClient.POST(
+    "/pos/auth/login",
+    {
+      body: {
+        employee_number: request.employee_number,
+        pin: request.pin,
+        terminal_id: request.terminal_id,
+      },
     },
-    body: JSON.stringify(request),
-  });
+  );
 
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Unknown error" }));
-    throw new ApiError(
-      error.detail || "Login failed",
-      response.status,
-      error.detail,
-    );
+  if (error || !response.ok) {
+    const detail = (error as { detail?: string })?.detail || "Login failed";
+    throw new ApiError(detail, response.status, detail);
   }
 
-  return response.json();
+  return data as unknown as PosSession;
 }
 
-/**
- * セッション検証
- */
 export async function verifySession(
   sessionId: string,
 ): Promise<{ valid: boolean; session?: PosSession }> {
-  const response = await fetchWithTimeout(
-    `${ACCOUNTS_API}/pos/auth/verify?session_id=${encodeURIComponent(sessionId)}`,
+  const { data, error, response } = await accountsClient.GET(
+    "/pos/auth/verify",
     {
-      method: "GET",
+      params: { query: { session_id: sessionId } },
     },
   );
 
@@ -106,57 +68,38 @@ export async function verifySession(
     throw new ApiError("Session verification failed", response.status);
   }
 
-  return response.json();
-}
-
-/**
- * セッション延長
- */
-export async function refreshSession(sessionId: string): Promise<PosSession> {
-  const response = await fetchWithTimeout(`${ACCOUNTS_API}/pos/auth/refresh`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ session_id: sessionId }),
-  });
-
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Unknown error" }));
-    throw new ApiError(
-      error.detail || "Session refresh failed",
-      response.status,
-      error.detail,
-    );
+  if (error) {
+    return { valid: false };
   }
 
-  return response.json();
+  return data as unknown as { valid: boolean; session?: PosSession };
 }
 
-/**
- * ログアウト
- */
-export async function posLogout(sessionId: string): Promise<void> {
-  await fetchWithTimeout(`${ACCOUNTS_API}/pos/auth/logout`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+export async function refreshSession(sessionId: string): Promise<PosSession> {
+  const { data, error, response } = await accountsClient.POST(
+    "/pos/auth/refresh",
+    {
+      body: { session_id: sessionId },
     },
-    body: JSON.stringify({ session_id: sessionId }),
-  }).catch(() => {
-    // ログアウト失敗は無視（オフラインでもログアウトできるように）
-  });
+  );
+
+  if (error || !response.ok) {
+    const detail =
+      (error as { detail?: string })?.detail || "Session refresh failed";
+    throw new ApiError(detail, response.status, detail);
+  }
+
+  return data as unknown as PosSession;
 }
 
-// ==========================================
-// 商品API
-// ==========================================
+export async function posLogout(sessionId: string): Promise<void> {
+  await accountsClient
+    .POST("/pos/auth/logout", {
+      body: { session_id: sessionId },
+    })
+    .catch(() => {});
+}
 
-/**
- * バックエンドAPIのレスポンスをフロントエンドの型に変換
- */
 interface ApiProductResponse {
   product_id: string;
   name: string;
@@ -191,32 +134,19 @@ function mapApiProductToProduct(apiProduct: ApiProductResponse): Product {
   };
 }
 
-/**
- * 商品一覧を取得（ログイン時にダウンロード）
- */
 export async function fetchProducts(eventId?: string): Promise<Product[]> {
-  const params = new URLSearchParams();
-  if (eventId) {
-    params.append("event_id", eventId);
-  }
-
-  const url = `${STOCK_API}/products${params.toString() ? `?${params}` : ""}`;
-  const response = await fetchWithTimeout(url, {
-    method: "GET",
+  const { data, error, response } = await stockClient.GET("/products", {
+    params: { query: eventId ? { category: eventId } : {} },
   });
 
-  if (!response.ok) {
+  if (error || !response.ok) {
     throw new ApiError("Failed to fetch products", response.status);
   }
 
-  const data = await response.json();
-  const apiProducts: ApiProductResponse[] = data.products || [];
+  const responseData = data as { products?: ApiProductResponse[] };
+  const apiProducts = responseData.products || [];
   return apiProducts.map(mapApiProductToProduct);
 }
-
-// ==========================================
-// 販売同期API
-// ==========================================
 
 interface OfflineSale {
   queue_id: string;
@@ -230,34 +160,27 @@ interface SyncResult {
   sync_timestamp: number;
 }
 
-/**
- * オフライン販売を同期
- */
 export async function syncOfflineSales(
   terminalId: string,
   sales: OfflineSale[],
 ): Promise<SyncResult> {
-  const response = await fetchWithTimeout(`${ACCOUNTS_API}/pos/sync/sales`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const { data, error, response } = await accountsClient.POST(
+    "/pos/sync/sales",
+    {
+      body: {
+        terminal_id: terminalId,
+        sales: sales as unknown as { [key: string]: unknown }[],
+      },
     },
-    body: JSON.stringify({
-      terminal_id: terminalId,
-      sales: sales,
-    }),
-  });
+  );
 
-  if (!response.ok) {
+  if (error || !response.ok) {
     throw new ApiError("Failed to sync offline sales", response.status);
   }
 
-  return response.json();
+  return data as unknown as SyncResult;
 }
 
-/**
- * 販売を記録（POS専用エンドポイント）
- */
 export async function recordSale(
   sessionId: string,
   saleData: {
@@ -272,60 +195,53 @@ export async function recordSale(
     terminal_id?: string;
   },
 ): Promise<{ sale_id: string }> {
-  const response = await fetchWithTimeout(`${ACCOUNTS_API}/pos/sales`, {
-    method: "POST",
+  const { data, error, response } = await accountsClient.POST("/pos/sales", {
+    body: saleData,
     headers: {
-      "Content-Type": "application/json",
       "X-POS-Session": sessionId,
     },
-    body: JSON.stringify(saleData),
   });
 
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Sale recording failed" }));
-    throw new ApiError(
-      error.detail || "Failed to record sale",
-      response.status,
-      error.detail,
-    );
+  if (error || !response.ok) {
+    const detail =
+      (error as { detail?: string })?.detail || "Sale recording failed";
+    throw new ApiError(detail, response.status, detail);
   }
 
-  return response.json();
+  return data as unknown as { sale_id: string };
 }
 
-// ==========================================
-// ヘルスチェック
-// ==========================================
-
-/**
- * APIの接続確認
- */
 export async function checkApiHealth(): Promise<boolean> {
   try {
-    const response = await fetchWithTimeout(
-      `${STOCK_API}/products?limit=1`,
-      {
-        method: "GET",
-      },
-      5000,
-    ); // 5秒タイムアウト
+    const { response } = await stockClient.GET("/products", {
+      params: { query: {} },
+    });
     return response.ok;
   } catch {
     return false;
   }
 }
 
-/**
- * ネットワーク接続確認
- */
 export async function checkNetworkConnectivity(): Promise<boolean> {
-  // まずブラウザのオンライン状態をチェック
   if (!navigator.onLine) {
     return false;
   }
 
-  // 実際にAPIに接続できるかチェック
   return checkApiHealth();
+}
+
+export async function applyCoupon(
+  _sessionId: string,
+  _code: string,
+  _subtotal: number,
+  _publisherId?: string,
+): Promise<AppliedCoupon & { new_total: number }> {
+  throw new ApiError("Coupon API not available in OpenAPI spec", 501);
+}
+
+export async function lookupCoupon(
+  _sessionId: string,
+  _code: string,
+): Promise<{ coupon: AppliedCoupon }> {
+  throw new ApiError("Coupon API not available in OpenAPI spec", 501);
 }

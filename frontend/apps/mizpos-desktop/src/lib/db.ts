@@ -126,6 +126,39 @@ export async function findProductByBarcode(
 }
 
 /**
+ * ISDNで商品を検索
+ */
+export async function findProductByIsdn(
+  isdn: string,
+): Promise<Product | undefined> {
+  const product = await db.products.where("isdn").equals(isdn).first();
+  if (!product) return undefined;
+  return normalizeProduct(
+    product as Product & { name?: string; stock_quantity?: number },
+  );
+}
+
+/**
+ * バーコードまたはISDNで商品を検索（スキャナー用）
+ */
+export async function findProductByCode(
+  code: string,
+): Promise<Product | undefined> {
+  // まずバーコードで検索
+  let product = await db.products.where("barcode").equals(code).first();
+
+  // 見つからなければISDNで検索
+  if (!product) {
+    product = await db.products.where("isdn").equals(code).first();
+  }
+
+  if (!product) return undefined;
+  return normalizeProduct(
+    product as Product & { name?: string; stock_quantity?: number },
+  );
+}
+
+/**
  * カテゴリで商品を取得
  */
 export async function getProductsByCategory(

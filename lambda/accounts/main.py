@@ -34,9 +34,21 @@ from models import (
     UpdateAddressRequest,
     UpdatePosEmployeeRequest,
     UpdateUserRequest,
+    CreateCouponRequest,
+    UpdateCouponRequest,
+    ApplyCouponRequest,
 )
 from permissions import (
     get_user_id_from_auth,
+)
+from coupon_services import (
+    create_coupon,
+    get_coupon,
+    get_coupon_by_code,
+    list_coupons,
+    update_coupon,
+    delete_coupon,
+    apply_coupon,
 )
 from pos_services import (
     authenticate_pos_employee,
@@ -833,6 +845,7 @@ async def create_pos_employee_endpoint(
             display_name=request.display_name,
             event_id=request.event_id,
             publisher_id=request.publisher_id,
+            user_id=request.user_id,
         )
         return {"employee": employee}
     except ValueError as e:
@@ -874,6 +887,7 @@ async def update_pos_employee_endpoint(
             event_id=request.event_id,
             publisher_id=request.publisher_id,
             active=request.active,
+            user_id=request.user_id,
         )
         if not employee:
             raise HTTPException(status_code=404, detail="Employee not found")
@@ -1077,6 +1091,190 @@ async def get_pending_sales(terminal_id: str):
         return {"pending_sales": pending, "count": len(pending)}
     except Exception as e:
         logger.error(f"Error getting pending sales: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# クーポン管理エンドポイント
+# ==========================================
+
+
+@router.get("/coupons", response_model=dict)
+async def list_coupons_endpoint(
+    publisher_id: str | None = None,
+    event_id: str | None = None,
+    active_only: bool = False,
+    current_user: dict = Depends(get_current_user),
+):
+    """クーポン一覧取得"""
+    try:
+        coupons = list_coupons(
+            publisher_id=publisher_id, event_id=event_id, active_only=active_only
+        )
+        return {"coupons": coupons}
+    except Exception as e:
+        logger.error(f"Error listing coupons: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/coupons", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_coupon_endpoint(
+    request: CreateCouponRequest, current_user: dict = Depends(get_current_user)
+):
+    """クーポン作成
+
+    固定金額割引（fixed）または割引率（percentage）を指定
+    publisher_id指定でサークル限定クーポンに
+    """
+    try:
+        coupon = create_coupon(
+            code=request.code,
+            name=request.name,
+            discount_type=request.discount_type,
+            discount_value=request.discount_value,
+            description=request.description,
+            publisher_id=request.publisher_id,
+            event_id=request.event_id,
+            min_purchase_amount=request.min_purchase_amount,
+            max_discount_amount=request.max_discount_amount,
+            valid_from=request.valid_from,
+            valid_until=request.valid_until,
+            usage_limit=request.usage_limit,
+            active=request.active,
+        )
+        return {"coupon": coupon}
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error creating coupon: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/coupons/{coupon_id}", response_model=dict)
+async def get_coupon_endpoint(
+    coupon_id: str, current_user: dict = Depends(get_current_user)
+):
+    """クーポン詳細取得"""
+    try:
+        coupon = get_coupon(coupon_id)
+        if not coupon:
+            raise HTTPException(status_code=404, detail="Coupon not found")
+        return {"coupon": coupon}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting coupon: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/coupons/{coupon_id}", response_model=dict)
+async def update_coupon_endpoint(
+    coupon_id: str,
+    request: UpdateCouponRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """クーポン更新"""
+    try:
+        coupon = update_coupon(
+            coupon_id=coupon_id,
+            name=request.name,
+            description=request.description,
+            discount_type=request.discount_type,
+            discount_value=request.discount_value,
+            publisher_id=request.publisher_id,
+            event_id=request.event_id,
+            min_purchase_amount=request.min_purchase_amount,
+            max_discount_amount=request.max_discount_amount,
+            valid_from=request.valid_from,
+            valid_until=request.valid_until,
+            usage_limit=request.usage_limit,
+            active=request.active,
+        )
+        if not coupon:
+            raise HTTPException(status_code=404, detail="Coupon not found")
+        return {"coupon": coupon}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating coupon: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/coupons/{coupon_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_coupon_endpoint(
+    coupon_id: str, current_user: dict = Depends(get_current_user)
+):
+    """クーポン削除"""
+    try:
+        if not delete_coupon(coupon_id):
+            raise HTTPException(status_code=404, detail="Coupon not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting coupon: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# POS用クーポン適用エンドポイント
+@router.post("/pos/coupons/apply", response_model=dict)
+async def apply_coupon_endpoint(request: Request, coupon_request: ApplyCouponRequest):
+    """クーポン適用（POS用）
+
+    クーポンコードを検証し、割引額を計算
+    X-POS-Session ヘッダーでセッションIDを指定
+    """
+    try:
+        session_id = request.headers.get("X-POS-Session")
+        if not session_id:
+            raise HTTPException(status_code=401, detail="POS session required")
+
+        session = verify_pos_session(session_id)
+        if not session:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        result, error = apply_coupon(
+            code=coupon_request.code,
+            subtotal=coupon_request.subtotal,
+            publisher_id=coupon_request.publisher_id,
+            event_id=session.get("event_id"),
+        )
+
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error applying coupon: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/pos/coupons/lookup", response_model=dict)
+async def lookup_coupon_endpoint(request: Request, code: str):
+    """クーポンコード検索（POS用）
+
+    クーポンコードで検索して情報を取得
+    X-POS-Session ヘッダーでセッションIDを指定
+    """
+    try:
+        session_id = request.headers.get("X-POS-Session")
+        if not session_id:
+            raise HTTPException(status_code=401, detail="POS session required")
+
+        session = verify_pos_session(session_id)
+        if not session:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        coupon = get_coupon_by_code(code)
+        if not coupon:
+            raise HTTPException(status_code=404, detail="Coupon not found")
+
+        return {"coupon": coupon}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error looking up coupon: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

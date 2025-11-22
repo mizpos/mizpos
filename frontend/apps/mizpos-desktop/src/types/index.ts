@@ -54,13 +54,18 @@ export interface SaleRecord {
   sale_id: string;
   timestamp: number;
   items: CartItem[];
-  total_amount: number;
+  subtotal: number; // 割引前の小計
+  discount_amount: number; // クーポン割引額
+  total_amount: number; // 割引後の合計
+  received_amount: number; // 受領額（現金の場合は満額、カード・その他は合計額と同じ）
   payment_method: "cash" | "card" | "other";
   employee_number: string;
   event_id?: string;
   terminal_id: string;
   synced: boolean;
   created_at: number;
+  // クーポン情報
+  coupon?: AppliedCoupon;
 }
 
 // オフライン販売キュー
@@ -93,4 +98,33 @@ export interface SyncStatus {
   lastSyncTime?: number;
   pendingCount: number;
   isSyncing: boolean;
+}
+
+// クーポン
+export interface Coupon {
+  coupon_id: string;
+  code: string;
+  name: string;
+  description?: string;
+  discount_type: "fixed" | "percentage";
+  discount_value: number;
+  publisher_id?: string;
+  event_id?: string;
+  min_purchase_amount: number;
+  max_discount_amount?: number;
+  valid_from?: string;
+  valid_until?: string;
+  usage_limit?: number;
+  usage_count: number;
+  active: boolean;
+}
+
+// クーポン適用結果
+export interface AppliedCoupon {
+  coupon_id: string;
+  code: string;
+  name: string;
+  discount_type: "fixed" | "percentage";
+  discount_value: number;
+  discount_amount: number; // 実際の割引額
 }

@@ -24,6 +24,7 @@ resource "aws_lambda_function" "accounts" {
       OFFLINE_SALES_QUEUE_TABLE = aws_dynamodb_table.offline_sales_queue.name
       SALES_TABLE               = aws_dynamodb_table.sales.name
       STOCK_TABLE               = aws_dynamodb_table.stock.name
+      COUPONS_TABLE             = aws_dynamodb_table.coupons.name
       USER_POOL_ID              = aws_cognito_user_pool.main.id
       COGNITO_CLIENT_ID         = aws_cognito_user_pool_client.main.id
       SES_SENDER_EMAIL          = var.ses_sender_email

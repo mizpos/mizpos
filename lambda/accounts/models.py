@@ -172,6 +172,9 @@ class CreatePosEmployeeRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100)
     event_id: str | None = Field(default=None, description="紐付くイベントID")
     publisher_id: str | None = Field(default=None, description="紐付くサークルID")
+    user_id: str | None = Field(
+        default=None, description="紐付くmizposアカウントのユーザーID"
+    )
 
 
 class UpdatePosEmployeeRequest(BaseModel):
@@ -188,6 +191,7 @@ class UpdatePosEmployeeRequest(BaseModel):
     event_id: str | None = None
     publisher_id: str | None = None
     active: bool | None = None
+    user_id: str | None = None
 
 
 class PosEmployeeResponse(BaseModel):
@@ -197,6 +201,7 @@ class PosEmployeeResponse(BaseModel):
     display_name: str
     event_id: str | None = None
     publisher_id: str | None = None
+    user_id: str | None = None
     active: bool = True
     created_at: str
     updated_at: str
@@ -280,3 +285,121 @@ class PosSaleRequest(BaseModel):
     payment_method: str = Field(..., pattern="^(cash|card|other)$")
     event_id: str | None = None
     terminal_id: str | None = None
+
+
+# ==========================================
+# クーポン管理用モデル
+# ==========================================
+
+
+class CreateCouponRequest(BaseModel):
+    """クーポン作成リクエスト
+
+    discount_type:
+      - fixed: 固定金額割引（例: ¥500引き）- 売上計算上マイナス円の商品として扱う
+      - percentage: 割引率（例: 10%引き）
+
+    スコープ:
+      - publisher_id指定あり: そのサークルの商品にのみ適用
+      - publisher_id指定なし: 全商品に適用可能
+    """
+
+    code: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="クーポンコード（ユニーク）",
+    )
+    name: str = Field(..., min_length=1, max_length=100, description="クーポン名")
+    description: str | None = Field(default=None, max_length=500, description="説明")
+    discount_type: str = Field(
+        ...,
+        pattern="^(fixed|percentage)$",
+        description="割引タイプ: fixed=固定金額, percentage=割引率",
+    )
+    discount_value: int = Field(
+        ...,
+        gt=0,
+        description="割引値（fixed: 円, percentage: パーセント）",
+    )
+    publisher_id: str | None = Field(
+        default=None,
+        description="紐付くサークルID（指定時はそのサークルの商品にのみ適用）",
+    )
+    event_id: str | None = Field(
+        default=None, description="紐付くイベントID（指定時はそのイベントでのみ有効）"
+    )
+    min_purchase_amount: int = Field(
+        default=0, ge=0, description="最低購入金額（この金額以上で適用可能）"
+    )
+    max_discount_amount: int | None = Field(
+        default=None, ge=0, description="最大割引額（percentageの場合の上限）"
+    )
+    valid_from: str | None = Field(default=None, description="有効期間開始（ISO8601）")
+    valid_until: str | None = Field(default=None, description="有効期間終了（ISO8601）")
+    usage_limit: int | None = Field(default=None, ge=1, description="総利用回数上限")
+    active: bool = Field(default=True, description="有効フラグ")
+
+
+class UpdateCouponRequest(BaseModel):
+    """クーポン更新リクエスト"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    discount_type: str | None = Field(default=None, pattern="^(fixed|percentage)$")
+    discount_value: int | None = Field(default=None, gt=0)
+    publisher_id: str | None = None
+    event_id: str | None = None
+    min_purchase_amount: int | None = Field(default=None, ge=0)
+    max_discount_amount: int | None = Field(default=None, ge=0)
+    valid_from: str | None = None
+    valid_until: str | None = None
+    usage_limit: int | None = Field(default=None, ge=1)
+    active: bool | None = None
+
+
+class CouponResponse(BaseModel):
+    """クーポンレスポンス"""
+
+    coupon_id: str
+    code: str
+    name: str
+    description: str | None = None
+    discount_type: str
+    discount_value: int
+    publisher_id: str | None = None
+    event_id: str | None = None
+    min_purchase_amount: int = 0
+    max_discount_amount: int | None = None
+    valid_from: str | None = None
+    valid_until: str | None = None
+    usage_limit: int | None = None
+    usage_count: int = 0
+    active: bool = True
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class ApplyCouponRequest(BaseModel):
+    """クーポン適用リクエスト（POS用）"""
+
+    code: str = Field(..., min_length=1, max_length=50, description="クーポンコード")
+    subtotal: int = Field(..., ge=0, description="クーポン適用前の小計")
+    publisher_id: str | None = Field(
+        default=None, description="対象商品のサークルID（サークル限定クーポン検証用）"
+    )
+
+
+class ApplyCouponResponse(BaseModel):
+    """クーポン適用レスポンス"""
+
+    coupon_id: str
+    code: str
+    name: str
+    discount_type: str
+    discount_value: int
+    discount_amount: int  # 実際の割引額（計算済み）
+    new_total: int  # 割引後の金額

@@ -114,6 +114,7 @@ def create_pos_employee(
     display_name: str,
     event_id: str | None = None,
     publisher_id: str | None = None,
+    user_id: str | None = None,
 ) -> dict:
     """POS従業員を作成
 
@@ -123,6 +124,7 @@ def create_pos_employee(
         display_name: 表示名
         event_id: 紐付くイベントID（オプション）
         publisher_id: 紐付くサークルID（オプション）
+        user_id: 紐付くmizposアカウントのユーザーID（オプション）
 
     Returns:
         作成された従業員データ
@@ -152,6 +154,8 @@ def create_pos_employee(
         item["event_id"] = event_id
     if publisher_id:
         item["publisher_id"] = publisher_id
+    if user_id:
+        item["user_id"] = user_id
 
     pos_employees_table.put_item(Item=item)
 
@@ -161,6 +165,7 @@ def create_pos_employee(
         "display_name": display_name,
         "event_id": event_id,
         "publisher_id": publisher_id,
+        "user_id": user_id,
         "active": True,
         "created_at": now,
         "updated_at": now,
@@ -187,13 +192,16 @@ def get_pos_employee(employee_number: str) -> dict | None:
 
 
 def list_pos_employees(
-    event_id: str | None = None, publisher_id: str | None = None
+    event_id: str | None = None,
+    publisher_id: str | None = None,
+    user_id: str | None = None,
 ) -> list[dict]:
     """POS従業員一覧を取得
 
     Args:
         event_id: イベントIDでフィルタ（オプション）
         publisher_id: サークルIDでフィルタ（オプション）
+        user_id: mizposユーザーIDでフィルタ（オプション）
 
     Returns:
         従業員データのリスト（pin_hash除外）
@@ -210,6 +218,12 @@ def list_pos_employees(
             KeyConditionExpression="publisher_id = :pid",
             ExpressionAttributeValues={":pid": publisher_id},
         )
+    elif user_id:
+        response = pos_employees_table.query(
+            IndexName="UserIndex",
+            KeyConditionExpression="user_id = :uid",
+            ExpressionAttributeValues={":uid": user_id},
+        )
     else:
         response = pos_employees_table.scan()
 
@@ -222,6 +236,18 @@ def list_pos_employees(
     return items
 
 
+def get_pos_employees_by_user(user_id: str) -> list[dict]:
+    """mizposアカウントに紐づくPOS従業員を取得
+
+    Args:
+        user_id: mizposアカウントのユーザーID
+
+    Returns:
+        従業員データのリスト（pin_hash除外）
+    """
+    return list_pos_employees(user_id=user_id)
+
+
 def update_pos_employee(
     employee_number: str,
     display_name: str | None = None,
@@ -229,6 +255,7 @@ def update_pos_employee(
     event_id: str | None = None,
     publisher_id: str | None = None,
     active: bool | None = None,
+    user_id: str | None = None,
 ) -> dict | None:
     """POS従業員を更新
 
@@ -239,6 +266,7 @@ def update_pos_employee(
         event_id: イベントID（オプション）
         publisher_id: サークルID（オプション）
         active: 有効/無効フラグ（オプション）
+        user_id: mizposアカウントのユーザーID（オプション）
 
     Returns:
         更新された従業員データ、存在しない場合はNone
@@ -274,6 +302,10 @@ def update_pos_employee(
         update_expression += ", #active = :act"
         expression_values[":act"] = active
         expression_names["#active"] = "active"
+
+    if user_id is not None:
+        update_expression += ", user_id = :uid"
+        expression_values[":uid"] = user_id
 
     update_kwargs = {
         "Key": {"employee_number": employee_number},

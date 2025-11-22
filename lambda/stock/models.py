@@ -216,7 +216,9 @@ class UpdateEventRequest(BaseModel):
 
 class EventResponse(EventBase):
     event_id: str
-    event_code: str = Field(..., description="4桁のイベントコード（従業員番号の先頭4桁）")
+    event_code: str = Field(
+        ..., description="4桁のイベントコード（従業員番号の先頭4桁）"
+    )
     is_active: bool
     created_at: str
     updated_at: str

@@ -292,7 +292,8 @@ function SalesPage() {
     {
       key: "total",
       header: "合計金額",
-      render: (item: Sale) => `¥${(item.total ?? item.total_amount ?? 0).toLocaleString()}`,
+      render: (item: Sale) =>
+        `¥${(item.total ?? item.total_amount ?? 0).toLocaleString()}`,
     },
     {
       key: "employee_number",
@@ -659,7 +660,9 @@ function SalesPage() {
                   >
                     販売担当者
                   </p>
-                  <p className={css({ fontSize: "sm", fontFamily: "monospace" })}>
+                  <p
+                    className={css({ fontSize: "sm", fontFamily: "monospace" })}
+                  >
                     {selectedSale.employee_number}
                   </p>
                 </div>
@@ -675,7 +678,9 @@ function SalesPage() {
                   >
                     端末ID
                   </p>
-                  <p className={css({ fontSize: "xs", fontFamily: "monospace" })}>
+                  <p
+                    className={css({ fontSize: "xs", fontFamily: "monospace" })}
+                  >
                     {selectedSale.terminal_id}
                   </p>
                 </div>
@@ -699,11 +704,21 @@ function SalesPage() {
                       borderRadius: "full",
                       fontSize: "xs",
                       fontWeight: "medium",
-                      backgroundColor: selectedSale.source === "online" ? "blue.100" : "green.100",
-                      color: selectedSale.source === "online" ? "blue.800" : "green.800",
+                      backgroundColor:
+                        selectedSale.source === "online"
+                          ? "blue.100"
+                          : "green.100",
+                      color:
+                        selectedSale.source === "online"
+                          ? "blue.800"
+                          : "green.800",
                     })}
                   >
-                    {selectedSale.source === "online" ? "オンライン" : selectedSale.source === "pos" ? "POS (リアルタイム)" : "POS (オフライン同期)"}
+                    {selectedSale.source === "online"
+                      ? "オンライン"
+                      : selectedSale.source === "pos"
+                        ? "POS (リアルタイム)"
+                        : "POS (オフライン同期)"}
                   </span>
                 </div>
               )}

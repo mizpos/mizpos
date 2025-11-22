@@ -1,13 +1,9 @@
-/**
- * mizPOS Desktop アプリケーション
- * POS端末向けTauriアプリ
- */
-
 import { useEffect, useState } from "react";
-import { LoginScreen, POSScreen } from "./components";
+import { css } from "styled-system/css";
+import { LoginScreen } from "./components/LoginScreen";
+import { POSScreen } from "./components/POSScreen";
 import { useAuthStore } from "./stores/auth";
 import { useNetworkStore } from "./stores/network";
-import "./App.css";
 
 function App() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -34,10 +30,28 @@ function App() {
   // 初期化中
   if (!isInitialized) {
     return (
-      <div className="app-loading">
-        <div className="loading-content">
-          <h1>mizPOS</h1>
-          <p>起動中...</p>
+      <div
+        className={css({
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #1a237e 0%, #3949ab 100%)",
+        })}
+      >
+        <div className={css({ textAlign: "center", color: "white" })}>
+          <h1
+            className={css({
+              fontSize: "48px",
+              fontWeight: 700,
+              margin: "0 0 16px 0",
+            })}
+          >
+            mizPOS
+          </h1>
+          <p className={css({ fontSize: "18px", opacity: 0.8, margin: 0 })}>
+            起動中...
+          </p>
         </div>
       </div>
     );

@@ -10,6 +10,8 @@ from botocore.exceptions import ClientError
 
 from models import VariantType
 
+import random
+
 # 環境変数
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
@@ -274,9 +276,6 @@ def generate_presigned_upload_url(
 # ==========================================
 
 
-import random
-
-
 def generate_unique_event_code() -> str:
     """重複しない4桁のイベントコードを生成
 
@@ -288,7 +287,9 @@ def generate_unique_event_code() -> str:
     # 既存のevent_codeを取得
     response = events_table.scan(ProjectionExpression="event_code")
     existing_codes = {
-        item.get("event_code") for item in response.get("Items", []) if item.get("event_code")
+        item.get("event_code")
+        for item in response.get("Items", [])
+        if item.get("event_code")
     }
 
     # 最大1000回試行
