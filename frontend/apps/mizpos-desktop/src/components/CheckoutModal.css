@@ -133,6 +133,26 @@
   border-color: #1a237e;
 }
 
+.payment-button:disabled,
+.payment-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.payment-button:disabled:hover,
+.payment-button.disabled:hover {
+  border-color: #e0e0e0;
+}
+
+.payment-button .offline-badge {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: #e65100;
+  margin-top: 4px;
+}
+
 /* 現金セクション */
 .cash-section {
   display: flex;

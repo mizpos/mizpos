@@ -574,3 +574,109 @@ def mark_offline_sale_failed(queue_id: str, created_at: int, error: str) -> None
         UpdateExpression="SET sync_status = :status, error_message = :err",
         ExpressionAttributeValues={":status": "failed", ":err": error},
     )
+
+
+# ==========================================
+# POS販売記録（リアルタイム）
+# ==========================================
+
+# Sales/Stockテーブル（環境変数から取得）
+SALES_TABLE = os.environ.get("SALES_TABLE", f"{ENVIRONMENT}-mizpos-sales")
+STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
+
+sales_table = dynamodb.Table(SALES_TABLE)
+stock_table = dynamodb.Table(STOCK_TABLE)
+
+
+def record_pos_sale(
+    session_id: str,
+    items: list[dict],
+    total_amount: int,
+    payment_method: str,
+    event_id: str | None = None,
+    terminal_id: str | None = None,
+) -> dict:
+    """POS端末からの販売をリアルタイムで記録
+
+    Args:
+        session_id: POSセッションID
+        items: 販売アイテム [{product_id, quantity, unit_price}]
+        total_amount: 合計金額
+        payment_method: 支払い方法 (cash/card/other)
+        event_id: イベントID
+        terminal_id: 端末ID
+
+    Returns:
+        作成された販売レコード
+
+    Raises:
+        ValueError: セッションが無効な場合
+    """
+    # セッションを検証
+    session = verify_pos_session(session_id)
+    if not session:
+        raise ValueError("Invalid or expired session")
+
+    sale_id = str(uuid.uuid4())
+    now = int(datetime.now(timezone.utc).timestamp())
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # 在庫を減らし、販売詳細を構築
+    sale_items = []
+    for item in items:
+        product_id = item["product_id"]
+        quantity = item["quantity"]
+        unit_price = item["unit_price"]
+
+        # 在庫を減らす
+        try:
+            stock_table.update_item(
+                Key={"product_id": product_id},
+                UpdateExpression="SET stock = stock - :qty, updated_at = :updated",
+                ExpressionAttributeValues={
+                    ":qty": quantity,
+                    ":updated": now_iso,
+                },
+                ConditionExpression="stock >= :qty",
+            )
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                # 在庫不足だが処理は継続（対面販売では在庫エラーを無視）
+                pass
+            else:
+                raise
+
+        sale_items.append(
+            {
+                "product_id": product_id,
+                "quantity": quantity,
+                "unit_price": Decimal(str(unit_price)),
+                "subtotal": Decimal(str(unit_price * quantity)),
+            }
+        )
+
+    # 販売レコードを作成
+    sale_item = {
+        "sale_id": sale_id,
+        "timestamp": now,
+        "items": sale_items,
+        "total_amount": Decimal(str(total_amount)),
+        "payment_method": payment_method,
+        "status": "completed",
+        "employee_number": session["employee_number"],
+        "terminal_id": terminal_id or session.get("terminal_id"),
+        "source": "pos",  # POS端末からの販売を識別
+        "created_at": now_iso,
+    }
+
+    if event_id:
+        sale_item["event_id"] = event_id
+
+    sales_table.put_item(Item=sale_item)
+
+    return {
+        "sale_id": sale_id,
+        "timestamp": now,
+        "total_amount": total_amount,
+        "status": "completed",
+    }

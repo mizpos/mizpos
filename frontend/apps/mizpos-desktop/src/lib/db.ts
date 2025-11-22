@@ -11,6 +11,13 @@ import type {
   SaleRecord,
 } from "../types";
 
+// 画像キャッシュの型
+interface CachedImage {
+  url: string; // 元のURL（キー）
+  blob: Blob; // 画像データ
+  cached_at: number;
+}
+
 // データベーススキーマ
 class PosDatabase extends Dexie {
   // テーブル定義
@@ -19,6 +26,7 @@ class PosDatabase extends Dexie {
   offlineQueue!: EntityTable<OfflineSaleQueue, "queue_id">;
   sessions!: EntityTable<PosSession & { id?: number }, "id">;
   config!: EntityTable<{ key: string; value: unknown }, "key">;
+  imageCache!: EntityTable<CachedImage, "url">;
 
   constructor() {
     super("mizpos-desktop");
@@ -34,6 +42,16 @@ class PosDatabase extends Dexie {
       sessions: "++id, session_id, employee_number, expires_at",
       // アプリ設定
       config: "key",
+    });
+
+    // バージョン2: 画像キャッシュテーブル追加
+    this.version(2).stores({
+      products: "product_id, category, barcode, isdn, publisher_id, event_id",
+      sales: "sale_id, timestamp, synced, employee_number, event_id",
+      offlineQueue: "queue_id, created_at, sync_status",
+      sessions: "++id, session_id, employee_number, expires_at",
+      config: "key",
+      imageCache: "url, cached_at",
     });
   }
 }
@@ -313,4 +331,109 @@ export const OFFLINE_QUEUE_WARNING_THRESHOLD = 100;
 export async function isOfflineQueueNearCapacity(): Promise<boolean> {
   const count = await getOfflineQueueSize();
   return count >= OFFLINE_QUEUE_WARNING_THRESHOLD;
+}
+
+// ==========================================
+// 画像キャッシュ操作
+// ==========================================
+
+/**
+ * 画像をキャッシュに保存
+ */
+export async function cacheImage(url: string, blob: Blob): Promise<void> {
+  await db.imageCache.put({
+    url,
+    blob,
+    cached_at: Date.now(),
+  });
+}
+
+/**
+ * キャッシュから画像を取得
+ */
+export async function getCachedImage(url: string): Promise<Blob | undefined> {
+  const cached = await db.imageCache.get(url);
+  return cached?.blob;
+}
+
+/**
+ * 画像URLからBlobを取得（キャッシュ優先）
+ */
+export async function getImageWithCache(url: string): Promise<string> {
+  // キャッシュをチェック
+  const cached = await getCachedImage(url);
+  if (cached) {
+    return URL.createObjectURL(cached);
+  }
+
+  // キャッシュになければダウンロードしてキャッシュ
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const blob = await response.blob();
+      await cacheImage(url, blob);
+      return URL.createObjectURL(blob);
+    }
+  } catch (error) {
+    console.error("Failed to fetch image:", url, error);
+  }
+
+  // 失敗した場合は元のURLを返す
+  return url;
+}
+
+/**
+ * 商品の画像を一括キャッシュ（商品同期時に呼び出す）
+ */
+export async function cacheProductImages(
+  products: Product[],
+  onProgress?: (current: number, total: number) => void,
+): Promise<void> {
+  const imageUrls = products
+    .filter((p) => p.image_url)
+    .map((p) => p.image_url as string);
+
+  let completed = 0;
+  const total = imageUrls.length;
+
+  // 並列でダウンロード（最大5つ同時）
+  const batchSize = 5;
+  for (let i = 0; i < imageUrls.length; i += batchSize) {
+    const batch = imageUrls.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (url) => {
+        try {
+          // 既にキャッシュ済みならスキップ
+          const existing = await getCachedImage(url);
+          if (!existing) {
+            const response = await fetch(url);
+            if (response.ok) {
+              const blob = await response.blob();
+              await cacheImage(url, blob);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to cache image:", url, error);
+        } finally {
+          completed++;
+          onProgress?.(completed, total);
+        }
+      }),
+    );
+  }
+}
+
+/**
+ * 古い画像キャッシュをクリア
+ */
+export async function clearOldImageCache(olderThanDays = 30): Promise<void> {
+  const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+  await db.imageCache.where("cached_at").below(cutoffTime).delete();
+}
+
+/**
+ * 画像キャッシュを完全にクリア
+ */
+export async function clearAllImageCache(): Promise<void> {
+  await db.imageCache.clear();
 }

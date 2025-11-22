@@ -67,7 +67,7 @@ export function ReceiptModal({ sale, onClose }: ReceiptModalProps) {
             </div>
             {!sale.synced && (
               <div className="info-row offline-badge">
-                <span>オフライン販売</span>
+                <span>同期待ち</span>
               </div>
             )}
           </div>

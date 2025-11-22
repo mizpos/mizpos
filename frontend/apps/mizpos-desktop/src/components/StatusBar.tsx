@@ -3,6 +3,7 @@
  * ネットワーク状態、ログイン情報、同期状態を表示
  */
 
+import { useState } from "react";
 import { useAuthStore } from "../stores/auth";
 import { formatLastOnlineTime, useNetworkStore } from "../stores/network";
 import "./StatusBar.css";
@@ -11,10 +12,18 @@ export function StatusBar() {
   const { session, logout } = useAuthStore();
   const { status, syncStatus, lastOnlineTime, queueWarning } =
     useNetworkStore();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    if (confirm("ログアウトしますか？")) {
+    setIsLoggingOut(true);
+    try {
       await logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
     }
   };
 
@@ -57,13 +66,35 @@ export function StatusBar() {
           <div className="user-info">
             <span className="user-name">{session.display_name}</span>
             <span className="user-id">({session.employee_number})</span>
-            <button
-              type="button"
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              ログアウト
-            </button>
+            {showLogoutConfirm ? (
+              <div className="logout-confirm">
+                <span>ログアウトしますか？</span>
+                <button
+                  type="button"
+                  className="logout-confirm-yes"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "処理中..." : "はい"}
+                </button>
+                <button
+                  type="button"
+                  className="logout-confirm-no"
+                  onClick={() => setShowLogoutConfirm(false)}
+                  disabled={isLoggingOut}
+                >
+                  いいえ
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="logout-button"
+                onClick={() => setShowLogoutConfirm(true)}
+              >
+                ログアウト
+              </button>
+            )}
           </div>
         )}
 

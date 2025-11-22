@@ -11,7 +11,6 @@ const API_BASE_URL =
   "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
 const ACCOUNTS_API = `${API_BASE_URL}/accounts`;
 const STOCK_API = `${API_BASE_URL}/stock`;
-const SALES_API = `${API_BASE_URL}/sales`;
 
 // リクエストタイムアウト（ミリ秒）
 const REQUEST_TIMEOUT = 10000;
@@ -214,7 +213,7 @@ export async function syncOfflineSales(
 }
 
 /**
- * 販売を記録
+ * 販売を記録（POS専用エンドポイント）
  */
 export async function recordSale(
   sessionId: string,
@@ -227,9 +226,10 @@ export async function recordSale(
     total_amount: number;
     payment_method: string;
     event_id?: string;
+    terminal_id?: string;
   },
 ): Promise<{ sale_id: string }> {
-  const response = await fetchWithTimeout(`${SALES_API}/sales`, {
+  const response = await fetchWithTimeout(`${ACCOUNTS_API}/pos/sales`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -239,7 +239,14 @@ export async function recordSale(
   });
 
   if (!response.ok) {
-    throw new ApiError("Failed to record sale", response.status);
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Sale recording failed" }));
+    throw new ApiError(
+      error.detail || "Failed to record sale",
+      response.status,
+      error.detail,
+    );
   }
 
   return response.json();

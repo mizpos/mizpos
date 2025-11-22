@@ -257,3 +257,21 @@ class OfflineSalesSyncResponse(BaseModel):
     synced_count: int
     failed_items: list[dict]
     sync_timestamp: int
+
+
+class PosSaleItemRequest(BaseModel):
+    """POS販売アイテム"""
+
+    product_id: str
+    quantity: int = Field(..., ge=1)
+    unit_price: int = Field(..., ge=0)
+
+
+class PosSaleRequest(BaseModel):
+    """POS販売リクエスト"""
+
+    items: list[PosSaleItemRequest]
+    total_amount: int = Field(..., ge=0)
+    payment_method: str = Field(..., pattern="^(cash|card|other)$")
+    event_id: str | None = None
+    terminal_id: str | None = None

@@ -28,6 +28,7 @@ from models import (
     InviteUserRequest,
     OfflineSalesSyncRequest,
     PosLoginRequest,
+    PosSaleRequest,
     PosSessionRefreshRequest,
     ResendConfirmationRequest,
     UpdateAddressRequest,
@@ -48,6 +49,7 @@ from pos_services import (
     list_pos_employees,
     mark_offline_sale_failed,
     mark_offline_sale_synced,
+    record_pos_sale,
     refresh_pos_session,
     update_pos_employee,
     verify_pos_session,
@@ -983,6 +985,35 @@ async def pos_verify_session(session_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+# POS販売記録（リアルタイム）
+@router.post("/pos/sales", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_pos_sale(request: Request, sale_request: PosSaleRequest):
+    """POS端末からの販売を記録
+
+    X-POS-Session ヘッダーでセッションIDを指定
+    リアルタイムで販売を処理し、在庫を減らす
+    """
+    session_id = request.headers.get("X-POS-Session")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing POS session")
+
+    try:
+        result = record_pos_sale(
+            session_id=session_id,
+            items=[item.model_dump() for item in sale_request.items],
+            total_amount=sale_request.total_amount,
+            payment_method=sale_request.payment_method,
+            event_id=sale_request.event_id,
+            terminal_id=sale_request.terminal_id,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error recording POS sale: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 # オフライン販売同期
 @router.post("/pos/sync/sales", response_model=dict)
 async def sync_offline_sales(request: OfflineSalesSyncRequest):
@@ -1063,7 +1094,7 @@ def handler(event, context):
                 "headers": {
                     "Access-Control-Allow-Origin": "*",
                     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-POS-Session",
                     "Access-Control-Max-Age": "300",
                 },
                 "body": "",
