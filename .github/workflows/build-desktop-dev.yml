@@ -98,6 +98,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: frontend/apps/mizpos-desktop
+          args: --debug
 
       - name: Get app version
         id: version

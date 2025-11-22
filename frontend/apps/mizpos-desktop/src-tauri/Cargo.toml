@@ -26,7 +26,6 @@ encoding_rs = "0.8"
 
 # Desktop only dependencies (USB printer support)
 [target.'cfg(not(target_os = "android"))'.dependencies]
-glib = "^0.21.0"
 escpos = { version = "^0.17.0", features = ["native_usb"] }
 nusb = "^0.2.1"
 
