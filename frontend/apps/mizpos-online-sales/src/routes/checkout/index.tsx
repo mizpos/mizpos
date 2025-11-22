@@ -2,7 +2,6 @@ import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { fetchUserAttributes } from "aws-amplify/auth";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import CheckoutForm from "../../components/CheckoutForm";
@@ -13,7 +12,6 @@ import {
   createOrder,
   createOrderPaymentIntent,
   getUserAddresses,
-  getUserInfo,
   type SavedAddress,
 } from "../../lib/api";
 
@@ -36,8 +34,8 @@ function CheckoutPage() {
   );
   const [useManualAddress, setUseManualAddress] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
-    email: "",
-    name: "",
+    email: user?.email || "",
+    name: user?.displayName || "",
     postalCode: "",
     prefecture: "",
     city: "",
@@ -53,48 +51,22 @@ function CheckoutPage() {
     }
   }, [user, navigate]);
 
-  // ユーザー属性を取得
-  useQuery({
-    queryKey: ["userAttributes"],
-    queryFn: async () => {
-      try {
-        const attributes = await fetchUserAttributes();
-        setCustomerInfo((prev) => ({
-          ...prev,
-          email: attributes.email || prev.email,
-        }));
-        return attributes;
-      } catch {
-        return null;
-      }
-    },
-    enabled: !!user,
-  });
-
-  // ユーザー情報（ディスプレイネーム）を取得
-  useQuery({
-    queryKey: ["userInfo", user?.sub],
-    queryFn: async () => {
-      if (!user?.sub) return null;
-      try {
-        const userInfo = await getUserInfo(user.sub);
-        setCustomerInfo((prev) => ({
-          ...prev,
-          name: userInfo.display_name || prev.name,
-        }));
-        return userInfo;
-      } catch {
-        return null;
-      }
-    },
-    enabled: !!user?.sub,
-  });
+  // ユーザー情報が読み込まれたらフォームに自動入力
+  useEffect(() => {
+    if (user) {
+      setCustomerInfo((prev) => ({
+        ...prev,
+        email: user.email || prev.email,
+        name: user.displayName || prev.name,
+      }));
+    }
+  }, [user]);
 
   // 登録済み住所を取得（ログイン済みユーザーのみ）
   const { data: savedAddresses = [] } = useQuery({
-    queryKey: ["addresses", user?.sub],
-    queryFn: () => getUserAddresses(user?.sub || ""),
-    enabled: !!user?.sub,
+    queryKey: ["addresses", user?.userId],
+    queryFn: () => getUserAddresses(user?.userId || ""),
+    enabled: !!user?.userId,
   });
 
   // 選択された住所を自動入力
@@ -129,10 +101,10 @@ function CheckoutPage() {
         customer_name: customerInfo.name,
       };
 
-      if (selectedAddressId && !useManualAddress && user?.sub) {
+      if (selectedAddressId && !useManualAddress && user?.userId) {
         // 登録済み住所を使用
         orderRequest.saved_address_id = selectedAddressId;
-        orderRequest.user_id = user.sub;
+        orderRequest.user_id = user.userId;
       } else {
         // 手動入力の住所を使用
         orderRequest.shipping_address = {
@@ -250,7 +222,7 @@ function CheckoutPage() {
               </h2>
 
               {/* 登録済み住所の選択（ログイン済みユーザーのみ） */}
-              {!!user?.sub && savedAddresses.length > 0 && (
+              {!!user?.userId && savedAddresses.length > 0 && (
                 <div className={css({ marginBottom: "24px" })}>
                   <div
                     className={css({

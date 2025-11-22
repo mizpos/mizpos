@@ -88,7 +88,7 @@ function SclPage() {
           >
             販売者名称
           </h3>
-          <p>mizphses</p>
+          <p>MIZPOS Operating Team（ミズポス）</p>
         </div>
 
         <div

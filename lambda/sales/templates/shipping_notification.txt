@@ -1,0 +1,32 @@
+【みずPOS】商品を発送しました
+
+{{ customer_name }} 様
+
+ご注文いただいた商品を発送いたしました。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+注文番号: {{ order_id }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{% if tracking_number %}
+【追跡番号】{{ tracking_number }}
+配送業者のサイトで配送状況を確認できます。
+{% endif %}
+
+■ 発送商品
+{% for item in items %}
+・{{ item.product_name }} x {{ item.quantity }}
+{% endfor %}
+
+■ お届け先
+{{ shipping_address.name }}
+〒{{ shipping_address.postal_code }}
+{{ shipping_address.prefecture }}{{ shipping_address.city }}
+{{ shipping_address.address_line1 }}{% if shipping_address.address_line2 %} {{ shipping_address.address_line2 }}{% endif %}
+{% if shipping_address.phone_number %}TEL: {{ shipping_address.phone_number }}{% endif %}
+
+商品到着まで今しばらくお待ちください。
+ご利用ありがとうございました。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+このメールは送信専用です。返信いただいても対応できませんのでご了承ください。
+(C) {{ year }} みずPOS. All rights reserved.

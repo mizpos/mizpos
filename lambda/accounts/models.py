@@ -140,3 +140,120 @@ class UpdateAddressRequest(BaseModel):
 # Cloudflare Turnstile検証用モデル
 class VerifyTurnstileRequest(BaseModel):
     token: str = Field(..., min_length=1, description="Turnstile token from frontend")
+
+
+# ==========================================
+# POS従業員管理用モデル（mizpos-desktop専用）
+# ==========================================
+
+
+class CreatePosEmployeeRequest(BaseModel):
+    """POS従業員作成リクエスト"""
+
+    employee_number: str = Field(
+        ...,
+        min_length=7,
+        max_length=7,
+        pattern="^[0-9]{7}$",
+        description="7桁の従業員番号",
+    )
+    pin: str = Field(
+        ...,
+        min_length=3,
+        max_length=8,
+        pattern="^[0-9]+$",
+        description="3〜8桁の数字PIN",
+    )
+    display_name: str = Field(..., min_length=1, max_length=100)
+    event_id: str | None = Field(default=None, description="紐付くイベントID")
+    publisher_id: str | None = Field(default=None, description="紐付くサークルID")
+
+
+class UpdatePosEmployeeRequest(BaseModel):
+    """POS従業員更新リクエスト"""
+
+    display_name: str | None = Field(default=None, min_length=1, max_length=100)
+    pin: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=8,
+        pattern="^[0-9]+$",
+        description="3〜8桁の数字PIN",
+    )
+    event_id: str | None = None
+    publisher_id: str | None = None
+    active: bool | None = None
+
+
+class PosEmployeeResponse(BaseModel):
+    """POS従業員レスポンス"""
+
+    employee_number: str
+    display_name: str
+    event_id: str | None = None
+    publisher_id: str | None = None
+    active: bool = True
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class PosLoginRequest(BaseModel):
+    """POS端末ログインリクエスト"""
+
+    employee_number: str = Field(
+        ...,
+        min_length=7,
+        max_length=7,
+        pattern="^[0-9]{7}$",
+        description="7桁の従業員番号",
+    )
+    pin: str = Field(
+        ...,
+        min_length=3,
+        max_length=8,
+        pattern="^[0-9]+$",
+        description="3〜8桁の数字PIN",
+    )
+    terminal_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="端末ID（Tauriアプリのデバイス識別子）",
+    )
+
+
+class PosLoginResponse(BaseModel):
+    """POS端末ログインレスポンス"""
+
+    session_id: str
+    employee_number: str
+    display_name: str
+    event_id: str | None = None
+    publisher_id: str | None = None
+    expires_at: int  # Unix timestamp
+    # オフラインモード用の検証データ
+    offline_verification_hash: str
+
+
+class PosSessionRefreshRequest(BaseModel):
+    """POSセッション更新リクエスト"""
+
+    session_id: str
+
+
+class OfflineSalesSyncRequest(BaseModel):
+    """オフライン販売同期リクエスト"""
+
+    terminal_id: str
+    sales: list[dict]  # 販売データの配列
+
+
+class OfflineSalesSyncResponse(BaseModel):
+    """オフライン販売同期レスポンス"""
+
+    synced_count: int
+    failed_items: list[dict]
+    sync_timestamp: int

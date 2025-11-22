@@ -1,0 +1,150 @@
+/* ステータスバー */
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #1a237e;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.status-bar-left,
+.status-bar-center,
+.status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-bar-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.app-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ネットワーク状態 */
+.network-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-online {
+  background: rgba(76, 175, 80, 0.2);
+}
+
+.status-online .status-indicator {
+  background: #4caf50;
+  box-shadow: 0 0 8px #4caf50;
+}
+
+.status-offline {
+  background: rgba(244, 67, 54, 0.2);
+}
+
+.status-offline .status-indicator {
+  background: #f44336;
+  box-shadow: 0 0 8px #f44336;
+}
+
+.status-checking {
+  background: rgba(255, 193, 7, 0.2);
+}
+
+.status-checking .status-indicator {
+  background: #ffc107;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 同期状態 */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.sync-status.warning {
+  background: rgba(255, 152, 0, 0.3);
+  color: #fff3e0;
+}
+
+.sync-icon {
+  font-size: 16px;
+}
+
+.syncing {
+  color: #81d4fa;
+  font-size: 12px;
+}
+
+.last-online {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ユーザー情報 */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-name {
+  font-weight: 600;
+}
+
+.user-id {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.logout-button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 時計 */
+.clock {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 60px;
+  text-align: right;
+}

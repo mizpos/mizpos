@@ -1,9 +1,20 @@
-"""Email service using AWS SES"""
+"""Email service using AWS SES with Jinja2 templates"""
 
 import os
+from pathlib import Path
 from typing import Optional
+from datetime import datetime
+
 import boto3
 from botocore.exceptions import ClientError
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+# テンプレート環境の初期化
+TEMPLATE_DIR = Path(__file__).parent / "templates"
+jinja_env = Environment(
+    loader=FileSystemLoader(TEMPLATE_DIR),
+    autoescape=select_autoescape(["html", "xml"]),
+)
 
 # SES クライアント
 ses_client = boto3.client(
@@ -14,6 +25,25 @@ ses_client = boto3.client(
 SENDER_EMAIL = os.environ.get("SES_SENDER_EMAIL", "noreply@miz.cab")
 CONFIGURATION_SET = os.environ.get("SES_CONFIGURATION_SET", "")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://sales.pos-stg.miz.cab")
+
+
+def render_template(template_name: str, **context) -> str:
+    """
+    Jinja2テンプレートをレンダリング
+
+    Args:
+        template_name: テンプレートファイル名
+        **context: テンプレートに渡すコンテキスト
+
+    Returns:
+        レンダリングされた文字列
+    """
+    # 共通コンテキスト
+    context.setdefault("year", datetime.now().year)
+    context.setdefault("frontend_url", FRONTEND_URL)
+
+    template = jinja_env.get_template(template_name)
+    return template.render(**context)
 
 
 def send_email(
@@ -74,57 +104,10 @@ def send_verification_email(email: str, verification_code: str) -> bool:
     """
     subject = "【みずPOS】メールアドレス認証"
 
-    body_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #2c3e50;">メールアドレスの認証</h2>
-
-            <p>みずPOSにご登録いただき、ありがとうございます。</p>
-
-            <p>以下の認証コードを入力して、メールアドレスの認証を完了してください。</p>
-
-            <div style="background-color: #f8f9fa; padding: 20px; margin: 20px 0; text-align: center; border-radius: 5px;">
-                <p style="margin: 0; font-size: 14px; color: #6c757d;">認証コード</p>
-                <p style="margin: 10px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #007bff;">
-                    {verification_code}
-                </p>
-            </div>
-
-            <p style="color: #6c757d; font-size: 14px;">
-                このコードは10分間有効です。<br>
-                お心当たりがない場合は、このメールを無視してください。
-            </p>
-
-            <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
-
-            <p style="color: #6c757d; font-size: 12px;">
-                このメールは送信専用です。返信いただいても対応できませんのでご了承ください。
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-
-    body_text = f"""
-【みずPOS】メールアドレス認証
-
-みずPOSにご登録いただき、ありがとうございます。
-
-以下の認証コードを入力して、メールアドレスの認証を完了してください。
-
-認証コード: {verification_code}
-
-このコードは10分間有効です。
-お心当たりがない場合は、このメールを無視してください。
-
----
-このメールは送信専用です。返信いただいても対応できませんのでご了承ください。
-    """
+    body_html = render_template(
+        "verification.html", verification_code=verification_code
+    )
+    body_text = render_template("verification.txt", verification_code=verification_code)
 
     return send_email(email, subject, body_html, body_text)
 
@@ -140,59 +123,9 @@ def send_welcome_email(email: str, display_name: str) -> bool:
     Returns:
         送信成功時True、失敗時False
     """
-    subject = "【みずPOS】登録完了のお知らせ"
+    subject = "【みずPOS】ご登録ありがとうございます"
 
-    body_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #2c3e50;">登録完了</h2>
-
-            <p>{display_name} 様</p>
-
-            <p>みずPOSへのご登録が完了しました。</p>
-
-            <p>これからみずPOSのオンラインショップをご利用いただけます。</p>
-
-            <div style="margin: 30px 0;">
-                <a href="{FRONTEND_URL}"
-                   style="display: inline-block; padding: 12px 30px; background-color: #007bff;
-                          color: #fff; text-decoration: none; border-radius: 5px;">
-                    ショップを見る
-                </a>
-            </div>
-
-            <p>今後ともよろしくお願いいたします。</p>
-
-            <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
-
-            <p style="color: #6c757d; font-size: 12px;">
-                このメールは送信専用です。返信いただいても対応できませんのでご了承ください。
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-
-    body_text = f"""
-【みずPOS】登録完了のお知らせ
-
-{display_name} 様
-
-みずPOSへのご登録が完了しました。
-
-これからみずPOSのオンラインショップをご利用いただけます。
-
-ショップURL: {FRONTEND_URL}
-
-今後ともよろしくお願いいたします。
-
----
-このメールは送信専用です。返信いただいても対応できませんのでご了承ください。
-    """
+    body_html = render_template("welcome.html", display_name=display_name)
+    body_text = render_template("welcome.txt", display_name=display_name)
 
     return send_email(email, subject, body_html, body_text)
