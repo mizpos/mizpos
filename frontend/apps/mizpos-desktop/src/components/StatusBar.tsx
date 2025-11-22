@@ -1,19 +1,35 @@
 /**
  * ステータスバー
- * ネットワーク状態、ログイン情報、同期状態を表示
+ * ネットワーク状態、ログイン情報、同期状態、本日の売上を表示
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getTodaySales } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 import { formatLastOnlineTime, useNetworkStore } from "../stores/network";
+import { useCartStore } from "../stores/cart";
 import "./StatusBar.css";
 
 export function StatusBar() {
   const { session, logout } = useAuthStore();
   const { status, syncStatus, lastOnlineTime, queueWarning } =
     useNetworkStore();
+  const { lastSale } = useCartStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [todaySales, setTodaySales] = useState({ count: 0, total: 0 });
+
+  // 本日の売上を取得・更新
+  useEffect(() => {
+    const updateTodaySales = async () => {
+      const sales = await getTodaySales();
+      const total = sales.reduce((sum, sale) => sum + sale.total_amount, 0);
+      setTodaySales({ count: sales.length, total });
+    };
+
+    updateTodaySales();
+    // lastSaleが変わったら更新（新しい売上があった時）
+  }, [lastSale]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -40,6 +56,13 @@ export function StatusBar() {
             {status === "offline" && "オフライン"}
             {status === "checking" && "確認中..."}
           </span>
+        </div>
+
+        {/* 本日の売上サマリー */}
+        <div className="today-sales">
+          <span className="sales-label">本日:</span>
+          <span className="sales-count">{todaySales.count}件</span>
+          <span className="sales-total">¥{todaySales.total.toLocaleString()}</span>
         </div>
       </div>
 
