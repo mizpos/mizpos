@@ -23,10 +23,15 @@ from models import (
     ChangePasswordRequest,
     ConfirmEmailRequest,
     CreateAddressRequest,
+    CreatePosEmployeeRequest,
     CreateUserRequest,
     InviteUserRequest,
+    OfflineSalesSyncRequest,
+    PosLoginRequest,
+    PosSessionRefreshRequest,
     ResendConfirmationRequest,
     UpdateAddressRequest,
+    UpdatePosEmployeeRequest,
     UpdateUserRequest,
 )
 from permissions import (
@@ -768,6 +773,272 @@ async def set_address_as_default(
     except HTTPException:
         raise
     except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# POS従業員管理エンドポイント（mizpos-desktop用）
+# ==========================================
+
+from pos_services import (
+    authenticate_pos_employee,
+    create_pos_employee,
+    delete_pos_employee,
+    get_pending_offline_sales,
+    get_pos_employee,
+    invalidate_employee_sessions,
+    invalidate_session,
+    list_pos_employees,
+    mark_offline_sale_failed,
+    mark_offline_sale_synced,
+    refresh_pos_session,
+    update_pos_employee,
+    verify_pos_session,
+)
+
+
+# POS従業員管理（管理者用）
+@router.get("/pos/employees", response_model=dict)
+async def list_pos_employees_endpoint(
+    event_id: str | None = None,
+    publisher_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """POS従業員一覧取得
+
+    event_idまたはpublisher_idでフィルタリング可能
+    """
+    try:
+        employees = list_pos_employees(event_id=event_id, publisher_id=publisher_id)
+        return {"employees": employees}
+    except Exception as e:
+        logger.error(f"Error listing POS employees: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post(
+    "/pos/employees", response_model=dict, status_code=status.HTTP_201_CREATED
+)
+async def create_pos_employee_endpoint(
+    request: CreatePosEmployeeRequest, current_user: dict = Depends(get_current_user)
+):
+    """POS従業員作成
+
+    7桁の従業員番号と3〜8桁の数字PINを設定
+    """
+    try:
+        employee = create_pos_employee(
+            employee_number=request.employee_number,
+            pin=request.pin,
+            display_name=request.display_name,
+            event_id=request.event_id,
+            publisher_id=request.publisher_id,
+        )
+        return {"employee": employee}
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error creating POS employee: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/pos/employees/{employee_number}", response_model=dict)
+async def get_pos_employee_endpoint(
+    employee_number: str, current_user: dict = Depends(get_current_user)
+):
+    """POS従業員詳細取得"""
+    try:
+        employee = get_pos_employee(employee_number)
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        return {"employee": employee}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting POS employee: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/pos/employees/{employee_number}", response_model=dict)
+async def update_pos_employee_endpoint(
+    employee_number: str,
+    request: UpdatePosEmployeeRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """POS従業員更新"""
+    try:
+        employee = update_pos_employee(
+            employee_number=employee_number,
+            display_name=request.display_name,
+            pin=request.pin,
+            event_id=request.event_id,
+            publisher_id=request.publisher_id,
+            active=request.active,
+        )
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        # PINまたはactiveが変更された場合、既存セッションを無効化
+        if request.pin is not None or request.active is False:
+            invalidate_employee_sessions(employee_number)
+
+        return {"employee": employee}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating POS employee: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete(
+    "/pos/employees/{employee_number}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_pos_employee_endpoint(
+    employee_number: str, current_user: dict = Depends(get_current_user)
+):
+    """POS従業員削除"""
+    try:
+        # セッションを無効化
+        invalidate_employee_sessions(employee_number)
+
+        deleted = delete_pos_employee(employee_number)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Employee not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting POS employee: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# POS端末認証（認証不要 - 端末からのみアクセス）
+@router.post("/pos/auth/login", response_model=dict)
+async def pos_login(request: PosLoginRequest):
+    """POS端末ログイン
+
+    従業員番号とPINで認証し、セッショントークンを発行
+    認証不要エンドポイント（POS端末専用）
+    """
+    try:
+        session = authenticate_pos_employee(
+            employee_number=request.employee_number,
+            pin=request.pin,
+            terminal_id=request.terminal_id,
+        )
+        if not session:
+            raise HTTPException(
+                status_code=401, detail="Invalid employee number or PIN"
+            )
+        return session
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in POS login: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/pos/auth/refresh", response_model=dict)
+async def pos_refresh_session(request: PosSessionRefreshRequest):
+    """POSセッション延長
+
+    有効なセッションの有効期限を延長
+    """
+    try:
+        session = refresh_pos_session(request.session_id)
+        if not session:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+        return session
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error refreshing POS session: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/pos/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def pos_logout(request: PosSessionRefreshRequest):
+    """POSログアウト
+
+    セッションを無効化
+    """
+    try:
+        invalidate_session(request.session_id)
+    except Exception as e:
+        logger.error(f"Error in POS logout: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/pos/auth/verify", response_model=dict)
+async def pos_verify_session(session_id: str):
+    """POSセッション検証
+
+    セッションが有効かどうかを確認
+    """
+    try:
+        session = verify_pos_session(session_id)
+        if not session:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+        return {"valid": True, "session": session}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying POS session: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# オフライン販売同期
+@router.post("/pos/sync/sales", response_model=dict)
+async def sync_offline_sales(request: OfflineSalesSyncRequest):
+    """オフライン販売データを同期
+
+    オフラインで記録された販売データをサーバーに送信
+    """
+    try:
+        synced_count = 0
+        failed_items = []
+
+        for sale in request.sales:
+            try:
+                # TODO: 実際の販売処理をSales Lambdaに委譲
+                # ここでは販売キューのステータス更新のみ
+                queue_id = sale.get("queue_id")
+                created_at = sale.get("created_at")
+
+                if queue_id and created_at:
+                    mark_offline_sale_synced(queue_id, created_at)
+                    synced_count += 1
+
+            except Exception as e:
+                logger.error(f"Error syncing sale {sale.get('queue_id')}: {e}")
+                failed_items.append(
+                    {"queue_id": sale.get("queue_id"), "error": str(e)}
+                )
+                if sale.get("queue_id") and sale.get("created_at"):
+                    mark_offline_sale_failed(
+                        sale["queue_id"], sale["created_at"], str(e)
+                    )
+
+        return {
+            "synced_count": synced_count,
+            "failed_items": failed_items,
+            "sync_timestamp": int(datetime.now(timezone.utc).timestamp()),
+        }
+    except Exception as e:
+        logger.error(f"Error in offline sales sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/pos/sync/pending", response_model=dict)
+async def get_pending_sales(terminal_id: str):
+    """端末の未同期販売を取得
+
+    サーバー側に保存されている未同期販売データを取得
+    """
+    try:
+        pending = get_pending_offline_sales(terminal_id)
+        return {"pending_sales": pending, "count": len(pending)}
+    except Exception as e:
+        logger.error(f"Error getting pending sales: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

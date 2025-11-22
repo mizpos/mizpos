@@ -269,3 +269,139 @@ resource "aws_dynamodb_table" "publishers" {
     Name = "${var.environment}-mizpos-publishers"
   }
 }
+
+# POS Employees table - POS端末用従業員情報（簡易認証用）
+# mizpos-desktop専用の従業員番号＋PINログイン
+resource "aws_dynamodb_table" "pos_employees" {
+  name         = "${var.environment}-mizpos-pos-employees"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "employee_number"
+
+  attribute {
+    name = "employee_number"
+    type = "S"
+  }
+
+  attribute {
+    name = "event_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "publisher_id"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "EventIndex"
+    hash_key        = "event_id"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "PublisherIndex"
+    hash_key        = "publisher_id"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-pos-employees"
+  }
+}
+
+# POS Sessions table - POS端末セッション管理
+# オフライン対応のため、セッション情報を保持
+resource "aws_dynamodb_table" "pos_sessions" {
+  name         = "${var.environment}-mizpos-pos-sessions"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "session_id"
+
+  attribute {
+    name = "session_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "employee_number"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "EmployeeIndex"
+    hash_key        = "employee_number"
+    projection_type = "ALL"
+  }
+
+  ttl {
+    enabled        = true
+    attribute_name = "expires_at"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-pos-sessions"
+  }
+}
+
+# Offline Sales Queue table - オフライン販売キュー
+# オフライン時の販売データを一時保存し、オンライン時に同期
+resource "aws_dynamodb_table" "offline_sales_queue" {
+  name         = "${var.environment}-mizpos-offline-sales-queue"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "queue_id"
+  range_key    = "created_at"
+
+  attribute {
+    name = "queue_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "created_at"
+    type = "N"
+  }
+
+  attribute {
+    name = "terminal_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "sync_status"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "TerminalIndex"
+    hash_key        = "terminal_id"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "SyncStatusIndex"
+    hash_key        = "sync_status"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  ttl {
+    enabled        = true
+    attribute_name = "expires_at"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-offline-sales-queue"
+  }
+}

@@ -3,6 +3,7 @@ import {
   IconBuildingStore,
   IconCalendar,
   IconChartBar,
+  IconDeviceDesktop,
   IconHome,
   IconKey,
   IconLogout,
@@ -38,6 +39,11 @@ const navItems: NavItem[] = [
   { label: "売上管理", href: "/sales", icon: <IconShoppingCart size={20} /> },
   { label: "レポート", href: "/reports", icon: <IconChartBar size={20} /> },
   { label: "ユーザー管理", href: "/users", icon: <IconUsers size={20} /> },
+  {
+    label: "POS従業員",
+    href: "/pos-employees",
+    icon: <IconDeviceDesktop size={20} />,
+  },
   { label: "設定", href: "/settings", icon: <IconSettings size={20} /> },
 ];
 

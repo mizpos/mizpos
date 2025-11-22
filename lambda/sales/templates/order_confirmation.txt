@@ -1,0 +1,36 @@
+【みずPOS】ご注文ありがとうございます
+
+{{ customer_name }} 様
+
+ご注文を受け付けました。以下の内容をご確認ください。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+注文番号: {{ order_id }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ ご注文内容
+{% for item in items %}
+{{ item.product_name }}
+  {{ format_currency(item.unit_price) }} x {{ item.quantity }} = {{ format_currency(item.subtotal) }}
+{% endfor %}
+
+--------------------------------------------------
+小計:     {{ format_currency(subtotal) }}
+{% if discount > 0 %}割引:     -{{ format_currency(discount) }}
+{% endif %}送料:     {{ format_currency(shipping_fee) }}
+--------------------------------------------------
+合計:     {{ format_currency(total) }}
+
+■ お届け先
+{{ shipping_address.name }}
+〒{{ shipping_address.postal_code }}
+{{ shipping_address.prefecture }}{{ shipping_address.city }}
+{{ shipping_address.address_line1 }}{% if shipping_address.address_line2 %} {{ shipping_address.address_line2 }}{% endif %}
+{% if shipping_address.phone_number %}TEL: {{ shipping_address.phone_number }}{% endif %}
+
+商品発送時に改めてメールでお知らせいたします。
+今しばらくお待ちください。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+このメールは送信専用です。返信いただいても対応できませんのでご了承ください。
+(C) {{ year }} みずPOS. All rights reserved.

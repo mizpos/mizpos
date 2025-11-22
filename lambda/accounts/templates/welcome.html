@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 22px; font-weight: 600;">
+    ご登録ありがとうございます
+</h2>
+
+<p style="margin: 0 0 20px 0; font-size: 16px;">
+    {{ display_name }} 様
+</p>
+
+<p style="margin: 0 0 25px 0; font-size: 15px; color: #555;">
+    みずPOSへのご登録が完了しました。<br>
+    これより、オンラインショップでのお買い物をお楽しみいただけます。
+</p>
+
+<!-- アクションボタン -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+    <tr>
+        <td align="center">
+            <a href="{{ frontend_url }}"
+               style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                ショップを見る
+            </a>
+        </td>
+    </tr>
+</table>
+
+<!-- インフォメーション -->
+<div style="background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin-top: 30px;">
+    <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #495057; font-weight: 600;">
+        ご利用にあたって
+    </h3>
+    <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">登録したメールアドレスでログインできます</li>
+        <li style="margin-bottom: 8px;">お気に入りの商品をカートに追加してご注文ください</li>
+        <li>ご不明な点がございましたらお問い合わせください</li>
+    </ul>
+</div>
+
+<p style="margin: 30px 0 0 0; font-size: 15px; color: #555;">
+    今後ともみずPOSをよろしくお願いいたします。
+</p>
+{% endblock %}

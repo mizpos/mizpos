@@ -1,51 +1,55 @@
-import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
+/**
+ * mizPOS Desktop アプリケーション
+ * POS端末向けTauriアプリ
+ */
+
+import { useEffect, useState } from "react";
+import { LoginScreen, POSScreen } from "./components";
+import { useAuthStore } from "./stores/auth";
+import { useNetworkStore } from "./stores/network";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const { session, initialize } = useAuthStore();
+  const { startMonitoring, stopMonitoring } = useNetworkStore();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  // アプリ初期化
+  useEffect(() => {
+    const init = async () => {
+      await initialize();
+      setIsInitialized(true);
+    };
+    init();
+  }, [initialize]);
+
+  // ネットワーク監視
+  useEffect(() => {
+    startMonitoring();
+    return () => {
+      stopMonitoring();
+    };
+  }, [startMonitoring, stopMonitoring]);
+
+  // 初期化中
+  if (!isInitialized) {
+    return (
+      <div className="app-loading">
+        <div className="loading-content">
+          <h1>mizPOS</h1>
+          <p>起動中...</p>
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+  // 未ログイン
+  if (!session) {
+    return <LoginScreen />;
+  }
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank" rel="noopener">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank" rel="noopener">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noopener">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
-  );
+  // メイン画面
+  return <POSScreen />;
 }
 
 export default App;
