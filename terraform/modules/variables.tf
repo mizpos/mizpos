@@ -41,7 +41,7 @@ variable "frontend_apps" {
   description = "List of frontend applications to deploy"
   type = list(object({
     name      = string
-    subdomain = string
+    subdomain = string # 空文字列の場合はルートドメインを使用
   }))
   default = [
     {
@@ -51,6 +51,10 @@ variable "frontend_apps" {
     {
       name      = "mizpos-online-sales"
       subdomain = "sales"
+    },
+    {
+      name      = "mizpos-website"
+      subdomain = "" # ルートドメイン（pos-stg.miz.cab）
     }
   ]
 }
