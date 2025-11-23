@@ -1,5 +1,6 @@
 import {
   IconDeviceMobile,
+  IconEdit,
   IconExternalLink,
   IconPlus,
   IconQrcode,
@@ -101,6 +102,8 @@ function AndroidEnterprisePage() {
   const [isCreateEnterpriseModalOpen, setIsCreateEnterpriseModalOpen] =
     useState(false);
   const [isCreatePolicyModalOpen, setIsCreatePolicyModalOpen] = useState(false);
+  const [isEditPolicyModalOpen, setIsEditPolicyModalOpen] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
   const [isEnrollDeviceModalOpen, setIsEnrollDeviceModalOpen] = useState(false);
   const [enrollmentToken, setEnrollmentToken] =
     useState<EnrollmentToken | null>(null);
@@ -404,6 +407,54 @@ function AndroidEnterprisePage() {
     },
   });
 
+  const updatePolicyMutation = useMutation({
+    mutationFn: async (data: {
+      policyName: string;
+      updates: {
+        policy_display_name?: string;
+        applications?: Array<{ package_name: string; install_type: string }>;
+        play_store_mode?: string;
+        password_required?: boolean;
+        password_minimum_length?: number;
+        screen_capture_disabled?: boolean;
+        camera_disabled?: boolean;
+        wifi_config_disabled?: boolean;
+      };
+    }) => {
+      if (!selectedEnterprise) throw new Error("No enterprise selected");
+      const { androidMgmt } = await getAuthenticatedClients();
+
+      // OpenAPIスキーマにPATCHがないため、fetchで直接呼び出し
+      const baseUrl = (
+        androidMgmt as unknown as { options: { baseUrl: string } }
+      ).options.baseUrl;
+      const headers = await import("../lib/api").then((m) =>
+        m.getAuthHeaders(),
+      );
+
+      const response = await fetch(
+        `${baseUrl}/enterprises/${selectedEnterprise.enterprise_id}/policies/${data.policyName}`,
+        {
+          method: "PATCH",
+          headers: await headers,
+          body: JSON.stringify(data.updates),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update policy");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["android-mgmt-policies", selectedEnterprise?.enterprise_id],
+      });
+      setIsEditPolicyModalOpen(false);
+      setEditingPolicy(null);
+    },
+  });
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ja-JP", {
       year: "numeric",
@@ -460,7 +511,8 @@ function AndroidEnterprisePage() {
       render: (item: Policy) => {
         const settings = item.settings || {};
         const features: string[] = [];
-        if (settings.screenCaptureDisabled) features.push("スクリーンキャプチャ禁止");
+        if (settings.screenCaptureDisabled)
+          features.push("スクリーンキャプチャ禁止");
         if (settings.cameraDisabled) features.push("カメラ禁止");
         if (settings.wifiConfigDisabled) features.push("WiFi設定禁止");
         if (settings.kioskCustomLauncherEnabled) features.push("KIOSKモード");
@@ -473,23 +525,40 @@ function AndroidEnterprisePage() {
       render: (item: Policy) => {
         const inUse = isPolicyInUse(item.policy_name);
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (
-                window.confirm(
-                  `ポリシー「${item.policy_display_name || item.policy_name}」を削除しますか？`,
-                )
-              ) {
-                deletePolicyMutation.mutate(item.policy_name);
+          <div className={css({ display: "flex", gap: "1" })}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditingPolicy(item);
+                setIsEditPolicyModalOpen(true);
+              }}
+              title="ポリシーを編集"
+            >
+              <IconEdit size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `ポリシー「${item.policy_display_name || item.policy_name}」を削除しますか？`,
+                  )
+                ) {
+                  deletePolicyMutation.mutate(item.policy_name);
+                }
+              }}
+              disabled={inUse || deletePolicyMutation.isPending}
+              title={
+                inUse
+                  ? "このポリシーを使用しているデバイスがあります"
+                  : "ポリシーを削除"
               }
-            }}
-            disabled={inUse || deletePolicyMutation.isPending}
-            title={inUse ? "このポリシーを使用しているデバイスがあります" : "ポリシーを削除"}
-          >
-            <IconTrash size={16} />
-          </Button>
+            >
+              <IconTrash size={16} />
+            </Button>
+          </div>
         );
       },
     },
@@ -1260,6 +1329,195 @@ function AndroidEnterprisePage() {
               </Button>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* ポリシー編集モーダル */}
+      <Modal
+        isOpen={isEditPolicyModalOpen}
+        onClose={() => {
+          setIsEditPolicyModalOpen(false);
+          setEditingPolicy(null);
+        }}
+        title={`ポリシー編集: ${editingPolicy?.policy_display_name || editingPolicy?.policy_name || ""}`}
+        size="lg"
+      >
+        {editingPolicy && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const formData = new FormData(form);
+
+              // アプリリストを取得
+              const appsText = formData.get("applications") as string;
+              const applications = appsText
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+                .map((packageName) => ({
+                  package_name: packageName,
+                  install_type: "AVAILABLE",
+                }));
+
+              updatePolicyMutation.mutate({
+                policyName: editingPolicy.policy_name,
+                updates: {
+                  policy_display_name: formData.get("display_name") as string,
+                  applications:
+                    applications.length > 0 ? applications : undefined,
+                  play_store_mode: formData.get("play_store_mode") as string,
+                  screen_capture_disabled:
+                    formData.get("screen_capture_disabled") === "on",
+                  camera_disabled: formData.get("camera_disabled") === "on",
+                  wifi_config_disabled:
+                    formData.get("wifi_config_disabled") === "on",
+                },
+              });
+            }}
+            className={css({ padding: "4" })}
+          >
+            <div className={css({ marginBottom: "4" })}>
+              <label htmlFor="edit_display_name" className={labelClass}>
+                表示名
+              </label>
+              <input
+                id="edit_display_name"
+                name="display_name"
+                type="text"
+                defaultValue={
+                  editingPolicy.policy_display_name || editingPolicy.policy_name
+                }
+                className={inputClass}
+              />
+            </div>
+
+            <div className={css({ marginBottom: "4" })}>
+              <label htmlFor="edit_applications" className={labelClass}>
+                許可アプリ（パッケージ名、1行に1つ）
+              </label>
+              <textarea
+                id="edit_applications"
+                name="applications"
+                rows={5}
+                defaultValue={
+                  editingPolicy.settings?.applications
+                    ?.map((app) => app.packageName)
+                    .join("\n") || ""
+                }
+                placeholder="com.example.app1&#10;com.example.app2"
+                className={css({
+                  width: "100%",
+                  padding: "2",
+                  borderRadius: "md",
+                  border: "1px solid",
+                  borderColor: "gray.300",
+                  fontFamily: "mono",
+                  fontSize: "sm",
+                })}
+              />
+            </div>
+
+            <div className={css({ marginBottom: "4" })}>
+              <label htmlFor="edit_play_store_mode" className={labelClass}>
+                Play Storeモード
+              </label>
+              <select
+                id="edit_play_store_mode"
+                name="play_store_mode"
+                defaultValue={
+                  editingPolicy.settings?.playStoreMode || "WHITELIST"
+                }
+                className={inputClass}
+              >
+                <option value="WHITELIST">
+                  ホワイトリスト（許可アプリのみ）
+                </option>
+                <option value="BLACKLIST">
+                  ブラックリスト（指定アプリを除外）
+                </option>
+              </select>
+            </div>
+
+            <div className={css({ marginBottom: "4" })}>
+              <span className={labelClass}>セキュリティ設定</span>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2",
+                  marginTop: "2",
+                })}
+              >
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                  })}
+                >
+                  <input
+                    type="checkbox"
+                    name="screen_capture_disabled"
+                    defaultChecked={
+                      editingPolicy.settings?.screenCaptureDisabled
+                    }
+                  />
+                  スクリーンキャプチャを禁止
+                </label>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                  })}
+                >
+                  <input
+                    type="checkbox"
+                    name="camera_disabled"
+                    defaultChecked={editingPolicy.settings?.cameraDisabled}
+                  />
+                  カメラを禁止
+                </label>
+                <label
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                  })}
+                >
+                  <input
+                    type="checkbox"
+                    name="wifi_config_disabled"
+                    defaultChecked={editingPolicy.settings?.wifiConfigDisabled}
+                  />
+                  WiFi設定変更を禁止
+                </label>
+              </div>
+            </div>
+
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "2",
+              })}
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setIsEditPolicyModalOpen(false);
+                  setEditingPolicy(null);
+                }}
+              >
+                キャンセル
+              </Button>
+              <Button type="submit" disabled={updatePolicyMutation.isPending}>
+                {updatePolicyMutation.isPending ? "保存中..." : "保存"}
+              </Button>
+            </div>
+          </form>
         )}
       </Modal>
     </>
