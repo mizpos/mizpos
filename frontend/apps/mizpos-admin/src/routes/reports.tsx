@@ -236,7 +236,9 @@ function ReportsPage() {
                     ? "オンライン決済"
                     : method === "stripe_terminal"
                       ? "端末決済"
-                      : "現金"}
+                      : method === "cash"
+                        ? "現金"
+                        : method}
                 </span>
                 <span className={css({ fontWeight: "semibold" })}>
                   ¥{amount.toLocaleString()}
@@ -927,7 +929,9 @@ function ReportsPage() {
                         ? "オンライン決済"
                         : drilldownData.value === "stripe_terminal"
                           ? "端末決済"
-                          : "現金"
+                          : drilldownData.value === "cash"
+                            ? "現金"
+                            : drilldownData.value
                     }`
                   : `カードブランド: ${drilldownData.value}`}
                 の詳細

@@ -130,12 +130,16 @@ function SalesPage() {
   const filteredSales = salesData
     .filter(
       (sale) =>
-        sale.sale_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (sale.customer_email
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ??
-          false),
+        sale &&
+        ((sale.sale_id || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+          (sale.user_id || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (sale.customer_email || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())),
     )
     .filter((sale) => showCancelled || sale.status !== "cancelled");
 
