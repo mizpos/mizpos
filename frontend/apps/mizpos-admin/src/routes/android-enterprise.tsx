@@ -391,7 +391,10 @@ function AndroidEnterprisePage() {
                       variant="secondary"
                       onClick={() =>
                         queryClient.invalidateQueries({
-                          queryKey: ["android-mgmt-devices", selectedEnterprise.id],
+                          queryKey: [
+                            "android-mgmt-devices",
+                            selectedEnterprise.id,
+                          ],
                         })
                       }
                     >
