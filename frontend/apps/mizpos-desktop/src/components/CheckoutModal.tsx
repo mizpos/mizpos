@@ -474,8 +474,7 @@ interface CheckoutModalProps {
 
 export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const {
-    subtotal,
-    totalAmount,
+    items,
     appliedCoupon,
     discountAmount,
     checkout,
@@ -493,6 +492,10 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
   const [receivedAmount, setReceivedAmount] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
+  // itemsから直接計算（Zustandのgetterがプラットフォームによって動作しない場合があるため）
+  const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalAmount = Math.max(0, subtotal - discountAmount);
 
   const received = Number.parseInt(receivedAmount, 10) || 0;
   const change = received - totalAmount;
