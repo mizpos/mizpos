@@ -63,6 +63,8 @@ mod desktop_printer {
         pub tax_amount: u32,
         /// レシート番号
         pub receipt_number: String,
+        /// お釣り（現金払いの場合のみ）
+        pub change_amount: Option<u32>,
     }
 
     #[tauri::command]
@@ -154,9 +156,19 @@ mod desktop_printer {
         Ok(())
     }
 
-    /// 数値を全角数字に変換
+    /// 数値を全角数字に変換（カンマ区切り付き）
     fn to_fullwidth_number(num: u32) -> String {
-        num.to_string()
+        // まずカンマ区切りの文字列を作成
+        let s = num.to_string();
+        let mut with_comma = String::new();
+        for (i, c) in s.chars().rev().enumerate() {
+            if i > 0 && i % 3 == 0 {
+                with_comma.insert(0, ',');
+            }
+            with_comma.insert(0, c);
+        }
+        // 全角に変換
+        with_comma
             .chars()
             .map(|c| match c {
                 '0' => '０',
@@ -169,6 +181,7 @@ mod desktop_printer {
                 '7' => '７',
                 '8' => '８',
                 '9' => '９',
+                ',' => '，',
                 _ => c,
             })
             .collect()
@@ -254,6 +267,13 @@ mod desktop_printer {
         // 支払情報
         for payment in &receipt.payments {
             printer.row_auto(&payment.method, &format_price(payment.amount))?;
+        }
+
+        // お釣り（現金払いでお釣りがある場合のみ）
+        if let Some(change) = receipt.change_amount {
+            if change > 0 {
+                printer.row_auto("お釣り", &format_price(change))?;
+            }
         }
 
         // 内消費税

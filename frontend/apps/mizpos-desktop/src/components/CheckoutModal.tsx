@@ -513,7 +513,10 @@ export function CheckoutModal({ onClose }: CheckoutModalProps) {
 
   const handleCheckout = async () => {
     clearError();
-    await checkout(paymentMethod);
+    // 現金払いの場合は受領額を渡す、それ以外は合計額と同じ
+    const receivedAmountValue =
+      paymentMethod === "cash" ? received : totalAmount;
+    await checkout(paymentMethod, receivedAmountValue);
   };
 
   const handleQuickAmount = (amount: number) => {

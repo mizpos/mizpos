@@ -389,6 +389,7 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
     events,
     selectedEvent,
     isLoading: isLoadingEvents,
+    error: eventError,
     fetchEventList,
     selectEvent,
   } = useEventStore();
@@ -409,6 +410,24 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // イベント一覧を取得
+  useEffect(() => {
+    fetchEventList();
+  }, [fetchEventList]);
+
+  // イベント選択を保存
+  const handleSaveEvent = useCallback(() => {
+    if (!hasSessionEvent) {
+      selectEvent(localSelectedEvent);
+      setMessage({
+        type: "success",
+        text: localSelectedEvent
+          ? `イベント「${localSelectedEvent.name}」を選択しました`
+          : "イベント選択を解除しました",
+      });
+    }
+  }, [hasSessionEvent, localSelectedEvent, selectEvent]);
 
   const loadDevices = useCallback(async () => {
     setIsLoading(true);
@@ -758,6 +777,138 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
               <div className={styles.paperWidthDesc}>48文字/行</div>
             </button>
           </div>
+        </div>
+
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>イベント設定</h3>
+
+          {hasSessionEvent ? (
+            // ユーザーがイベントに紐づいている場合
+            <div className={styles.currentDevice}>
+              <div className={styles.currentDeviceLabel}>
+                アカウントに紐づくイベント
+              </div>
+              <div className={styles.currentDeviceValue}>
+                {sessionEvent?.name || session?.event_id || "不明なイベント"}
+              </div>
+              {sessionEvent?.location && (
+                <div className={styles.eventDetail}>
+                  場所: {sessionEvent.location}
+                </div>
+              )}
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "12px",
+                  color: "#666",
+                }}
+              >
+                ※
+                アカウントにイベントが紐づいているため、イベントを変更できません
+              </div>
+            </div>
+          ) : (
+            // ユーザーがイベントに紐づいていない場合は選択可能
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "12px",
+                }}
+              >
+                <span style={{ fontSize: "14px", color: "#666" }}>
+                  販売対象イベントを選択
+                </span>
+                <button
+                  type="button"
+                  className={styles.refreshButton}
+                  onClick={fetchEventList}
+                  disabled={isLoadingEvents}
+                >
+                  {isLoadingEvents ? "読込中..." : "更新"}
+                </button>
+              </div>
+
+              <div className={styles.eventList}>
+                {/* イベントなし選択肢 */}
+                <button
+                  type="button"
+                  className={`${styles.noEventOption} ${
+                    localSelectedEvent === null
+                      ? styles.noEventOptionSelected
+                      : ""
+                  }`}
+                  onClick={() => setLocalSelectedEvent(null)}
+                >
+                  イベントを指定しない（全商品表示）
+                </button>
+
+                {eventError ? (
+                  <div
+                    className={styles.emptyState}
+                    style={{ color: "#d32f2f" }}
+                  >
+                    エラー: {eventError}
+                  </div>
+                ) : events.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    {isLoadingEvents
+                      ? "イベントを読み込み中..."
+                      : "利用可能なイベントがありません"}
+                  </div>
+                ) : (
+                  events.map((event) => {
+                    const isSelected =
+                      localSelectedEvent?.event_id === event.event_id;
+                    return (
+                      <button
+                        type="button"
+                        key={event.event_id}
+                        className={`${styles.eventItem} ${
+                          isSelected ? styles.eventItemSelected : ""
+                        }`}
+                        onClick={() => setLocalSelectedEvent(event)}
+                      >
+                        <div className={styles.eventInfo}>
+                          <span className={styles.eventName}>{event.name}</span>
+                          {event.location && (
+                            <span className={styles.eventDetail}>
+                              {event.location}
+                            </span>
+                          )}
+                          {event.start_date && (
+                            <span className={styles.eventDetail}>
+                              {event.start_date}
+                              {event.end_date && ` 〜 ${event.end_date}`}
+                            </span>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <span
+                            className={`${styles.eventBadge} ${styles.eventBadgeSelected}`}
+                          >
+                            選択中
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className={styles.buttonGroup}>
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.primaryButton}`}
+                  onClick={handleSaveEvent}
+                >
+                  イベント設定を保存
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <div className={styles.section}>

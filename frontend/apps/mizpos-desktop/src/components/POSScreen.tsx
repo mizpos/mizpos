@@ -9,6 +9,7 @@ import {
 } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 import { useCartStore } from "../stores/cart";
+import { getEffectiveEventId, useEventStore } from "../stores/event";
 import { useNetworkStore } from "../stores/network";
 import { usePrinterStore } from "../stores/printer";
 import type { Product } from "../types";
@@ -138,6 +139,13 @@ export function POSScreen() {
   const { addItem } = useCartStore();
   const { status } = useNetworkStore();
   const { lastSale, clearLastSale } = useCartStore();
+  const { selectedEvent } = useEventStore();
+
+  // 有効なイベントIDを取得（セッションに紐づくイベント > 手動選択イベント）
+  const effectiveEventId = getEffectiveEventId(
+    session?.event_id,
+    selectedEvent,
+  );
   const { initialize: initPrinter } = usePrinterStore();
 
   useEffect(() => {
@@ -156,7 +164,7 @@ export function POSScreen() {
       // オンラインの場合はサーバーから最新を取得
       if (status === "online") {
         try {
-          const serverProducts = await fetchProducts(session?.event_id);
+          const serverProducts = await fetchProducts(effectiveEventId);
           if (serverProducts.length > 0) {
             await syncProducts(serverProducts);
             localProducts = serverProducts;
@@ -181,7 +189,7 @@ export function POSScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [status, session?.event_id]);
+  }, [status, effectiveEventId]);
 
   useEffect(() => {
     loadProducts();

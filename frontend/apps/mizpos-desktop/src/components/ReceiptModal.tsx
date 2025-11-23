@@ -40,6 +40,12 @@ function convertToFullReceiptData(
   const saleDate = new Date(sale.timestamp);
   const saleDatetime = `${saleDate.getFullYear()}/${String(saleDate.getMonth() + 1).padStart(2, "0")}/${String(saleDate.getDate()).padStart(2, "0")} ${String(saleDate.getHours()).padStart(2, "0")}:${String(saleDate.getMinutes()).padStart(2, "0")}`;
 
+  // お釣りを計算（現金払いでお釣りがある場合のみ）
+  const changeAmount =
+    sale.payment_method === "cash" && sale.received_amount > sale.total_amount
+      ? sale.received_amount - sale.total_amount
+      : undefined;
+
   return {
     event_name: eventName,
     staff_id: sale.employee_number,
@@ -62,6 +68,7 @@ function convertToFullReceiptData(
     tax_rate: taxRate,
     tax_amount: taxAmount,
     receipt_number: sale.sale_id.slice(0, 8).toUpperCase(),
+    change_amount: changeAmount,
   };
 }
 
@@ -468,21 +475,22 @@ export function ReceiptModal({
             </span>
           </div>
 
-          {/* 現金の場合は受領額を表示 */}
-          {sale.payment_method === "cash" && (
-            <div className={styles.receiptPaymentDetail}>
-              <div className={styles.paymentRow}>
-                <span>お預かり</span>
-                <span>{formatPrice(sale.received_amount)}</span>
+          {/* 現金の場合は受領額を表示（お釣りがある場合のみ） */}
+          {sale.payment_method === "cash" &&
+            sale.received_amount > sale.total_amount && (
+              <div className={styles.receiptPaymentDetail}>
+                <div className={styles.paymentRow}>
+                  <span>お預かり</span>
+                  <span>{formatPrice(sale.received_amount)}</span>
+                </div>
+                <div className={styles.paymentRow}>
+                  <span>お釣り</span>
+                  <span>
+                    {formatPrice(sale.received_amount - sale.total_amount)}
+                  </span>
+                </div>
               </div>
-              <div className={styles.paymentRow}>
-                <span>お釣り</span>
-                <span>
-                  {formatPrice(sale.received_amount - sale.total_amount)}
-                </span>
-              </div>
-            </div>
-          )}
+            )}
 
           {/* フッター */}
           <div className={styles.receiptFooter}>

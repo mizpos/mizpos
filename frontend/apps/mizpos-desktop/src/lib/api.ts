@@ -247,7 +247,7 @@ export async function lookupCoupon(
   throw new ApiError("Coupon API not available in OpenAPI spec", 501);
 }
 
-// イベント一覧を取得
+// イベント一覧を取得（POS用認証なしエンドポイント）
 interface ApiEventResponse {
   event_id: string;
   name: string;
@@ -261,17 +261,24 @@ interface ApiEventResponse {
   updated_at: string;
 }
 
-export async function fetchEvents(publisherId?: string): Promise<PosEvent[]> {
-  const { data, error, response } = await stockClient.GET("/events", {
-    params: { query: publisherId ? { publisher_id: publisherId } : {} },
-  });
+export async function fetchPosEvents(): Promise<PosEvent[]> {
+  const { data, error, response } = await accountsClient.GET("/pos/events", {});
 
   if (error || !response.ok) {
     throw new ApiError("Failed to fetch events", response.status);
   }
 
-  const responseData = data as { events?: ApiEventResponse[] };
-  const apiEvents = responseData.events || [];
+  // レスポンスが配列の場合と { events: [...] } の場合の両方に対応
+  let apiEvents: ApiEventResponse[] = [];
+  if (Array.isArray(data)) {
+    apiEvents = data as unknown as ApiEventResponse[];
+  } else {
+    const responseData = data as unknown as {
+      events?: ApiEventResponse[];
+    };
+    apiEvents = responseData.events || [];
+  }
+
   return apiEvents.map((event) => ({
     event_id: event.event_id,
     name: event.name,
@@ -280,7 +287,7 @@ export async function fetchEvents(publisherId?: string): Promise<PosEvent[]> {
     end_date: event.end_date,
     location: event.location,
     publisher_id: event.publisher_id,
-    is_active: event.is_active,
+    is_active: event.is_active ?? true,
     created_at: event.created_at,
     updated_at: event.updated_at,
   }));

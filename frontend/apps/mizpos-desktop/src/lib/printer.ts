@@ -254,6 +254,8 @@ export interface FullReceiptData {
   tax_amount: number;
   /** レシート番号 */
   receipt_number: string;
+  /** お釣り（現金払いの場合のみ） */
+  change_amount?: number;
 }
 
 export function bluetoothPrintReceipt(data: ReceiptData): PrinterResult {

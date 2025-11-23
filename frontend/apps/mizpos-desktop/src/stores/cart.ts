@@ -7,6 +7,7 @@ import { applyCoupon as applyCouponApi, recordSale } from "../lib/api";
 import { addSale, addToOfflineQueue, getTerminalId } from "../lib/db";
 import type { AppliedCoupon, CartItem, Product, SaleRecord } from "../types";
 import { useAuthStore } from "./auth";
+import { getEffectiveEventId, useEventStore } from "./event";
 import { useNetworkStore } from "./network";
 
 interface CartState {
@@ -32,6 +33,7 @@ interface CartState {
   removeCoupon: () => void;
   checkout: (
     paymentMethod: "cash" | "card" | "other",
+    receivedAmount?: number,
   ) => Promise<SaleRecord | null>;
   clearLastSale: () => void;
   clearError: () => void;
@@ -179,15 +181,28 @@ export const useCartStore = create<CartState>()((set, get) => ({
   },
 
   // チェックアウト（販売処理）
-  checkout: async (paymentMethod: "cash" | "card" | "other") => {
+  checkout: async (
+    paymentMethod: "cash" | "card" | "other",
+    receivedAmount?: number,
+  ) => {
     const state = get();
     const { items, appliedCoupon, discountAmount } = state;
     // getter プロパティは直接計算する（Zustandのget()ではgetterが動作しない）
     const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
     const totalAmount = Math.max(0, subtotal - discountAmount);
     const session = useAuthStore.getState().session;
+    const selectedEvent = useEventStore.getState().selectedEvent;
     const networkStatus = useNetworkStore.getState().status;
     const isOnline = networkStatus === "online";
+
+    // 受領額（指定がなければ合計額と同じ）
+    const actualReceivedAmount = receivedAmount ?? totalAmount;
+
+    // 有効なイベントIDを取得（セッションに紐づくイベント > 手動選択イベント）
+    const effectiveEventId = getEffectiveEventId(
+      session?.event_id,
+      selectedEvent,
+    );
 
     if (items.length === 0) {
       set({ error: "カートが空です" });
@@ -222,7 +237,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
             })),
             total_amount: totalAmount,
             payment_method: paymentMethod,
-            event_id: session.event_id,
+            event_id: effectiveEventId,
             terminal_id: terminalId,
           });
 
@@ -234,10 +249,10 @@ export const useCartStore = create<CartState>()((set, get) => ({
             subtotal,
             discount_amount: discountAmount,
             total_amount: totalAmount,
-            received_amount: totalAmount, // 満額受領として記録
+            received_amount: actualReceivedAmount,
             payment_method: paymentMethod,
             employee_number: session.employee_number,
-            event_id: session.event_id,
+            event_id: effectiveEventId,
             terminal_id: terminalId,
             synced: true,
             created_at: timestamp,
@@ -286,11 +301,11 @@ export const useCartStore = create<CartState>()((set, get) => ({
         subtotal,
         discount_amount: discountAmount,
         total_amount: totalAmount,
-        received_amount: totalAmount, // 満額受領として記録
+        received_amount: actualReceivedAmount,
         payment_method: paymentMethod,
         coupon: appliedCoupon || undefined,
         employee_number: session.employee_number,
-        event_id: session.event_id,
+        event_id: effectiveEventId,
         terminal_id: terminalId,
         synced: false,
         created_at: timestamp,
