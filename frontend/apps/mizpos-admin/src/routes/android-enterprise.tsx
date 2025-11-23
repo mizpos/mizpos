@@ -38,7 +38,9 @@ export const Route = createFileRoute("/android-enterprise")({
 
 // API レスポンスの型定義（OpenAPI スキーマに定義がないため、ローカルで定義）
 interface Enterprise {
-  id: string;
+  enterprise_id: string;
+  name?: string;
+  display_name?: string;
   enterprise_display_name?: string;
   created_at: string;
   updated_at?: string;
@@ -121,14 +123,14 @@ function AndroidEnterprisePage() {
   });
 
   const { data: policies = [], isLoading: policiesLoading } = useQuery({
-    queryKey: ["android-mgmt-policies", selectedEnterprise?.id],
+    queryKey: ["android-mgmt-policies", selectedEnterprise?.enterprise_id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
       const { androidMgmt } = await getAuthenticatedClients();
       const { data, error } = await androidMgmt.GET(
         "/enterprises/{enterprise_id}/policies",
         {
-          params: { path: { enterprise_id: selectedEnterprise.id } },
+          params: { path: { enterprise_id: selectedEnterprise.enterprise_id } },
         },
       );
       if (error) throw new Error("Failed to fetch policies");
@@ -138,14 +140,14 @@ function AndroidEnterprisePage() {
   });
 
   const { data: devices = [], isLoading: devicesLoading } = useQuery({
-    queryKey: ["android-mgmt-devices", selectedEnterprise?.id],
+    queryKey: ["android-mgmt-devices", selectedEnterprise?.enterprise_id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
       const { androidMgmt } = await getAuthenticatedClients();
       const { data, error } = await androidMgmt.GET(
         "/enterprises/{enterprise_id}/devices",
         {
-          params: { path: { enterprise_id: selectedEnterprise.id } },
+          params: { path: { enterprise_id: selectedEnterprise.enterprise_id } },
         },
       );
       if (error) throw new Error("Failed to fetch devices");
@@ -252,7 +254,7 @@ function AndroidEnterprisePage() {
       const { data, error } = await androidMgmt.POST(
         "/enterprises/{enterprise_id}/policies",
         {
-          params: { path: { enterprise_id: selectedEnterprise.id } },
+          params: { path: { enterprise_id: selectedEnterprise.enterprise_id } },
           body: {
             policy_name: formData.name,
             applications_enabled: true,
@@ -273,7 +275,7 @@ function AndroidEnterprisePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["android-mgmt-policies", selectedEnterprise?.id],
+        queryKey: ["android-mgmt-policies", selectedEnterprise?.enterprise_id],
       });
       setIsCreatePolicyModalOpen(false);
       setPolicyForm({
@@ -310,7 +312,7 @@ function AndroidEnterprisePage() {
         {
           params: {
             path: {
-              enterprise_id: selectedEnterprise.id,
+              enterprise_id: selectedEnterprise.enterprise_id,
               device_id: deviceId,
             },
             query: { wipe_data: true },
@@ -321,8 +323,31 @@ function AndroidEnterprisePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["android-mgmt-devices", selectedEnterprise?.id],
+        queryKey: ["android-mgmt-devices", selectedEnterprise?.enterprise_id],
       });
+    },
+  });
+
+  const deleteEnterpriseMutation = useMutation({
+    mutationFn: async (enterpriseId: string) => {
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { error } = await androidMgmt.DELETE(
+        "/enterprises/{enterprise_id}",
+        {
+          params: {
+            path: {
+              enterprise_id: enterpriseId,
+            },
+          },
+        },
+      );
+      if (error) throw new Error("Failed to delete enterprise");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["android-mgmt-enterprises"],
+      });
+      setSelectedEnterprise(null);
     },
   });
 
@@ -337,8 +362,13 @@ function AndroidEnterprisePage() {
   };
 
   const enterpriseColumns = [
-    { key: "id", header: "ID" },
-    { key: "enterprise_display_name", header: "表示名" },
+    { key: "enterprise_id", header: "ID" },
+    {
+      key: "display_name",
+      header: "表示名",
+      render: (item: Enterprise) =>
+        item.display_name || item.enterprise_display_name || "-",
+    },
     {
       key: "created_at",
       header: "作成日時",
@@ -478,9 +508,33 @@ function AndroidEnterprisePage() {
                     color: "gray.900",
                   })}
                 >
-                  {selectedEnterprise.enterprise_display_name ||
-                    selectedEnterprise.id}
+                  {selectedEnterprise.display_name ||
+                    selectedEnterprise.enterprise_display_name ||
+                    selectedEnterprise.enterprise_id}
                 </h2>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "このエンタープライズを削除しますか？この操作は取り消せません。",
+                      )
+                    ) {
+                      deleteEnterpriseMutation.mutate(
+                        selectedEnterprise.enterprise_id,
+                      );
+                    }
+                  }}
+                  disabled={devices.length > 0 || deleteEnterpriseMutation.isPending}
+                  title={
+                    devices.length > 0
+                      ? "登録されているデバイスがあるため削除できません"
+                      : "エンタープライズを削除"
+                  }
+                >
+                  {deleteEnterpriseMutation.isPending ? "削除中..." : "削除"}
+                </Button>
               </div>
               <div className={css({ display: "flex", gap: "2" })}>
                 <button
@@ -556,7 +610,7 @@ function AndroidEnterprisePage() {
                         queryClient.invalidateQueries({
                           queryKey: [
                             "android-mgmt-devices",
-                            selectedEnterprise.id,
+                            selectedEnterprise.enterprise_id,
                           ],
                         })
                       }
@@ -651,12 +705,14 @@ function AndroidEnterprisePage() {
                 columns={enterpriseColumns}
                 data={enterprises.filter(
                   (e) =>
-                    e.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (e.enterprise_display_name || "")
+                    (e.enterprise_id || "")
+                      .toLowerCase()
+                      .includes(searchTerm.toLowerCase()) ||
+                    (e.display_name || e.enterprise_display_name || "")
                       .toLowerCase()
                       .includes(searchTerm.toLowerCase()),
                 )}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => item.enterprise_id}
                 emptyMessage="エンタープライズがありません"
               />
             )}
