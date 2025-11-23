@@ -31,13 +31,13 @@ resource "aws_secretsmanager_secret_version" "stripe_api_key" {
 
 # GCP Service Account for Android Management API
 resource "aws_secretsmanager_secret" "google_service_account" {
-  name        = "${var.environment}-${var.project_name}-gcp-service-account"
+  name        = "${var.environment}-${var.project_name}-google-service-account"
   description = "Google Cloud service account key for Android Management API"
 
   recovery_window_in_days = var.environment == "prod" ? 30 : 7
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-gcp-service-account"
+    Name = "${var.environment}-${var.project_name}-google-service-account"
   }
 }
 
