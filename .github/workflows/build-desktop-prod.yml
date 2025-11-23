@@ -39,8 +39,17 @@ jobs:
             artifact_ext: ".AppImage,.deb"
     runs-on: ${{ matrix.platform }}
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: mizpos-enterprise-android-manager
+
       - name: Checkout
         uses: actions/checkout@v4
+
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -121,8 +130,17 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: mizpos-enterprise-android-manager
+
       - name: Checkout
         uses: actions/checkout@v4
+
 
       - name: Get app version
         id: version

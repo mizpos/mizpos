@@ -34,6 +34,14 @@ jobs:
     runs-on: ubuntu-slim
     if: github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'infrastructure'
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: mizpos-enterprise-android-manager
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -115,6 +123,14 @@ jobs:
           - mizpos-admin
           - mizpos-online-sales
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: mizpos-enterprise-android-manager
+
       - name: Checkout
         uses: actions/checkout@v4
 
