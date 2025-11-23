@@ -2,16 +2,16 @@ import createClient from "openapi-fetch";
 import type { paths as accountsPaths } from "./generated/accounts";
 import type { paths as salesPaths } from "./generated/sales";
 import type { paths as stockPaths } from "./generated/stock";
-import type { paths as mdmPaths } from "./types/mdm";
+import type { paths as androidMgmtPaths } from "./types/android-management";
 
 export type {
   components as AccountsComponents,
   paths as AccountsPaths,
 } from "./generated/accounts";
 export type {
-  components as MdmComponents,
-  paths as MdmPaths,
-} from "./generated/mdm";
+  components as AndroidMgmtComponents,
+  paths as AndroidMgmtPaths,
+} from "./generated/android-management";
 export type {
   components as SalesComponents,
   paths as SalesPaths,
@@ -47,8 +47,8 @@ export function createSalesClient(config: ApiConfig) {
   });
 }
 
-export function createMdmClient(config: ApiConfig) {
-  return createClient<mdmPaths>({
+export function createAndroidMgmtClient(config: ApiConfig) {
+  return createClient<androidMgmtPaths>({
     baseUrl: config.baseUrl,
     headers: config.headers,
   });
@@ -58,7 +58,7 @@ export interface MizposApiClients {
   accounts: ReturnType<typeof createAccountsClient>;
   stock: ReturnType<typeof createStockClient>;
   sales: ReturnType<typeof createSalesClient>;
-  mdm: ReturnType<typeof createMdmClient>;
+  androidMgmt: ReturnType<typeof createAndroidMgmtClient>;
 }
 
 export function createMizposClients(config: ApiConfig): MizposApiClients {
@@ -66,7 +66,7 @@ export function createMizposClients(config: ApiConfig): MizposApiClients {
     accounts: createAccountsClient(config),
     stock: createStockClient(config),
     sales: createSalesClient(config),
-    mdm: createMdmClient(config),
+    androidMgmt: createAndroidMgmtClient(config),
   };
 }
 

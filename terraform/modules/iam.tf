@@ -295,9 +295,9 @@ resource "aws_iam_role_policy" "lambda_sales" {
   })
 }
 
-# Lambda実行ロール - mdm
-resource "aws_iam_role" "lambda_mdm" {
-  name = "${var.environment}-${var.project_name}-lambda-mdm-role"
+# Lambda実行ロール - android-mgmt
+resource "aws_iam_role" "lambda_android_mgmt" {
+  name = "${var.environment}-${var.project_name}-lambda-android-mgmt-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -313,14 +313,14 @@ resource "aws_iam_role" "lambda_mdm" {
   })
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-lambda-mdm-role"
+    Name = "${var.environment}-${var.project_name}-lambda-android-mgmt-role"
   }
 }
 
-# Lambda mdm用ポリシー
-resource "aws_iam_role_policy" "lambda_mdm" {
-  name = "${var.environment}-${var.project_name}-lambda-mdm-policy"
-  role = aws_iam_role.lambda_mdm.id
+# Lambda android-mgmt用ポリシー
+resource "aws_iam_role_policy" "lambda_android_mgmt" {
+  name = "${var.environment}-${var.project_name}-lambda-android-mgmt-policy"
+  role = aws_iam_role.lambda_android_mgmt.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -345,12 +345,12 @@ resource "aws_iam_role_policy" "lambda_mdm" {
           "dynamodb:Scan"
         ]
         Resource = [
-          aws_dynamodb_table.mdm_enterprises.arn,
-          "${aws_dynamodb_table.mdm_enterprises.arn}/index/*",
-          aws_dynamodb_table.mdm_policies.arn,
-          "${aws_dynamodb_table.mdm_policies.arn}/index/*",
-          aws_dynamodb_table.mdm_devices.arn,
-          "${aws_dynamodb_table.mdm_devices.arn}/index/*"
+          aws_dynamodb_table.android_mgmt_enterprises.arn,
+          "${aws_dynamodb_table.android_mgmt_enterprises.arn}/index/*",
+          aws_dynamodb_table.android_mgmt_policies.arn,
+          "${aws_dynamodb_table.android_mgmt_policies.arn}/index/*",
+          aws_dynamodb_table.android_mgmt_devices.arn,
+          "${aws_dynamodb_table.android_mgmt_devices.arn}/index/*"
         ]
       },
       {

@@ -1,4 +1,4 @@
-import type { MdmComponents } from "@mizpos/api";
+import type { AndroidMgmtComponents } from "@mizpos/api";
 import {
   IconDeviceMobile,
   IconPlus,
@@ -22,9 +22,9 @@ export const Route = createFileRoute("/android-enterprise")({
   component: AndroidEnterprisePage,
 });
 
-type Enterprise = MdmComponents["schemas"]["Enterprise"];
-type Policy = MdmComponents["schemas"]["Policy"];
-type Device = MdmComponents["schemas"]["Device"];
+type Enterprise = AndroidMgmtComponents["schemas"]["Enterprise"];
+type Policy = AndroidMgmtComponents["schemas"]["Policy"];
+type Device = AndroidMgmtComponents["schemas"]["Device"];
 
 interface EnrollmentToken {
   token: string;
@@ -66,21 +66,21 @@ function AndroidEnterprisePage() {
   const [selectedPolicy, setSelectedPolicy] = useState("");
 
   const { data: enterprises = [], isLoading: enterprisesLoading } = useQuery({
-    queryKey: ["mdm-enterprises"],
+    queryKey: ["android-mgmt-enterprises"],
     queryFn: async () => {
-      const { mdm } = await getAuthenticatedClients();
-      const { data, error } = await mdm.GET("/enterprises");
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { data, error } = await androidMgmt.GET("/enterprises");
       if (error) throw new Error("Failed to fetch enterprises");
       return data?.enterprises || [];
     },
   });
 
   const { data: policies = [], isLoading: policiesLoading } = useQuery({
-    queryKey: ["mdm-policies", selectedEnterprise?.id],
+    queryKey: ["android-mgmt-policies", selectedEnterprise?.id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
-      const { mdm } = await getAuthenticatedClients();
-      const { data, error } = await mdm.GET("/policies", {
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { data, error } = await androidMgmt.GET("/policies", {
         params: { query: { enterprise_id: selectedEnterprise.id } },
       });
       if (error) throw new Error("Failed to fetch policies");
@@ -90,11 +90,11 @@ function AndroidEnterprisePage() {
   });
 
   const { data: devices = [], isLoading: devicesLoading } = useQuery({
-    queryKey: ["mdm-devices", selectedEnterprise?.id],
+    queryKey: ["android-mgmt-devices", selectedEnterprise?.id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
-      const { mdm } = await getAuthenticatedClients();
-      const { data, error } = await mdm.GET("/devices", {
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { data, error } = await androidMgmt.GET("/devices", {
         params: { query: { enterprise_id: selectedEnterprise.id } },
       });
       if (error) throw new Error("Failed to fetch devices");
@@ -106,8 +106,8 @@ function AndroidEnterprisePage() {
   const createPolicyMutation = useMutation({
     mutationFn: async (formData: typeof policyForm) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const { mdm } = await getAuthenticatedClients();
-      const { data, error } = await mdm.POST("/policies", {
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { data, error } = await androidMgmt.POST("/policies", {
         body: {
           enterprise_id: selectedEnterprise.id,
           name: formData.name,
@@ -119,7 +119,7 @@ function AndroidEnterprisePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["mdm-policies", selectedEnterprise?.id],
+        queryKey: ["android-mgmt-policies", selectedEnterprise?.id],
       });
       setIsCreatePolicyModalOpen(false);
       setPolicyForm({
@@ -150,15 +150,15 @@ function AndroidEnterprisePage() {
   const deleteDeviceMutation = useMutation({
     mutationFn: async (deviceId: string) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const { mdm } = await getAuthenticatedClients();
-      const { error } = await mdm.DELETE("/devices/{device_id}", {
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { error } = await androidMgmt.DELETE("/devices/{device_id}", {
         params: { path: { device_id: deviceId } },
       });
       if (error) throw new Error("Failed to delete device");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["mdm-devices", selectedEnterprise?.id],
+        queryKey: ["android-mgmt-devices", selectedEnterprise?.id],
       });
     },
   });
@@ -391,7 +391,7 @@ function AndroidEnterprisePage() {
                       variant="secondary"
                       onClick={() =>
                         queryClient.invalidateQueries({
-                          queryKey: ["mdm-devices", selectedEnterprise.id],
+                          queryKey: ["android-mgmt-devices", selectedEnterprise.id],
                         })
                       }
                     >

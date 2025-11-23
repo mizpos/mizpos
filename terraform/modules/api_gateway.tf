@@ -200,46 +200,46 @@ resource "aws_lambda_permission" "sales" {
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
-# Lambda Integration - mdm
-resource "aws_apigatewayv2_integration" "mdm" {
+# Lambda Integration - android-mgmt
+resource "aws_apigatewayv2_integration" "android_mgmt" {
   api_id           = aws_apigatewayv2_api.main.id
   integration_type = "AWS_PROXY"
 
   connection_type        = "INTERNET"
   integration_method     = "POST"
-  integration_uri        = aws_lambda_function.mdm.invoke_arn
+  integration_uri        = aws_lambda_function.android_mgmt.invoke_arn
   payload_format_version = "2.0"
 }
 
-# Routes - mdm (JWT validation handled by Lambda)
-resource "aws_apigatewayv2_route" "mdm" {
+# Routes - android-mgmt (JWT validation handled by Lambda)
+resource "aws_apigatewayv2_route" "android_mgmt" {
   api_id    = aws_apigatewayv2_api.main.id
-  route_key = "ANY /mdm/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.mdm.id}"
+  route_key = "ANY /mizpos-enterprise-android-manager/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.android_mgmt.id}"
 
   authorization_type = "NONE"
 }
 
-resource "aws_apigatewayv2_route" "openapi_mdm" {
+resource "aws_apigatewayv2_route" "openapi_android_mgmt" {
   api_id    = aws_apigatewayv2_api.main.id
-  route_key = "GET /mdm/openapi.json"
-  target    = "integrations/${aws_apigatewayv2_integration.mdm.id}"
+  route_key = "GET /mizpos-enterprise-android-manager/openapi.json"
+  target    = "integrations/${aws_apigatewayv2_integration.android_mgmt.id}"
 
   authorization_type = "NONE"
 }
 
-resource "aws_apigatewayv2_route" "docs_mdm" {
+resource "aws_apigatewayv2_route" "docs_android_mgmt" {
   api_id    = aws_apigatewayv2_api.main.id
-  route_key = "GET /mdm/docs"
-  target    = "integrations/${aws_apigatewayv2_integration.mdm.id}"
+  route_key = "GET /mizpos-enterprise-android-manager/docs"
+  target    = "integrations/${aws_apigatewayv2_integration.android_mgmt.id}"
 
   authorization_type = "NONE"
 }
 
-resource "aws_lambda_permission" "mdm" {
+resource "aws_lambda_permission" "android_mgmt" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.mdm.function_name
+  function_name = aws_lambda_function.android_mgmt.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

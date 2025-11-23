@@ -1,6 +1,6 @@
 import {
   createAccountsClient,
-  createMdmClient,
+  createAndroidMgmtClient,
   createSalesClient,
   createStockClient,
 } from "@mizpos/api";
@@ -53,8 +53,8 @@ export const sales = createSalesClient({
   },
 });
 
-export const mdm = createMdmClient({
-  baseUrl: `${API_GATEWAY_BASE}/mdm`,
+export const androidMgmt = createAndroidMgmtClient({
+  baseUrl: `${API_GATEWAY_BASE}/mizpos-enterprise-android-manager`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -76,8 +76,8 @@ export async function getAuthenticatedClients() {
       baseUrl: `${API_GATEWAY_BASE}/sales`,
       headers,
     }),
-    mdm: createMdmClient({
-      baseUrl: `${API_GATEWAY_BASE}/mdm`,
+    androidMgmt: createAndroidMgmtClient({
+      baseUrl: `${API_GATEWAY_BASE}/mizpos-enterprise-android-manager`,
       headers,
     }),
   };

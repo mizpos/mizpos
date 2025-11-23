@@ -480,9 +480,9 @@ resource "aws_dynamodb_table" "coupons" {
   }
 }
 
-# MDM Enterprises table - Android Enterprise登録情報
-resource "aws_dynamodb_table" "mdm_enterprises" {
-  name         = "${var.environment}-mizpos-mdm-enterprises"
+# Android Management Enterprises table - Android Enterprise登録情報
+resource "aws_dynamodb_table" "android_mgmt_enterprises" {
+  name         = "${var.environment}-mizpos-android-mgmt-enterprises"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "enterprise_id"
 
@@ -496,13 +496,13 @@ resource "aws_dynamodb_table" "mdm_enterprises" {
   }
 
   tags = {
-    Name = "${var.environment}-mizpos-mdm-enterprises"
+    Name = "${var.environment}-mizpos-android-mgmt-enterprises"
   }
 }
 
-# MDM Policies table - デバイスポリシー設定
-resource "aws_dynamodb_table" "mdm_policies" {
-  name         = "${var.environment}-mizpos-mdm-policies"
+# Android Management Policies table - デバイスポリシー設定
+resource "aws_dynamodb_table" "android_mgmt_policies" {
+  name         = "${var.environment}-mizpos-android-mgmt-policies"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "policy_id"
 
@@ -527,13 +527,13 @@ resource "aws_dynamodb_table" "mdm_policies" {
   }
 
   tags = {
-    Name = "${var.environment}-mizpos-mdm-policies"
+    Name = "${var.environment}-mizpos-android-mgmt-policies"
   }
 }
 
-# MDM Devices table - 管理対象デバイス
-resource "aws_dynamodb_table" "mdm_devices" {
-  name         = "${var.environment}-mizpos-mdm-devices"
+# Android Management Devices table - 管理対象デバイス
+resource "aws_dynamodb_table" "android_mgmt_devices" {
+  name         = "${var.environment}-mizpos-android-mgmt-devices"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "device_id"
 
@@ -558,6 +558,6 @@ resource "aws_dynamodb_table" "mdm_devices" {
   }
 
   tags = {
-    Name = "${var.environment}-mizpos-mdm-devices"
+    Name = "${var.environment}-mizpos-android-mgmt-devices"
   }
 }
