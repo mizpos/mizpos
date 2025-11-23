@@ -4,6 +4,7 @@ import {
   IconCalendar,
   IconChartBar,
   IconDeviceDesktop,
+  IconDeviceMobile,
   IconGift,
   IconHome,
   IconKey,
@@ -45,6 +46,11 @@ const navItems: NavItem[] = [
     label: "POS従業員",
     href: "/pos-employees",
     icon: <IconDeviceDesktop size={20} />,
+  },
+  {
+    label: "端末管理",
+    href: "/android-enterprise",
+    icon: <IconDeviceMobile size={20} />,
   },
   { label: "設定", href: "/settings", icon: <IconSettings size={20} /> },
 ];

@@ -1,5 +1,6 @@
 import {
   createAccountsClient,
+  createAndroidMgmtClient,
   createSalesClient,
   createStockClient,
 } from "@mizpos/api";
@@ -52,7 +53,13 @@ export const sales = createSalesClient({
   },
 });
 
-// 認証付きAPIクライアントを取得する関数
+export const androidMgmt = createAndroidMgmtClient({
+  baseUrl: `${API_GATEWAY_BASE}/mizpos-enterprise-android-manager`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 export async function getAuthenticatedClients() {
   const headers = await getAuthHeaders();
 
@@ -67,6 +74,10 @@ export async function getAuthenticatedClients() {
     }),
     sales: createSalesClient({
       baseUrl: `${API_GATEWAY_BASE}/sales`,
+      headers,
+    }),
+    androidMgmt: createAndroidMgmtClient({
+      baseUrl: `${API_GATEWAY_BASE}/mizpos-enterprise-android-manager`,
       headers,
     }),
   };

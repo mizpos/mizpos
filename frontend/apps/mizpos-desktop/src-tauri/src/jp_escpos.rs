@@ -16,6 +16,21 @@ pub const TXT_ALIGN_LT: &[u8] = b"\x1b\x61\x00";
 pub const TXT_ALIGN_CT: &[u8] = b"\x1b\x61\x01";
 pub const TXT_ALIGN_RT: &[u8] = b"\x1b\x61\x02";
 
+// Reverse (black background, white text)
+pub const TXT_REVERSE_ON: &[u8] = b"\x1dB\x01";
+pub const TXT_REVERSE_OFF: &[u8] = b"\x1dB\x00";
+
+// Double size text (ESC !)
+pub const TXT_DOUBLE_SIZE: &[u8] = b"\x1b!\x30"; // double width + double height
+pub const TXT_NORMAL_SIZE: &[u8] = b"\x1b!\x00";
+
+// QR Code commands (GS ( k)
+pub const QR_MODEL_2: &[u8] = b"\x1d\x28\x6b\x04\x00\x31\x41\x32\x00"; // Model 2
+pub const QR_SIZE_PREFIX: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x43"; // size command prefix
+pub const QR_ERROR_L: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x45\x30"; // Error correction L
+pub const QR_ERROR_M: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x45\x31"; // Error correction M
+pub const QR_PRINT: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x51\x30"; // Print QR code
+
 pub const JP_CHARCODE_JIS: &[u8] = b"\x1b\x74\x02";
 pub const JP_KANJI_SELECT: &[u8] = b"\x1c\x43\x01";
 pub const JP_KANJI_MODE_ON: &[u8] = b"\x1c\x26";
@@ -70,6 +85,7 @@ pub struct TextStyle {
     pub underline: bool,
     pub double_width: bool,
     pub double_height: bool,
+    pub reverse: bool,
     pub align: Align,
 }
 
@@ -80,6 +96,7 @@ impl Default for TextStyle {
             underline: false,
             double_width: false,
             double_height: false,
+            reverse: false,
             align: Align::Left,
         }
     }
@@ -117,6 +134,15 @@ impl TextStyle {
 
     pub fn right(self) -> Self {
         self.align(Align::Right)
+    }
+
+    pub fn reverse(mut self) -> Self {
+        self.reverse = true;
+        self
+    }
+
+    pub fn double(self) -> Self {
+        self.double_width().double_height()
     }
 }
 
@@ -213,6 +239,22 @@ impl<D: Driver> JpPrinter<D> {
         }
     }
 
+    fn set_reverse(&mut self, on: bool) -> Result<(), String> {
+        if on {
+            self.raw(TXT_REVERSE_ON)
+        } else {
+            self.raw(TXT_REVERSE_OFF)
+        }
+    }
+
+    fn set_double_size(&mut self, on: bool) -> Result<(), String> {
+        if on {
+            self.raw(TXT_DOUBLE_SIZE)
+        } else {
+            self.raw(TXT_NORMAL_SIZE)
+        }
+    }
+
     fn encode_shift_jis(&self, text: &str) -> Vec<u8> {
         let (encoded, _, _) = SHIFT_JIS.encode(text);
         encoded.into_owned()
@@ -230,16 +272,26 @@ impl<D: Driver> JpPrinter<D> {
         self.set_align(style.align)?;
         self.set_bold(style.bold)?;
         self.set_underline(style.underline)?;
+        self.set_reverse(style.reverse)?;
+
+        // Use ESC ! for double size (works better with reverse)
+        let use_double_size = style.double_width && style.double_height;
+        if use_double_size {
+            self.set_double_size(true)?;
+        }
 
         self.raw(JP_KANJI_MODE_ON)?;
 
         let size_flag = {
             let mut n: u8 = 0x00;
-            if style.double_width {
-                n |= 0x04;
-            }
-            if style.double_height {
-                n |= 0x08;
+            // Only use kanji size command if not using ESC !
+            if !use_double_size {
+                if style.double_width {
+                    n |= 0x04;
+                }
+                if style.double_height {
+                    n |= 0x08;
+                }
             }
             n
         };
@@ -261,8 +313,13 @@ impl<D: Driver> JpPrinter<D> {
 
         self.raw(JP_KANJI_MODE_OFF)?;
 
+        if use_double_size {
+            self.set_double_size(false)?;
+        }
+
         self.set_bold(false)?;
         self.set_underline(false)?;
+        self.set_reverse(false)?;
         self.set_align(Align::Left)?;
 
         Ok(())
@@ -302,5 +359,79 @@ impl<D: Driver> JpPrinter<D> {
 
     pub fn row_auto(&mut self, left: &str, right: &str) -> Result<(), String> {
         self.row(left, right, self.paper_width.chars())
+    }
+
+    /// Print QR code
+    /// size: 1-16 (default: 4)
+    pub fn qr_code(&mut self, data: &str, size: Option<u8>) -> Result<(), String> {
+        let size = size.unwrap_or(4).clamp(1, 16);
+
+        // Select model 2
+        self.raw(QR_MODEL_2)?;
+
+        // Set size
+        let mut size_cmd = QR_SIZE_PREFIX.to_vec();
+        size_cmd.push(size);
+        self.raw(&size_cmd)?;
+
+        // Set error correction level M
+        self.raw(QR_ERROR_M)?;
+
+        // Store data in symbol storage area
+        // Command: GS ( k pL pH cn fn [data]
+        // cn=49 (0x31), fn=80 (0x50)
+        let data_bytes = data.as_bytes();
+        let len = data_bytes.len() + 3; // +3 for cn, fn, m
+        let pl = (len & 0xFF) as u8;
+        let ph = ((len >> 8) & 0xFF) as u8;
+
+        let mut store_cmd = vec![0x1d, 0x28, 0x6b, pl, ph, 0x31, 0x50, 0x30];
+        store_cmd.extend_from_slice(data_bytes);
+        self.raw(&store_cmd)?;
+
+        // Print QR code
+        self.raw(QR_PRINT)?;
+
+        Ok(())
+    }
+
+    /// Print QR code centered
+    pub fn qr_code_center(&mut self, data: &str, size: Option<u8>) -> Result<(), String> {
+        self.set_align(Align::Center)?;
+        self.qr_code(data, size)?;
+        self.set_align(Align::Left)?;
+        Ok(())
+    }
+
+    /// Print text with padding to fill line (for reverse style)
+    pub fn jp_textln_padded(&mut self, txt: &str, style: TextStyle) -> Result<(), String> {
+        let char_count = txt.chars().count();
+        let line_width = if style.double_width || (style.double_width && style.double_height) {
+            self.paper_width.chars_jp()
+        } else {
+            self.paper_width.chars()
+        };
+
+        let padded = match style.align {
+            Align::Center => {
+                let padding = line_width.saturating_sub(char_count);
+                let left_pad = padding / 2;
+                let right_pad = padding - left_pad;
+                format!("{}{}{}", " ".repeat(left_pad), txt, " ".repeat(right_pad))
+            }
+            Align::Right => {
+                let padding = line_width.saturating_sub(char_count);
+                format!("{}{}", " ".repeat(padding), txt)
+            }
+            Align::Left => {
+                let padding = line_width.saturating_sub(char_count);
+                format!("{}{}", txt, " ".repeat(padding))
+            }
+        };
+
+        // Override align to left since we manually padded
+        let mut left_style = style;
+        left_style.align = Align::Left;
+        self.jp_textln(&padded, left_style)
     }
 }

@@ -23,6 +23,7 @@ import { Route as EventsRouteImport } from './routes/events'
 import { Route as CouponsRouteImport } from './routes/coupons'
 import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as CallbackRouteImport } from './routes/callback'
+import { Route as AndroidEnterpriseRouteImport } from './routes/android-enterprise'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UsersRoute = UsersRouteImport.update({
@@ -95,6 +96,11 @@ const CallbackRoute = CallbackRouteImport.update({
   path: '/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AndroidEnterpriseRoute = AndroidEnterpriseRouteImport.update({
+  id: '/android-enterprise',
+  path: '/android-enterprise',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -103,6 +109,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/android-enterprise': typeof AndroidEnterpriseRoute
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
   '/coupons': typeof CouponsRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/android-enterprise': typeof AndroidEnterpriseRoute
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
   '/coupons': typeof CouponsRoute
@@ -138,6 +146,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/android-enterprise': typeof AndroidEnterpriseRoute
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
   '/coupons': typeof CouponsRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/android-enterprise'
     | '/callback'
     | '/change-password'
     | '/coupons'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/android-enterprise'
     | '/callback'
     | '/change-password'
     | '/coupons'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/android-enterprise'
     | '/callback'
     | '/change-password'
     | '/coupons'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AndroidEnterpriseRoute: typeof AndroidEnterpriseRoute
   CallbackRoute: typeof CallbackRoute
   ChangePasswordRoute: typeof ChangePasswordRoute
   CouponsRoute: typeof CouponsRoute
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/android-enterprise': {
+      id: '/android-enterprise'
+      path: '/android-enterprise'
+      fullPath: '/android-enterprise'
+      preLoaderRoute: typeof AndroidEnterpriseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -337,6 +357,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AndroidEnterpriseRoute: AndroidEnterpriseRoute,
   CallbackRoute: CallbackRoute,
   ChangePasswordRoute: ChangePasswordRoute,
   CouponsRoute: CouponsRoute,

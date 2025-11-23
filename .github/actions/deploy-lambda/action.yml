@@ -33,14 +33,15 @@ runs:
       shell: bash
       env:
         ENV: ${{ inputs.ENV }}
+        AWS_ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
       working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
       run: |
-        export AWS_ACCOUNT_ID
         echo "Installing dependencies for ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
         pip install -r requirements.txt -t .
         echo "Deploying ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
         lambroll deploy \
           --function function.jsonnet \
           --ext-str ENV=${{ inputs.ENV }} \
+          --ext-str AWS_ACCOUNT_ID=${{ inputs.AWS_ACCOUNT_ID }} \
           --src . \
           --exclude-file .lambdaignore
