@@ -47,20 +47,37 @@ interface Enterprise {
 }
 
 interface Policy {
-  id: string;
-  name: string;
+  policy_id: string;
+  policy_name: string;
+  policy_display_name?: string;
   enterprise_id: string;
+  settings?: {
+    applications?: Array<{ packageName: string; installType: string }>;
+    playStoreMode?: string;
+    passwordPolicies?: Array<{
+      passwordMinimumLength?: number;
+      passwordQuality?: string;
+    }>;
+    screenCaptureDisabled?: boolean;
+    cameraDisabled?: boolean;
+    wifiConfigDisabled?: boolean;
+    kioskCustomLauncherEnabled?: boolean;
+  };
   created_at: string;
   updated_at?: string;
 }
 
 interface Device {
-  id: string;
+  device_id: string;
+  name?: string;
   enterprise_id: string;
-  applied_policy_name?: string;
-  state?: string;
+  policy_name?: string;
+  enrollment_state?: string;
+  hardware_info?: Record<string, unknown>;
+  software_info?: Record<string, unknown>;
   last_status_report_time?: string;
-  created_at?: string;
+  applied_state?: string;
+  synced_at?: string;
 }
 
 interface EnrollmentToken {
@@ -294,12 +311,24 @@ function AndroidEnterprisePage() {
   });
 
   const createEnrollmentTokenMutation = useMutation({
-    mutationFn: async (_policyName: string) => {
+    mutationFn: async (policyName: string) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      throw new Error("Enrollment token API not yet implemented");
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { data, error } = await androidMgmt.POST(
+        "/enterprises/{enterprise_id}/enrollment-tokens",
+        {
+          params: { path: { enterprise_id: selectedEnterprise.enterprise_id } },
+          body: {
+            policy_name: policyName,
+            enrollment_type: "QR_CODE",
+          },
+        },
+      );
+      if (error) throw new Error("Failed to create enrollment token");
+      return data as { enrollment_token: EnrollmentToken };
     },
-    onSuccess: (data: EnrollmentToken) => {
-      setEnrollmentToken(data);
+    onSuccess: (data) => {
+      setEnrollmentToken(data.enrollment_token);
     },
   });
 
@@ -351,6 +380,30 @@ function AndroidEnterprisePage() {
     },
   });
 
+  const deletePolicyMutation = useMutation({
+    mutationFn: async (policyName: string) => {
+      if (!selectedEnterprise) throw new Error("No enterprise selected");
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { error } = await androidMgmt.DELETE(
+        "/enterprises/{enterprise_id}/policies/{policy_name}",
+        {
+          params: {
+            path: {
+              enterprise_id: selectedEnterprise.enterprise_id,
+              policy_name: policyName,
+            },
+          },
+        },
+      );
+      if (error) throw new Error("Failed to delete policy");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["android-mgmt-policies", selectedEnterprise?.enterprise_id],
+      });
+    },
+  });
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ja-JP", {
       year: "numeric",
@@ -389,8 +442,57 @@ function AndroidEnterprisePage() {
     },
   ];
 
+  // ポリシーが使用中かどうかをチェック
+  const isPolicyInUse = (policyName: string) => {
+    return devices.some((d) => d.policy_name === policyName);
+  };
+
   const policyColumns = [
-    { key: "name", header: "ポリシー名" },
+    {
+      key: "policy_name",
+      header: "ポリシー名",
+      render: (item: Policy) =>
+        item.policy_display_name || item.policy_name || "-",
+    },
+    {
+      key: "settings",
+      header: "設定概要",
+      render: (item: Policy) => {
+        const settings = item.settings || {};
+        const features: string[] = [];
+        if (settings.screenCaptureDisabled) features.push("スクリーンキャプチャ禁止");
+        if (settings.cameraDisabled) features.push("カメラ禁止");
+        if (settings.wifiConfigDisabled) features.push("WiFi設定禁止");
+        if (settings.kioskCustomLauncherEnabled) features.push("KIOSKモード");
+        return features.length > 0 ? features.join(", ") : "標準設定";
+      },
+    },
+    {
+      key: "actions",
+      header: "操作",
+      render: (item: Policy) => {
+        const inUse = isPolicyInUse(item.policy_name);
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (
+                window.confirm(
+                  `ポリシー「${item.policy_display_name || item.policy_name}」を削除しますか？`,
+                )
+              ) {
+                deletePolicyMutation.mutate(item.policy_name);
+              }
+            }}
+            disabled={inUse || deletePolicyMutation.isPending}
+            title={inUse ? "このポリシーを使用しているデバイスがあります" : "ポリシーを削除"}
+          >
+            <IconTrash size={16} />
+          </Button>
+        );
+      },
+    },
     {
       key: "created_at",
       header: "作成日時",
@@ -399,9 +501,9 @@ function AndroidEnterprisePage() {
   ];
 
   const deviceColumns = [
-    { key: "id", header: "デバイスID" },
-    { key: "applied_policy_name", header: "ポリシー" },
-    { key: "state", header: "状態" },
+    { key: "device_id", header: "デバイスID" },
+    { key: "policy_name", header: "ポリシー" },
+    { key: "enrollment_state", header: "状態" },
     {
       key: "last_status_report_time",
       header: "最終レポート",
@@ -423,7 +525,7 @@ function AndroidEnterprisePage() {
                 "このデバイスを削除しますか？デバイスのデータは消去されます。",
               )
             ) {
-              deleteDeviceMutation.mutate(item.id);
+              deleteDeviceMutation.mutate(item.device_id);
             }
           }}
           disabled={deleteDeviceMutation.isPending}
@@ -588,7 +690,7 @@ function AndroidEnterprisePage() {
                   <Table
                     columns={policyColumns}
                     data={policies}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item) => item.policy_id}
                     emptyMessage="ポリシーがありません"
                   />
                 )}
@@ -636,7 +738,7 @@ function AndroidEnterprisePage() {
                   <Table
                     columns={deviceColumns}
                     data={devices}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item) => item.device_id}
                     emptyMessage="デバイスがありません"
                   />
                 )}
@@ -1125,8 +1227,8 @@ function AndroidEnterprisePage() {
               >
                 <option value="">選択してください</option>
                 {policies.map((p) => (
-                  <option key={p.id} value={p.name}>
-                    {p.name}
+                  <option key={p.policy_id} value={p.policy_name}>
+                    {p.policy_display_name || p.policy_name}
                   </option>
                 ))}
               </select>
