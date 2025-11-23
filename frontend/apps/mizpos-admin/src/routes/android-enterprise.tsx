@@ -143,12 +143,12 @@ function AndroidEnterprisePage() {
             play_store_mode: "WHITELIST",
             password_required: true,
             password_minimum_length: 6,
-            screen_capture_disabled:
-              formData.policy_data.screenCaptureDisabled as boolean,
+            screen_capture_disabled: formData.policy_data
+              .screenCaptureDisabled as boolean,
             camera_disabled: formData.policy_data.cameraDisabled as boolean,
             wifi_config_disabled: false,
-            kiosk_mode_enabled:
-              formData.policy_data.kioskCustomLauncherEnabled as boolean,
+            kiosk_mode_enabled: formData.policy_data
+              .kioskCustomLauncherEnabled as boolean,
           },
         },
       );
