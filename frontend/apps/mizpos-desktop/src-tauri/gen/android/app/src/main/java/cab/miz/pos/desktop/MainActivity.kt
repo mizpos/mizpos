@@ -178,7 +178,12 @@ class MainActivity : TauriActivity() {
         }
 
         @JavascriptInterface
-        fun welcomePrint(terminalId: String, paperWidth: Int = CitizenPrinter.PAPER_58MM): String {
+        fun welcomePrint(terminalId: String): String {
+            return welcomePrintWithWidth(terminalId, CitizenPrinter.PAPER_58MM)
+        }
+
+        @JavascriptInterface
+        fun welcomePrintWithWidth(terminalId: String, paperWidth: Int): String {
             return try {
                 if (!printer.isConnected()) {
                     return JSONObject().apply {

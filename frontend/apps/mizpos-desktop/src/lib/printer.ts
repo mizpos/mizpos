@@ -39,7 +39,8 @@ interface MizPosPrinterBridge {
   disconnect(): string;
   isConnected(): string;
   printText(text: string): string;
-  welcomePrint(terminalId: string, paperWidth?: number): string;
+  welcomePrint(terminalId: string): string;
+  welcomePrintWithWidth(terminalId: string, paperWidth: number): string;
   printReceipt(jsonData: string): string;
 }
 
@@ -158,7 +159,10 @@ export function bluetoothWelcomePrint(
   if (!window.MizPosPrinter) {
     return { success: false, error: "Bluetooth not available" };
   }
-  const result = window.MizPosPrinter.welcomePrint(terminalId, paperWidth);
+  // paperWidthが指定されている場合はwelcomePrintWithWidthを使用
+  const result = paperWidth
+    ? window.MizPosPrinter.welcomePrintWithWidth(terminalId, paperWidth)
+    : window.MizPosPrinter.welcomePrint(terminalId);
   return parseAndroidResult<PrinterResult>(result);
 }
 
