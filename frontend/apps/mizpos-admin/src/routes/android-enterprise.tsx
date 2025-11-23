@@ -15,7 +15,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { getAuthenticatedClients } from "../lib/api";
+import { getAuthHeaders } from "../lib/api";
 
 export const Route = createFileRoute("/android-enterprise")({
   component: AndroidEnterprisePage,
@@ -56,7 +56,10 @@ interface EnrollmentToken {
   expiration_timestamp: string;
 }
 
-const API_BASE = "/mdm";
+const API_GATEWAY_BASE =
+  import.meta.env.VITE_API_GATEWAY_BASE ||
+  "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
+const MDM_API_BASE = `${API_GATEWAY_BASE}/mdm`;
 
 function AndroidEnterprisePage() {
   const queryClient = useQueryClient();
@@ -89,16 +92,9 @@ function AndroidEnterprisePage() {
   const { data: enterprises = [], isLoading: enterprisesLoading } = useQuery({
     queryKey: ["mdm-enterprises"],
     queryFn: async () => {
-      const { accounts } = await getAuthenticatedClients();
-      const baseUrl = (accounts as unknown as { c: { baseUrl: string } }).c
-        .baseUrl;
-      const mdmUrl = baseUrl.replace("/accounts", API_BASE);
-      const response = await fetch(`${mdmUrl}/enterprises`, {
-        headers: {
-          Authorization:
-            accounts.c?.headers?.Authorization ||
-            (await getAuthHeaders()).Authorization,
-        },
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${MDM_API_BASE}/enterprises`, {
+        headers,
       });
       if (!response.ok) throw new Error("Failed to fetch enterprises");
       const data = await response.json();
@@ -110,19 +106,10 @@ function AndroidEnterprisePage() {
     queryKey: ["mdm-policies", selectedEnterprise?.enterprise_id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
-      const { accounts } = await getAuthenticatedClients();
-      const baseUrl = (accounts as unknown as { c: { baseUrl: string } }).c
-        .baseUrl;
-      const mdmUrl = baseUrl.replace("/accounts", API_BASE);
+      const headers = await getAuthHeaders();
       const response = await fetch(
-        `${mdmUrl}/enterprises/${selectedEnterprise.enterprise_id}/policies`,
-        {
-          headers: {
-            Authorization:
-              accounts.c?.headers?.Authorization ||
-              (await getAuthHeaders()).Authorization,
-          },
-        },
+        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/policies`,
+        { headers },
       );
       if (!response.ok) throw new Error("Failed to fetch policies");
       const data = await response.json();
@@ -135,19 +122,10 @@ function AndroidEnterprisePage() {
     queryKey: ["mdm-devices", selectedEnterprise?.enterprise_id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
-      const { accounts } = await getAuthenticatedClients();
-      const baseUrl = (accounts as unknown as { c: { baseUrl: string } }).c
-        .baseUrl;
-      const mdmUrl = baseUrl.replace("/accounts", API_BASE);
+      const headers = await getAuthHeaders();
       const response = await fetch(
-        `${mdmUrl}/enterprises/${selectedEnterprise.enterprise_id}/devices`,
-        {
-          headers: {
-            Authorization:
-              accounts.c?.headers?.Authorization ||
-              (await getAuthHeaders()).Authorization,
-          },
-        },
+        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/devices`,
+        { headers },
       );
       if (!response.ok) throw new Error("Failed to fetch devices");
       const data = await response.json();
@@ -159,20 +137,12 @@ function AndroidEnterprisePage() {
   const createPolicyMutation = useMutation({
     mutationFn: async (data: typeof policyForm) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const { accounts } = await getAuthenticatedClients();
-      const baseUrl = (accounts as unknown as { c: { baseUrl: string } }).c
-        .baseUrl;
-      const mdmUrl = baseUrl.replace("/accounts", API_BASE);
+      const headers = await getAuthHeaders();
       const response = await fetch(
-        `${mdmUrl}/enterprises/${selectedEnterprise.enterprise_id}/policies`,
+        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/policies`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization:
-              accounts.c?.headers?.Authorization ||
-              (await getAuthHeaders()).Authorization,
-          },
+          headers,
           body: JSON.stringify(data),
         },
       );
@@ -200,20 +170,12 @@ function AndroidEnterprisePage() {
   const createEnrollmentTokenMutation = useMutation({
     mutationFn: async (policyName: string) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const { accounts } = await getAuthenticatedClients();
-      const baseUrl = (accounts as unknown as { c: { baseUrl: string } }).c
-        .baseUrl;
-      const mdmUrl = baseUrl.replace("/accounts", API_BASE);
+      const headers = await getAuthHeaders();
       const response = await fetch(
-        `${mdmUrl}/enterprises/${selectedEnterprise.enterprise_id}/enrollment-tokens`,
+        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/enrollment-tokens`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization:
-              accounts.c?.headers?.Authorization ||
-              (await getAuthHeaders()).Authorization,
-          },
+          headers,
           body: JSON.stringify({
             policy_name: policyName,
             enrollment_type: "QR_CODE",
@@ -232,19 +194,12 @@ function AndroidEnterprisePage() {
   const deleteDeviceMutation = useMutation({
     mutationFn: async (deviceId: string) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const { accounts } = await getAuthenticatedClients();
-      const baseUrl = (accounts as unknown as { c: { baseUrl: string } }).c
-        .baseUrl;
-      const mdmUrl = baseUrl.replace("/accounts", API_BASE);
+      const headers = await getAuthHeaders();
       const response = await fetch(
-        `${mdmUrl}/enterprises/${selectedEnterprise.enterprise_id}/devices/${deviceId}?wipe_data=true`,
+        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/devices/${deviceId}?wipe_data=true`,
         {
           method: "DELETE",
-          headers: {
-            Authorization:
-              accounts.c?.headers?.Authorization ||
-              (await getAuthHeaders()).Authorization,
-          },
+          headers,
         },
       );
       if (!response.ok) throw new Error("Failed to delete device");
@@ -255,15 +210,6 @@ function AndroidEnterprisePage() {
       });
     },
   });
-
-  async function getAuthHeaders() {
-    const { accounts } = await getAuthenticatedClients();
-    return {
-      Authorization:
-        (accounts as unknown as { c: { headers: { Authorization: string } } }).c
-          ?.headers?.Authorization || "",
-    };
-  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ja-JP", {

@@ -11,3 +11,7 @@ apis:
     root: https://6z64vei2y5.execute-api.ap-northeast-1.amazonaws.com/prod/sales/openapi.json
     x-openapi-ts:
       output: ./generated/sales.ts
+  AndroidManagementApi:
+    root: https://6z64vei2y5.execute-api.ap-northeast-1.amazonaws.com/prod/mdm/openapi.json
+    x-openapi-ts:
+      output: ./generated/android-management.ts
