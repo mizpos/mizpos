@@ -9,6 +9,10 @@ export type {
   paths as AccountsPaths,
 } from "./generated/accounts";
 export type {
+  components as MdmComponents,
+  paths as MdmPaths,
+} from "./generated/mdm";
+export type {
   components as SalesComponents,
   paths as SalesPaths,
 } from "./generated/sales";
@@ -16,10 +20,6 @@ export type {
   components as StockComponents,
   paths as StockPaths,
 } from "./generated/stock";
-export type {
-  components as MdmComponents,
-  paths as MdmPaths,
-} from "./types/mdm";
 
 export interface ApiConfig {
   baseUrl: string;
