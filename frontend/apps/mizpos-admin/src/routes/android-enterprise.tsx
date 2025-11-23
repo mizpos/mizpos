@@ -171,7 +171,10 @@ function AndroidEnterprisePage() {
       setSignupUrl(data.signup_url.url);
       setSignupStep("waiting");
       // コールバック時に使用するためlocalStorageに保存
-      localStorage.setItem("android_enterprise_signup_url_name", data.signup_url.name);
+      localStorage.setItem(
+        "android_enterprise_signup_url_name",
+        data.signup_url.name,
+      );
     },
     onError: (error) => {
       setSignupError(error.message);
@@ -214,7 +217,9 @@ function AndroidEnterprisePage() {
   useEffect(() => {
     if (searchParams.enterpriseToken) {
       // signupUrlNameはURLパラメータまたはlocalStorageから取得
-      const urlName = searchParams.signupUrlName || localStorage.getItem("android_enterprise_signup_url_name");
+      const urlName =
+        searchParams.signupUrlName ||
+        localStorage.getItem("android_enterprise_signup_url_name");
       if (urlName) {
         setIsCreateEnterpriseModalOpen(true);
         setSignupStep("waiting");
@@ -227,12 +232,18 @@ function AndroidEnterprisePage() {
       } else {
         // signupUrlNameが見つからない場合はエラー表示
         setIsCreateEnterpriseModalOpen(true);
-        setSignupError("サインアップURL名が見つかりません。もう一度サインアップURLを生成してください。");
+        setSignupError(
+          "サインアップURL名が見つかりません。もう一度サインアップURLを生成してください。",
+        );
         setSignupStep("error");
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.enterpriseToken]);
+  }, [
+    searchParams.enterpriseToken,
+    createEnterpriseMutation.mutate,
+    searchParams.signupUrlName,
+  ]);
 
   const createPolicyMutation = useMutation({
     mutationFn: async (formData: typeof policyForm) => {

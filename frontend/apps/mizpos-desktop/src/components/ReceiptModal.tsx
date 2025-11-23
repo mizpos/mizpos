@@ -1,10 +1,63 @@
+import { useState } from "react";
 import { css } from "styled-system/css";
+import type { FullReceiptData } from "../lib/printer";
 import { formatPrice } from "../stores/cart";
+import { usePrinterStore } from "../stores/printer";
 import type { SaleRecord } from "../types";
 
 interface ReceiptModalProps {
   sale: SaleRecord;
   onClose: () => void;
+  eventName?: string;
+}
+
+/**
+ * SaleRecord を FullReceiptData に変換
+ */
+function convertToFullReceiptData(
+  sale: SaleRecord,
+  eventName: string,
+): FullReceiptData {
+  // 消費税計算（内税10%として計算）
+  const taxRate = 10;
+  const taxAmount = Math.floor(sale.total_amount - sale.total_amount / 1.1);
+
+  // 支払方法の日本語名
+  const paymentMethodName = (() => {
+    switch (sale.payment_method) {
+      case "cash":
+        return "現金";
+      case "card":
+        return "カード";
+      case "other":
+        return "その他";
+      default:
+        return sale.payment_method;
+    }
+  })();
+
+  return {
+    event_name: eventName,
+    staff_id: sale.employee_number,
+    customer_name: undefined, // 必要に応じて設定可能
+    items: sale.items.map((item) => ({
+      circle_name: item.product.publisher_id || "",
+      jan: item.product.barcode || "",
+      isbn: item.product.isdn || "",
+      quantity: item.quantity,
+      price: item.subtotal,
+    })),
+    total: sale.total_amount,
+    payments: [
+      {
+        method: paymentMethodName,
+        amount: sale.received_amount,
+      },
+    ],
+    tax_rate: taxRate,
+    tax_amount: taxAmount,
+    receipt_number: sale.sale_id.slice(0, 8).toUpperCase(),
+  };
 }
 
 const styles = {
@@ -232,6 +285,22 @@ const styles = {
     "&:hover": {
       background: "#c5cae9",
     },
+    "&:disabled": {
+      cursor: "not-allowed",
+      opacity: 0.6,
+    },
+  }),
+  printError: css({
+    color: "#d32f2f",
+    fontSize: "12px",
+    textAlign: "center",
+    padding: "8px",
+  }),
+  printSuccess: css({
+    color: "#4caf50",
+    fontSize: "12px",
+    textAlign: "center",
+    padding: "8px",
   }),
   doneButton: css({
     flex: 1,
@@ -250,12 +319,47 @@ const styles = {
   }),
 };
 
-export function ReceiptModal({ sale, onClose }: ReceiptModalProps) {
+export function ReceiptModal({
+  sale,
+  onClose,
+  eventName = "mizPOS",
+}: ReceiptModalProps) {
   const saleDate = new Date(sale.timestamp);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
+  const [printSuccess, setPrintSuccess] = useState(false);
 
-  const handlePrint = () => {
-    // TODO: Tauri経由でレシートプリンターに印刷
-    window.print();
+  const { printFullReceipt, printerConfig } = usePrinterStore();
+
+  const handlePrint = async () => {
+    // プリンターが設定されていない場合はブラウザ印刷にフォールバック
+    if (!printerConfig) {
+      window.print();
+      return;
+    }
+
+    setIsPrinting(true);
+    setPrintError(null);
+    setPrintSuccess(false);
+
+    try {
+      const receiptData = convertToFullReceiptData(sale, eventName);
+      const result = await printFullReceipt(receiptData);
+
+      if (result.success) {
+        setPrintSuccess(true);
+        // 3秒後に成功メッセージを消す
+        setTimeout(() => setPrintSuccess(false), 3000);
+      } else {
+        setPrintError(result.error || "印刷に失敗しました");
+      }
+    } catch (error) {
+      setPrintError(
+        error instanceof Error ? error.message : "印刷中にエラーが発生しました",
+      );
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -383,13 +487,22 @@ export function ReceiptModal({ sale, onClose }: ReceiptModalProps) {
         </div>
 
         <div className={styles.receiptActions}>
-          <button
-            type="button"
-            className={styles.printButton}
-            onClick={handlePrint}
-          >
-            印刷
-          </button>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <button
+              type="button"
+              className={styles.printButton}
+              onClick={handlePrint}
+              disabled={isPrinting}
+            >
+              {isPrinting ? "印刷中..." : "印刷"}
+            </button>
+            {printError && (
+              <div className={styles.printError}>{printError}</div>
+            )}
+            {printSuccess && (
+              <div className={styles.printSuccess}>印刷完了</div>
+            )}
+          </div>
           <button type="button" className={styles.doneButton} onClick={onClose}>
             完了
           </button>

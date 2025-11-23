@@ -5,6 +5,7 @@ import {
   type BluetoothDevice,
   connectBluetoothPrinter,
   disconnectBluetoothPrinter,
+  type FullReceiptData,
   getBluetoothDevices,
   getPlatform,
   getUsbDevices,
@@ -58,6 +59,7 @@ interface PrinterState {
   // Print functions
   testPrint: () => Promise<PrinterResult>;
   printReceipt: (data: ReceiptData) => Promise<PrinterResult>;
+  printFullReceipt: (data: FullReceiptData) => Promise<PrinterResult>;
   printText: (text: string) => Promise<PrinterResult>;
 }
 
@@ -217,6 +219,19 @@ export const usePrinterStore = create<PrinterState>()(
         }
 
         return printer.printReceipt(data);
+      },
+
+      printFullReceipt: async (
+        data: FullReceiptData,
+      ): Promise<PrinterResult> => {
+        const { platform, printerConfig, paperWidth } = get();
+
+        const printer = createPrinter(platform, printerConfig, paperWidth);
+        if (!printer) {
+          return { success: false, error: "Printer not configured" };
+        }
+
+        return printer.printFullReceipt(data);
       },
 
       printText: async (text: string): Promise<PrinterResult> => {
