@@ -39,7 +39,7 @@ interface MizPosPrinterBridge {
   disconnect(): string;
   isConnected(): string;
   printText(text: string): string;
-  welcomePrint(terminalId: string): string;
+  welcomePrint(terminalId: string, paperWidth?: number): string;
   printReceipt(jsonData: string): string;
 }
 
@@ -151,11 +151,14 @@ export function isBluetoothConnected(): boolean {
   return parsed.connected;
 }
 
-export function bluetoothWelcomePrint(terminalId: string): PrinterResult {
+export function bluetoothWelcomePrint(
+  terminalId: string,
+  paperWidth?: number,
+): PrinterResult {
   if (!window.MizPosPrinter) {
     return { success: false, error: "Bluetooth not available" };
   }
-  const result = window.MizPosPrinter.welcomePrint(terminalId);
+  const result = window.MizPosPrinter.welcomePrint(terminalId, paperWidth);
   return parseAndroidResult<PrinterResult>(result);
 }
 
@@ -176,6 +179,7 @@ export interface ReceiptData {
   }>;
   total?: string;
   footer?: string;
+  paperWidth?: number;
 }
 
 export function bluetoothPrintReceipt(data: ReceiptData): PrinterResult {
@@ -240,7 +244,7 @@ export class UnifiedPrinter {
 
   async welcomePrint(terminalId: string): Promise<PrinterResult> {
     if (this.config.platform === "android") {
-      return bluetoothWelcomePrint(terminalId);
+      return bluetoothWelcomePrint(terminalId, this.config.paperWidth);
     }
 
     // Desktop USB
@@ -286,7 +290,10 @@ export class UnifiedPrinter {
 
   async printReceipt(data: ReceiptData): Promise<PrinterResult> {
     if (this.config.platform === "android") {
-      return bluetoothPrintReceipt(data);
+      return bluetoothPrintReceipt({
+        ...data,
+        paperWidth: this.config.paperWidth,
+      });
     }
 
     // Desktop: format and print as text

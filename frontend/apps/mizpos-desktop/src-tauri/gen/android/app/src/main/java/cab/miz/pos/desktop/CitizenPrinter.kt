@@ -24,6 +24,12 @@ class CitizenPrinter(private val context: Context) {
         // Standard SPP UUID for Bluetooth serial communication
         private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
+        // Paper width settings
+        const val PAPER_58MM = 58
+        const val PAPER_80MM = 80
+        private const val CHARS_58MM = 32  // Characters per line for 58mm
+        private const val CHARS_80MM = 48  // Characters per line for 80mm
+
         // ESC/POS Commands
         private val ESC_INIT = byteArrayOf(0x1B, 0x40) // Initialize printer
         private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00) // Full cut
@@ -38,6 +44,10 @@ class CitizenPrinter(private val context: Context) {
         // Japanese character set (Shift-JIS for CMP-30II)
         private val ESC_KANJI_MODE = byteArrayOf(0x1C, 0x26) // Enable Kanji mode
         private val ESC_KANJI_OFF = byteArrayOf(0x1C, 0x2E) // Disable Kanji mode
+
+        fun getCharsPerLine(paperWidth: Int): Int {
+            return if (paperWidth == PAPER_80MM) CHARS_80MM else CHARS_58MM
+        }
     }
 
     private var bluetoothAdapter: BluetoothAdapter? = null
@@ -190,14 +200,15 @@ class CitizenPrinter(private val context: Context) {
     /**
      * Print separator line
      */
-    fun printSeparator(width: Int = 32): Boolean {
+    fun printSeparator(paperWidth: Int = PAPER_58MM): Boolean {
+        val width = getCharsPerLine(paperWidth)
         return printLine("-".repeat(width))
     }
 
     /**
      * Print welcome message (for testing)
      */
-    fun printWelcome(terminalId: String): Boolean {
+    fun printWelcome(terminalId: String, paperWidth: Int = PAPER_58MM): Boolean {
         if (!isConnected()) return false
 
         init()
@@ -218,12 +229,12 @@ class CitizenPrinter(private val context: Context) {
         write(ESC_KANJI_OFF)
 
         printLine("")
-        printSeparator()
+        printSeparator(paperWidth)
 
         // Terminal ID
         printLine("ターミナルID: $terminalId")
 
-        printSeparator()
+        printSeparator(paperWidth)
         printLine("")
 
         // Japanese test
