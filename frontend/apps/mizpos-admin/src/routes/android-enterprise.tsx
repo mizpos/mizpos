@@ -1,4 +1,3 @@
-import type { AndroidMgmtComponents } from "@mizpos/api";
 import {
   IconDeviceMobile,
   IconPlus,
@@ -22,9 +21,30 @@ export const Route = createFileRoute("/android-enterprise")({
   component: AndroidEnterprisePage,
 });
 
-type Enterprise = AndroidMgmtComponents["schemas"]["Enterprise"];
-type Policy = AndroidMgmtComponents["schemas"]["Policy"];
-type Device = AndroidMgmtComponents["schemas"]["Device"];
+// API レスポンスの型定義（OpenAPI スキーマに定義がないため、ローカルで定義）
+interface Enterprise {
+  id: string;
+  enterprise_display_name?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface Policy {
+  id: string;
+  name: string;
+  enterprise_id: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface Device {
+  id: string;
+  enterprise_id: string;
+  applied_policy_name?: string;
+  state?: string;
+  last_status_report_time?: string;
+  created_at?: string;
+}
 
 interface EnrollmentToken {
   token: string;
@@ -67,11 +87,11 @@ function AndroidEnterprisePage() {
 
   const { data: enterprises = [], isLoading: enterprisesLoading } = useQuery({
     queryKey: ["android-mgmt-enterprises"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Enterprise[]> => {
       const { androidMgmt } = await getAuthenticatedClients();
       const { data, error } = await androidMgmt.GET("/enterprises");
       if (error) throw new Error("Failed to fetch enterprises");
-      return data?.enterprises || [];
+      return (data as { enterprises?: Enterprise[] })?.enterprises || [];
     },
   });
 
@@ -80,11 +100,14 @@ function AndroidEnterprisePage() {
     queryFn: async () => {
       if (!selectedEnterprise) return [];
       const { androidMgmt } = await getAuthenticatedClients();
-      const { data, error } = await androidMgmt.GET("/policies", {
-        params: { query: { enterprise_id: selectedEnterprise.id } },
-      });
+      const { data, error } = await androidMgmt.GET(
+        "/enterprises/{enterprise_id}/policies",
+        {
+          params: { path: { enterprise_id: selectedEnterprise.id } },
+        },
+      );
       if (error) throw new Error("Failed to fetch policies");
-      return data?.policies || [];
+      return (data as { policies?: Policy[] })?.policies || [];
     },
     enabled: !!selectedEnterprise,
   });
@@ -94,11 +117,14 @@ function AndroidEnterprisePage() {
     queryFn: async () => {
       if (!selectedEnterprise) return [];
       const { androidMgmt } = await getAuthenticatedClients();
-      const { data, error } = await androidMgmt.GET("/devices", {
-        params: { query: { enterprise_id: selectedEnterprise.id } },
-      });
+      const { data, error } = await androidMgmt.GET(
+        "/enterprises/{enterprise_id}/devices",
+        {
+          params: { path: { enterprise_id: selectedEnterprise.id } },
+        },
+      );
       if (error) throw new Error("Failed to fetch devices");
-      return data?.devices || [];
+      return (data as { devices?: Device[] })?.devices || [];
     },
     enabled: !!selectedEnterprise,
   });
@@ -107,13 +133,25 @@ function AndroidEnterprisePage() {
     mutationFn: async (formData: typeof policyForm) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
       const { androidMgmt } = await getAuthenticatedClients();
-      const { data, error } = await androidMgmt.POST("/policies", {
-        body: {
-          enterprise_id: selectedEnterprise.id,
-          name: formData.name,
-          policy_data: formData.policy_data,
+      const { data, error } = await androidMgmt.POST(
+        "/enterprises/{enterprise_id}/policies",
+        {
+          params: { path: { enterprise_id: selectedEnterprise.id } },
+          body: {
+            policy_name: formData.name,
+            applications_enabled: true,
+            play_store_mode: "WHITELIST",
+            password_required: true,
+            password_minimum_length: 6,
+            screen_capture_disabled:
+              formData.policy_data.screenCaptureDisabled as boolean,
+            camera_disabled: formData.policy_data.cameraDisabled as boolean,
+            wifi_config_disabled: false,
+            kiosk_mode_enabled:
+              formData.policy_data.kioskCustomLauncherEnabled as boolean,
+          },
         },
-      });
+      );
       if (error) throw new Error("Failed to create policy");
       return data;
     },
@@ -151,9 +189,18 @@ function AndroidEnterprisePage() {
     mutationFn: async (deviceId: string) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
       const { androidMgmt } = await getAuthenticatedClients();
-      const { error } = await androidMgmt.DELETE("/devices/{device_id}", {
-        params: { path: { device_id: deviceId } },
-      });
+      const { error } = await androidMgmt.DELETE(
+        "/enterprises/{enterprise_id}/devices/{device_id}",
+        {
+          params: {
+            path: {
+              enterprise_id: selectedEnterprise.id,
+              device_id: deviceId,
+            },
+            query: { wipe_data: true },
+          },
+        },
+      );
       if (error) throw new Error("Failed to delete device");
     },
     onSuccess: () => {
