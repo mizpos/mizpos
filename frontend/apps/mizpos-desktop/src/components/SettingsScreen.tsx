@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import type { BluetoothDevice, UsbDevice } from "../lib/printer";
+import { useAuthStore } from "../stores/auth";
+import { useEventStore } from "../stores/event";
 import { type PaperWidth, usePrinterStore } from "../stores/printer";
+import type { PosEvent } from "../types";
 
 type Device = UsbDevice | BluetoothDevice;
 
@@ -268,6 +271,87 @@ const styles = {
     fontSize: "12px",
     color: "#666",
     marginTop: "4px",
+  }),
+  eventList: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    maxHeight: "200px",
+    overflowY: "auto",
+  }),
+  eventItem: css({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    border: "2px solid #e0e0e0",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    background: "white",
+    _hover: {
+      borderColor: "#bdbdbd",
+      background: "#fafafa",
+    },
+  }),
+  eventItemSelected: css({
+    borderColor: "#1a237e",
+    background: "#e8eaf6",
+  }),
+  eventItemDisabled: css({
+    cursor: "not-allowed",
+    opacity: 0.6,
+    _hover: {
+      borderColor: "#e0e0e0",
+      background: "white",
+    },
+  }),
+  eventInfo: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  }),
+  eventName: css({
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#333",
+  }),
+  eventDetail: css({
+    fontSize: "12px",
+    color: "#666",
+  }),
+  eventBadge: css({
+    padding: "4px 8px",
+    borderRadius: "4px",
+    fontSize: "11px",
+    fontWeight: 600,
+  }),
+  eventBadgeSession: css({
+    background: "#fff3e0",
+    color: "#e65100",
+  }),
+  eventBadgeSelected: css({
+    background: "#1a237e",
+    color: "white",
+  }),
+  noEventOption: css({
+    padding: "12px 16px",
+    border: "2px dashed #e0e0e0",
+    borderRadius: "8px",
+    cursor: "pointer",
+    textAlign: "center",
+    fontSize: "14px",
+    color: "#666",
+    transition: "all 0.2s ease",
+    _hover: {
+      borderColor: "#bdbdbd",
+      background: "#fafafa",
+    },
+  }),
+  noEventOptionSelected: css({
+    borderColor: "#1a237e",
+    background: "#e8eaf6",
+    color: "#1a237e",
   }),
 };
 
