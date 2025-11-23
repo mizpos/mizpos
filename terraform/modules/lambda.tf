@@ -165,12 +165,12 @@ resource "aws_lambda_function" "mdm" {
 
   environment {
     variables = {
-      ENVIRONMENT                    = var.environment
-      ENTERPRISES_TABLE_NAME         = aws_dynamodb_table.mdm_enterprises.name
-      POLICIES_TABLE_NAME            = aws_dynamodb_table.mdm_policies.name
-      DEVICES_TABLE_NAME             = aws_dynamodb_table.mdm_devices.name
-      USER_POOL_ID                   = aws_cognito_user_pool.main.id
-      COGNITO_CLIENT_ID              = aws_cognito_user_pool_client.main.id
+      ENVIRONMENT                     = var.environment
+      ENTERPRISES_TABLE_NAME          = aws_dynamodb_table.mdm_enterprises.name
+      POLICIES_TABLE_NAME             = aws_dynamodb_table.mdm_policies.name
+      DEVICES_TABLE_NAME              = aws_dynamodb_table.mdm_devices.name
+      USER_POOL_ID                    = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID               = aws_cognito_user_pool_client.main.id
       GCP_SERVICE_ACCOUNT_SECRET_NAME = aws_secretsmanager_secret.gcp_service_account.name
     }
   }

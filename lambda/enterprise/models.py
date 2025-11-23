@@ -88,7 +88,9 @@ class DeviceCommandRequest(BaseModel):
     command_type: str = Field(
         ..., description="コマンドタイプ (LOCK/REBOOT/RESET_PASSWORD/WIPE)"
     )
-    new_password: Optional[str] = Field(None, description="新パスワード（RESET_PASSWORD時）")
+    new_password: Optional[str] = Field(
+        None, description="新パスワード（RESET_PASSWORD時）"
+    )
 
 
 # ==========================================

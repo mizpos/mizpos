@@ -7,7 +7,6 @@ import json
 import logging
 import os
 from functools import lru_cache
-from typing import Optional
 
 import boto3
 from google.oauth2 import service_account
@@ -23,9 +22,7 @@ GCP_SERVICE_ACCOUNT_SECRET_NAME = os.environ.get(
 AWS_REGION = os.environ.get("AWS_REGION", "ap-northeast-1")
 
 # Android Management API スコープ
-ANDROID_MANAGEMENT_SCOPES = [
-    "https://www.googleapis.com/auth/androidmanagement"
-]
+ANDROID_MANAGEMENT_SCOPES = ["https://www.googleapis.com/auth/androidmanagement"]
 
 
 def get_secrets_manager_client():
@@ -50,8 +47,7 @@ def get_service_account_credentials() -> service_account.Credentials:
         service_account_info = json.loads(secret_string)
 
         credentials = service_account.Credentials.from_service_account_info(
-            service_account_info,
-            scopes=ANDROID_MANAGEMENT_SCOPES
+            service_account_info, scopes=ANDROID_MANAGEMENT_SCOPES
         )
 
         return credentials
@@ -69,10 +65,7 @@ def get_android_management_service() -> Resource:
     try:
         credentials = get_service_account_credentials()
         service = build(
-            "androidmanagement",
-            "v1",
-            credentials=credentials,
-            cache_discovery=False
+            "androidmanagement", "v1", credentials=credentials, cache_discovery=False
         )
         return service
 

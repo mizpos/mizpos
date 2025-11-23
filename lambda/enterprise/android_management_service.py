@@ -3,7 +3,6 @@ Android Management API Service
 エンタープライズ、ポリシー、デバイス管理のコアロジック
 """
 
-import json
 import logging
 import os
 import uuid
@@ -55,10 +54,11 @@ def create_signup_url(callback_url: str) -> dict:
             "projectId": project_id,
         }
 
-        result = service.signupUrls().create(
-            projectId=project_id,
-            body=request_body
-        ).execute()
+        result = (
+            service.signupUrls()
+            .create(projectId=project_id, body=request_body)
+            .execute()
+        )
 
         logger.info(f"Created signup URL: {result.get('name')}")
 
@@ -96,15 +96,23 @@ def create_enterprise(enterprise_token: str, signup_url_name: str) -> dict:
         project_id = get_project_id()
 
         # enterprises.create を呼び出し
-        result = service.enterprises().create(
-            projectId=project_id,
-            signupUrlName=signup_url_name,
-            enterpriseToken=enterprise_token
-        ).execute()
+        result = (
+            service.enterprises()
+            .create(
+                projectId=project_id,
+                signupUrlName=signup_url_name,
+                enterpriseToken=enterprise_token,
+            )
+            .execute()
+        )
 
         enterprise_name = result.get("name", "")
         # enterprises/XXXX の形式からIDを抽出
-        enterprise_id = enterprise_name.split("/")[-1] if "/" in enterprise_name else enterprise_name
+        enterprise_id = (
+            enterprise_name.split("/")[-1]
+            if "/" in enterprise_name
+            else enterprise_name
+        )
 
         # DynamoDBに保存
         now = datetime.now(timezone.utc).isoformat()
@@ -130,7 +138,9 @@ def create_enterprise(enterprise_token: str, signup_url_name: str) -> dict:
             "display_name": enterprise_item.get("display_name"),
             "primary_color": enterprise_item.get("primary_color"),
             "logo": enterprise_item.get("logo"),
-            "enabled_notification_types": enterprise_item.get("enabled_notification_types"),
+            "enabled_notification_types": enterprise_item.get(
+                "enabled_notification_types"
+            ),
         }
 
     except HttpError as e:
@@ -246,9 +256,13 @@ def create_policy(
             "passwordPolicies": [
                 {
                     "passwordMinimumLength": password_minimum_length,
-                    "passwordQuality": "NUMERIC" if password_required else "UNSPECIFIED",
+                    "passwordQuality": "NUMERIC"
+                    if password_required
+                    else "UNSPECIFIED",
                 }
-            ] if password_required else [],
+            ]
+            if password_required
+            else [],
             "screenCaptureDisabled": screen_capture_disabled,
             "cameraDisabled": camera_disabled,
             "wifiConfigDisabled": wifi_config_disabled,
@@ -266,10 +280,12 @@ def create_policy(
 
         # Google APIでポリシー作成
         full_policy_name = f"{enterprise_name}/policies/{policy_name}"
-        result = service.enterprises().policies().patch(
-            name=full_policy_name,
-            body=policy_body
-        ).execute()
+        _ = (
+            service.enterprises()
+            .policies()
+            .patch(name=full_policy_name, body=policy_body)
+            .execute()
+        )
 
         # DynamoDBに保存
         now = datetime.now(timezone.utc).isoformat()
@@ -325,7 +341,7 @@ def get_policy(enterprise_id: str, policy_name: str) -> Optional[dict]:
             ExpressionAttributeValues={
                 ":eid": enterprise_id,
                 ":pname": policy_name,
-            }
+            },
         )
         items = response.get("Items", [])
         return items[0] if items else None
@@ -348,7 +364,7 @@ def list_policies(enterprise_id: str) -> list[dict]:
         response = policies_table.query(
             IndexName="EnterpriseIndex",
             KeyConditionExpression="enterprise_id = :eid",
-            ExpressionAttributeValues={":eid": enterprise_id}
+            ExpressionAttributeValues={":eid": enterprise_id},
         )
         return response.get("Items", [])
     except Exception as e:
@@ -396,9 +412,7 @@ def delete_policy(enterprise_id: str, policy_name: str) -> bool:
 
 
 def create_enrollment_token(
-    enterprise_id: str,
-    policy_name: str,
-    enrollment_type: str = "QR_CODE"
+    enterprise_id: str, policy_name: str, enrollment_type: str = "QR_CODE"
 ) -> dict:
     """
     デバイス登録トークン（QRコード）を生成
@@ -425,10 +439,12 @@ def create_enrollment_token(
             "allowPersonalUsage": "PERSONAL_USAGE_DISALLOWED",
         }
 
-        result = service.enterprises().enrollmentTokens().create(
-            parent=enterprise_name,
-            body=enrollment_token_body
-        ).execute()
+        result = (
+            service.enterprises()
+            .enrollmentTokens()
+            .create(parent=enterprise_name, body=enrollment_token_body)
+            .execute()
+        )
 
         token_name = result.get("name", "")
         token_value = result.get("value", "")
@@ -471,16 +487,16 @@ def list_devices(enterprise_id: str) -> list[dict]:
         service = get_android_management_service()
         enterprise_name = f"enterprises/{enterprise_id}"
 
-        result = service.enterprises().devices().list(
-            parent=enterprise_name
-        ).execute()
+        result = service.enterprises().devices().list(parent=enterprise_name).execute()
 
         devices = result.get("devices", [])
 
         # DynamoDBと同期
         for device in devices:
             device_name = device.get("name", "")
-            device_id = device_name.split("/")[-1] if "/" in device_name else device_name
+            device_id = (
+                device_name.split("/")[-1] if "/" in device_name else device_name
+            )
 
             now = datetime.now(timezone.utc).isoformat()
             device_item = {
@@ -523,9 +539,7 @@ def get_device(enterprise_id: str, device_id: str) -> Optional[dict]:
         service = get_android_management_service()
         device_name = f"enterprises/{enterprise_id}/devices/{device_id}"
 
-        result = service.enterprises().devices().get(
-            name=device_name
-        ).execute()
+        result = service.enterprises().devices().get(name=device_name).execute()
 
         return result
 
@@ -541,7 +555,7 @@ def issue_device_command(
     enterprise_id: str,
     device_id: str,
     command_type: str,
-    new_password: Optional[str] = None
+    new_password: Optional[str] = None,
 ) -> dict:
     """
     デバイスにコマンドを発行
@@ -566,10 +580,12 @@ def issue_device_command(
         if command_type == "RESET_PASSWORD" and new_password:
             command_body["newPassword"] = new_password
 
-        result = service.enterprises().devices().issueCommand(
-            name=device_name,
-            body=command_body
-        ).execute()
+        result = (
+            service.enterprises()
+            .devices()
+            .issueCommand(name=device_name, body=command_body)
+            .execute()
+        )
 
         logger.info(f"Issued command {command_type} to device {device_id}")
 
@@ -608,9 +624,7 @@ def delete_device(enterprise_id: str, device_id: str, wipe_data: bool = False) -
             issue_device_command(enterprise_id, device_id, "WIPE")
 
         # デバイスを削除
-        service.enterprises().devices().delete(
-            name=device_name
-        ).execute()
+        service.enterprises().devices().delete(name=device_name).execute()
 
         # DynamoDBからも削除
         devices_table.delete_item(Key={"device_id": device_id})

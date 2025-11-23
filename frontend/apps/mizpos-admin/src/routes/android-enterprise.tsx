@@ -86,10 +86,7 @@ function AndroidEnterprisePage() {
 
   const [selectedPolicy, setSelectedPolicy] = useState("");
 
-  const {
-    data: enterprises = [],
-    isLoading: enterprisesLoading,
-  } = useQuery({
+  const { data: enterprises = [], isLoading: enterprisesLoading } = useQuery({
     queryKey: ["mdm-enterprises"],
     queryFn: async () => {
       const { accounts } = await getAuthenticatedClients();
@@ -109,10 +106,7 @@ function AndroidEnterprisePage() {
     },
   });
 
-  const {
-    data: policies = [],
-    isLoading: policiesLoading,
-  } = useQuery({
+  const { data: policies = [], isLoading: policiesLoading } = useQuery({
     queryKey: ["mdm-policies", selectedEnterprise?.enterprise_id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
@@ -128,7 +122,7 @@ function AndroidEnterprisePage() {
               accounts.c?.headers?.Authorization ||
               (await getAuthHeaders()).Authorization,
           },
-        }
+        },
       );
       if (!response.ok) throw new Error("Failed to fetch policies");
       const data = await response.json();
@@ -137,10 +131,7 @@ function AndroidEnterprisePage() {
     enabled: !!selectedEnterprise,
   });
 
-  const {
-    data: devices = [],
-    isLoading: devicesLoading,
-  } = useQuery({
+  const { data: devices = [], isLoading: devicesLoading } = useQuery({
     queryKey: ["mdm-devices", selectedEnterprise?.enterprise_id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
@@ -156,7 +147,7 @@ function AndroidEnterprisePage() {
               accounts.c?.headers?.Authorization ||
               (await getAuthHeaders()).Authorization,
           },
-        }
+        },
       );
       if (!response.ok) throw new Error("Failed to fetch devices");
       const data = await response.json();
@@ -183,7 +174,7 @@ function AndroidEnterprisePage() {
               (await getAuthHeaders()).Authorization,
           },
           body: JSON.stringify(data),
-        }
+        },
       );
       if (!response.ok) throw new Error("Failed to create policy");
       return response.json();
@@ -227,7 +218,7 @@ function AndroidEnterprisePage() {
             policy_name: policyName,
             enrollment_type: "QR_CODE",
           }),
-        }
+        },
       );
       if (!response.ok) throw new Error("Failed to create enrollment token");
       const data = await response.json();
@@ -254,7 +245,7 @@ function AndroidEnterprisePage() {
               accounts.c?.headers?.Authorization ||
               (await getAuthHeaders()).Authorization,
           },
-        }
+        },
       );
       if (!response.ok) throw new Error("Failed to delete device");
     },
@@ -268,7 +259,9 @@ function AndroidEnterprisePage() {
   async function getAuthHeaders() {
     const { accounts } = await getAuthenticatedClients();
     return {
-      Authorization: (accounts as unknown as { c: { headers: { Authorization: string } } }).c?.headers?.Authorization || "",
+      Authorization:
+        (accounts as unknown as { c: { headers: { Authorization: string } } }).c
+          ?.headers?.Authorization || "",
     };
   }
 
@@ -337,7 +330,7 @@ function AndroidEnterprisePage() {
           onClick={() => {
             if (
               window.confirm(
-                "このデバイスを削除しますか？デバイスのデータは消去されます。"
+                "このデバイスを削除しますか？デバイスのデータは消去されます。",
               )
             ) {
               deleteDeviceMutation.mutate(item.device_id);
@@ -404,7 +397,13 @@ function AndroidEnterprisePage() {
                 marginBottom: "4",
               })}
             >
-              <div className={css({ display: "flex", alignItems: "center", gap: "3" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "3",
+                })}
+              >
                 <Button
                   variant="secondary"
                   size="sm"
@@ -429,7 +428,10 @@ function AndroidEnterprisePage() {
                   className={tabClass(activeTab === "policies")}
                   onClick={() => setActiveTab("policies")}
                 >
-                  <IconShield size={16} style={{ display: "inline", marginRight: 4 }} />
+                  <IconShield
+                    size={16}
+                    style={{ display: "inline", marginRight: 4 }}
+                  />
                   ポリシー
                 </button>
                 <button
@@ -437,7 +439,10 @@ function AndroidEnterprisePage() {
                   className={tabClass(activeTab === "devices")}
                   onClick={() => setActiveTab("devices")}
                 >
-                  <IconDeviceMobile size={16} style={{ display: "inline", marginRight: 4 }} />
+                  <IconDeviceMobile
+                    size={16}
+                    style={{ display: "inline", marginRight: 4 }}
+                  />
                   デバイス
                 </button>
               </div>
@@ -591,7 +596,7 @@ function AndroidEnterprisePage() {
                       .includes(searchTerm.toLowerCase()) ||
                     (e.display_name || "")
                       .toLowerCase()
-                      .includes(searchTerm.toLowerCase())
+                      .includes(searchTerm.toLowerCase()),
                 )}
                 keyExtractor={(item) => item.enterprise_id}
                 emptyMessage="エンタープライズがありません"
@@ -609,9 +614,16 @@ function AndroidEnterprisePage() {
       >
         <div className={css({ padding: "4" })}>
           <p className={css({ marginBottom: "4", color: "gray.600" })}>
-            Android Enterpriseのエンタープライズを登録するには、Google管理コンソールでの設定が必要です。
+            Android
+            Enterpriseのエンタープライズを登録するには、Google管理コンソールでの設定が必要です。
           </p>
-          <ol className={css({ paddingLeft: "6", marginBottom: "4", color: "gray.700" })}>
+          <ol
+            className={css({
+              paddingLeft: "6",
+              marginBottom: "4",
+              color: "gray.700",
+            })}
+          >
             <li>サインアップURLを生成</li>
             <li>管理者がURLにアクセスして登録</li>
             <li>コールバックで取得したトークンでエンタープライズを作成</li>
@@ -839,7 +851,13 @@ function AndroidEnterprisePage() {
             <p className={css({ fontSize: "sm", color: "gray.500" })}>
               有効期限: {formatDate(enrollmentToken.expiration_timestamp)}
             </p>
-            <p className={css({ fontSize: "xs", color: "gray.400", marginTop: "2" })}>
+            <p
+              className={css({
+                fontSize: "xs",
+                color: "gray.400",
+                marginTop: "2",
+              })}
+            >
               トークン: {enrollmentToken.token}
             </p>
           </div>
@@ -878,7 +896,9 @@ function AndroidEnterprisePage() {
                 キャンセル
               </Button>
               <Button
-                onClick={() => createEnrollmentTokenMutation.mutate(selectedPolicy)}
+                onClick={() =>
+                  createEnrollmentTokenMutation.mutate(selectedPolicy)
+                }
                 disabled={
                   !selectedPolicy || createEnrollmentTokenMutation.isPending
                 }
