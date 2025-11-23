@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { fetchPosEvents } from "../lib/api";
+import { fetchEvents } from "../lib/api";
 import type { PosEvent } from "../types";
 
 interface EventState {
@@ -30,9 +30,9 @@ export const useEventStore = create<EventState>()(
       fetchEventList: async () => {
         set({ isLoading: true, error: null });
         try {
-          const events = await fetchPosEvents();
+          const events = await fetchEvents();
           // アクティブなイベントのみフィルタリング
-          const activeEvents = events.filter((e) => e.is_active);
+          const activeEvents = events.filter((e: PosEvent) => e.is_active);
           set({ events: activeEvents, isLoading: false });
         } catch (error) {
           set({
