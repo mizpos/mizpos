@@ -45,9 +45,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-
         with:
           submodules: recursive
+          token: ${{ steps.generate-token.outputs.token }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -117,76 +117,6 @@ jobs:
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
           LAMBDA_FUNTION_PATH: lambda/mizpos-enterprise-android-manager
 
-  deploy-lambda-only:
-    name: Deploy Production Lambda Functions
-    runs-on: ubuntu-slim
-    if: github.event.inputs.deploy_type == 'lambda'
-    steps:
-      - name: Generate token
-        id: generate-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: mizpos-enterprise-android-manager
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-        with:
-          submodules: recursive
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get AWS Account ID and Save to Environment Variable
-        shell: bash
-        run: |
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          export AWS_ACCOUNT_ID
-          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
-
-      - name: Install Lambroll
-        shell: bash
-        run: |
-          curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ env.LAMBROLL_VERSION }}/lambroll_v${{ env.LAMBROLL_VERSION }}_linux_amd64.tar.gz | tar -xz
-          sudo mv lambroll /usr/local/bin/
-
-      - name: Deploy "Accounts" Lambda Functions
-        uses: ./.github/actions/deploy-lambda
-        with:
-          WORKING_DIR: ${{ env.WORKING_DIR }}
-          ENV: prod
-          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/accounts
-
-      - name: Deploy "STOCK" Lambda Functions
-        uses: ./.github/actions/deploy-lambda
-        with:
-          WORKING_DIR: ${{ env.WORKING_DIR }}
-          ENV: prod
-          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/stock
-
-      - name: Deploy "SALES" Lambda Functions
-        uses: ./.github/actions/deploy-lambda
-        with:
-          WORKING_DIR: ${{ env.WORKING_DIR }}
-          ENV: prod
-          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/sales
-
-      - name: Deploy "Enterprise" Lambda Functions
-        uses: ./.github/actions/deploy-lambda
-        with:
-          WORKING_DIR: ${{ env.WORKING_DIR }}
-          ENV: prod
-          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/mizpos-enterprise-android-manager
-
   build-frontend:
     name: Build Production Frontend
     runs-on: ubuntu-slim
@@ -200,14 +130,9 @@ jobs:
       - name: Generate token
         id: generate-token
         uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: mizpos-enterprise-android-manager
 
       - name: Checkout
         uses: actions/checkout@v4
-
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -359,9 +284,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-
         with:
-          fetch-depth: 0
+          submodules: recursive
+          token: ${{ steps.generate-token.outputs.token }}
 
       - name: Generate version tag
         id: version
