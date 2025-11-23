@@ -233,22 +233,34 @@ class MainActivity : TauriActivity() {
                         val name = item.getString("name")
                         val price = item.getString("price")
                         val qty = item.optInt("quantity", 1)
-                        printer.printLine("$name x$qty")
-                        printer.printLine("  ¥$price")
+                        // 商品名（長い場合は自動改行される）
+                        printer.printJapaneseLine(name)
+                        // 数量と価格を右寄せで表示
+                        val priceText = "${qty}点 \\$price"
+                        printer.printRightAligned(priceText, paperWidth)
                     }
                     printer.printSeparator(paperWidth)
                 }
 
                 // Total
                 if (data.has("total")) {
-                    printer.printBold("合計: ¥${data.getString("total")}")
-                    printer.printLine("")
+                    printer.printJapaneseLine("合計: \\${data.getString("total")}")
                 }
 
                 // Footer
                 if (data.has("footer")) {
                     printer.printLine("")
-                    printer.printCentered(data.getString("footer"))
+                    val footerText = data.getString("footer")
+                    // 改行で分割して各行を出力
+                    footerText.split("\n").forEach { line ->
+                        printer.printJapaneseLine(line)
+                    }
+                }
+
+                // Barcode (receipt number) - CODE128
+                if (data.has("qrCode")) {
+                    printer.printLine("")
+                    printer.printBarcodeCentered(data.getString("qrCode"), 50, 2)
                 }
 
                 printer.feed(3)

@@ -53,6 +53,12 @@ class CitizenPrinter(private val context: Context) {
         private val ESC_KANJI_MODE = byteArrayOf(0x1C, 0x26) // Enable Kanji mode
         private val ESC_KANJI_OFF = byteArrayOf(0x1C, 0x2E) // Disable Kanji mode
 
+        // QR Code commands (GS ( k)
+        private val QR_MODEL_2 = byteArrayOf(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00) // Model 2
+        private val QR_SIZE_PREFIX = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43) // size command prefix
+        private val QR_ERROR_M = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31) // Error correction M
+        private val QR_PRINT = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30) // Print QR code
+
         fun getCharsPerLine(paperWidth: Int): Int {
             return if (paperWidth == PAPER_80MM) CHARS_80MM else CHARS_58MM
         }
@@ -187,6 +193,28 @@ class CitizenPrinter(private val context: Context) {
     }
 
     /**
+     * Print Japanese text with newline (enables Kanji mode)
+     */
+    fun printJapaneseLine(text: String): Boolean {
+        write(ESC_KANJI_MODE)
+        val result = printText(text + "\n")
+        write(ESC_KANJI_OFF)
+        return result
+    }
+
+    /**
+     * Print Japanese bold text (enables Kanji mode)
+     */
+    fun printJapaneseBold(text: String): Boolean {
+        write(ESC_BOLD_ON)
+        write(ESC_KANJI_MODE)
+        val result = printText(text)
+        write(ESC_KANJI_OFF)
+        write(ESC_BOLD_OFF)
+        return result
+    }
+
+    /**
      * Print centered text
      */
     fun printCentered(text: String): Boolean {
@@ -226,6 +254,102 @@ class CitizenPrinter(private val context: Context) {
     fun printSeparator(paperWidth: Int = PAPER_58MM): Boolean {
         val width = getCharsPerLine(paperWidth)
         return printLine("-".repeat(width))
+    }
+
+    /**
+     * Print right-aligned text with Japanese support
+     * 全角文字は2文字分としてカウント
+     */
+    fun printRightAligned(text: String, paperWidth: Int = PAPER_58MM): Boolean {
+        val maxWidth = getCharsPerLine(paperWidth)
+        // 全角文字を2文字分としてカウント
+        val textWidth = text.sumOf { c ->
+            if (c.code > 0x7F) 2 else 1
+        }
+        val padding = maxOf(0, maxWidth - textWidth)
+        write(ESC_KANJI_MODE)
+        val result = printLine(" ".repeat(padding) + text)
+        write(ESC_KANJI_OFF)
+        return result
+    }
+
+    /**
+     * Print QR code
+     * @param data QRコードに埋め込むデータ
+     * @param size QRコードのサイズ (1-16, デフォルト: 4)
+     */
+    fun printQRCode(data: String, size: Int = 4): Boolean {
+        val clampedSize = size.coerceIn(1, 16)
+
+        // Select model 2
+        if (!write(QR_MODEL_2)) return false
+
+        // Set size
+        val sizeCmd = QR_SIZE_PREFIX + byteArrayOf(clampedSize.toByte())
+        if (!write(sizeCmd)) return false
+
+        // Set error correction level M
+        if (!write(QR_ERROR_M)) return false
+
+        // Store data in symbol storage area
+        // Command: GS ( k pL pH cn fn m [data]
+        // cn=49 (0x31), fn=80 (0x50), m=48 (0x30)
+        val dataBytes = data.toByteArray(Charsets.UTF_8)
+        val len = dataBytes.size + 3 // +3 for cn, fn, m
+        val pl = (len and 0xFF).toByte()
+        val ph = ((len shr 8) and 0xFF).toByte()
+        val storeCmd = byteArrayOf(0x1D, 0x28, 0x6B, pl, ph, 0x31, 0x50, 0x30) + dataBytes
+        if (!write(storeCmd)) return false
+
+        // Print QR code
+        return write(QR_PRINT)
+    }
+
+    /**
+     * Print QR code centered
+     */
+    fun printQRCodeCentered(data: String, size: Int = 4): Boolean {
+        write(ESC_CENTER)
+        val result = printQRCode(data, size)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print CODE128 barcode
+     * @param data バーコードデータ (ASCII文字のみ)
+     * @param height バーコードの高さ (ドット単位、デフォルト: 50)
+     * @param width バーコードの幅 (2-6、デフォルト: 2)
+     */
+    fun printBarcode(data: String, height: Int = 50, width: Int = 2): Boolean {
+        val clampedWidth = width.coerceIn(2, 6)
+        val clampedHeight = height.coerceIn(1, 255)
+
+        // GS H n - HRI character print position: 2 = below barcode
+        if (!write(byteArrayOf(0x1D, 0x48, 0x02))) return false
+
+        // GS h n - Set barcode height
+        if (!write(byteArrayOf(0x1D, 0x68, clampedHeight.toByte()))) return false
+
+        // GS w n - Set barcode width
+        if (!write(byteArrayOf(0x1D, 0x77, clampedWidth.toByte()))) return false
+
+        // GS k m n d1...dn - Print barcode
+        // m = 73 (0x49) for CODE128
+        val dataBytes = data.toByteArray(Charsets.US_ASCII)
+        val n = dataBytes.size.toByte()
+        val cmd = byteArrayOf(0x1D, 0x6B, 0x49, n) + dataBytes
+        return write(cmd)
+    }
+
+    /**
+     * Print CODE128 barcode centered
+     */
+    fun printBarcodeCentered(data: String, height: Int = 50, width: Int = 2): Boolean {
+        write(ESC_CENTER)
+        val result = printBarcode(data, height, width)
+        write(ESC_LEFT)
+        return result
     }
 
     /**

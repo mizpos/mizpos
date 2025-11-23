@@ -10,8 +10,12 @@ pub const PAPER_PART_CUT: &[u8] = b"\x1d\x56\x01";
 
 pub const TXT_BOLD_ON: &[u8] = b"\x1b\x45\x01";
 pub const TXT_BOLD_OFF: &[u8] = b"\x1b\x45\x00";
+// ESC - for ASCII/Kana underline
 pub const TXT_UNDERL_ON: &[u8] = b"\x1b\x2d\x01";
 pub const TXT_UNDERL_OFF: &[u8] = b"\x1b\x2d\x00";
+// FS - for Kanji underline
+pub const JP_UNDERL_ON: &[u8] = b"\x1c\x2d\x01";
+pub const JP_UNDERL_OFF: &[u8] = b"\x1c\x2d\x00";
 pub const TXT_ALIGN_LT: &[u8] = b"\x1b\x61\x00";
 pub const TXT_ALIGN_CT: &[u8] = b"\x1b\x61\x01";
 pub const TXT_ALIGN_RT: &[u8] = b"\x1b\x61\x02";
@@ -24,12 +28,17 @@ pub const TXT_REVERSE_OFF: &[u8] = b"\x1dB\x00";
 pub const TXT_DOUBLE_SIZE: &[u8] = b"\x1b!\x30"; // double width + double height
 pub const TXT_NORMAL_SIZE: &[u8] = b"\x1b!\x00";
 
-// QR Code commands (GS ( k)
-pub const QR_MODEL_2: &[u8] = b"\x1d\x28\x6b\x04\x00\x31\x41\x32\x00"; // Model 2
-pub const QR_SIZE_PREFIX: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x43"; // size command prefix
-pub const QR_ERROR_L: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x45\x30"; // Error correction L
-pub const QR_ERROR_M: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x45\x31"; // Error correction M
-pub const QR_PRINT: &[u8] = b"\x1d\x28\x6b\x03\x00\x31\x51\x30"; // Print QR code
+// QR Code commands (GS ( k) - Citizen ESC/POS
+// fn=165 (0xA5): Select model
+// fn=167 (0xA7): Set cell size
+// fn=169 (0xA9): Set error correction level
+// fn=180 (0xB4): Store data
+// fn=181 (0xB5): Print symbol
+pub const QR_MODEL_2: &[u8] = &[0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0xA5, 0x32, 0x00];
+pub const QR_SIZE_PREFIX: &[u8] = &[0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0xA7];
+pub const QR_ERROR_L: &[u8] = &[0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0xA9, 0x30];
+pub const QR_ERROR_M: &[u8] = &[0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0xA9, 0x31];
+pub const QR_PRINT: &[u8] = &[0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0xB5, 0x30];
 
 pub const JP_CHARCODE_JIS: &[u8] = b"\x1b\x74\x02";
 pub const JP_KANJI_SELECT: &[u8] = b"\x1c\x43\x01";
@@ -233,9 +242,12 @@ impl<D: Driver> JpPrinter<D> {
 
     fn set_underline(&mut self, on: bool) -> Result<(), String> {
         if on {
-            self.raw(TXT_UNDERL_ON)
+            // 英数カナ用と漢字用の両方を設定
+            self.raw(TXT_UNDERL_ON)?;
+            self.raw(JP_UNDERL_ON)
         } else {
-            self.raw(TXT_UNDERL_OFF)
+            self.raw(TXT_UNDERL_OFF)?;
+            self.raw(JP_UNDERL_OFF)
         }
     }
 
@@ -348,9 +360,21 @@ impl<D: Driver> JpPrinter<D> {
         self.double_line(self.paper_width.chars())
     }
 
+    /// 文字列の印刷幅を計算（全角文字は2、半角文字は1）
+    fn print_width(s: &str) -> usize {
+        s.chars().map(|c| {
+            // ASCII範囲内は半角（1）、それ以外は全角（2）
+            if c as u32 <= 0x7F {
+                1
+            } else {
+                2
+            }
+        }).sum()
+    }
+
     pub fn row(&mut self, left: &str, right: &str, width: usize) -> Result<(), String> {
-        let left_len = left.chars().count();
-        let right_len = right.chars().count();
+        let left_len = Self::print_width(left);
+        let right_len = Self::print_width(right);
         let space_len = width.saturating_sub(left_len + right_len);
         let spaces = " ".repeat(space_len);
         let row = format!("{}{}{}", left, spaces, right);
@@ -361,35 +385,35 @@ impl<D: Driver> JpPrinter<D> {
         self.row(left, right, self.paper_width.chars())
     }
 
-    /// Print QR code
+    /// Print QR code (ESC/POS)
     /// size: 1-16 (default: 4)
     pub fn qr_code(&mut self, data: &str, size: Option<u8>) -> Result<(), String> {
         let size = size.unwrap_or(4).clamp(1, 16);
 
-        // Select model 2
+        // fn=165 (0xA5): Select model 2
         self.raw(QR_MODEL_2)?;
 
-        // Set size
+        // fn=167 (0xA7): Set cell size
         let mut size_cmd = QR_SIZE_PREFIX.to_vec();
         size_cmd.push(size);
         self.raw(&size_cmd)?;
 
-        // Set error correction level M
+        // fn=169 (0xA9): Set error correction level M
         self.raw(QR_ERROR_M)?;
 
-        // Store data in symbol storage area
-        // Command: GS ( k pL pH cn fn [data]
-        // cn=49 (0x31), fn=80 (0x50)
+        // fn=180 (0xB4): Store data in symbol storage area
+        // Command: GS ( k pL pH cn fn m d1...dk
+        // cn=49 (0x31), fn=180 (0xB4), m=48 (0x30)
         let data_bytes = data.as_bytes();
         let len = data_bytes.len() + 3; // +3 for cn, fn, m
         let pl = (len & 0xFF) as u8;
         let ph = ((len >> 8) & 0xFF) as u8;
 
-        let mut store_cmd = vec![0x1d, 0x28, 0x6b, pl, ph, 0x31, 0x50, 0x30];
+        let mut store_cmd = vec![0x1D, 0x28, 0x6B, pl, ph, 0x31, 0xB4, 0x30];
         store_cmd.extend_from_slice(data_bytes);
         self.raw(&store_cmd)?;
 
-        // Print QR code
+        // fn=181 (0xB5): Print QR code
         self.raw(QR_PRINT)?;
 
         Ok(())
@@ -403,28 +427,73 @@ impl<D: Driver> JpPrinter<D> {
         Ok(())
     }
 
+    /// Print CODE128 barcode
+    /// GS k m n d1...dn
+    /// m = 73 (0x49) for CODE128
+    /// height: barcode height in dots (default: 50)
+    /// width: barcode module width 2-6 (default: 2)
+    pub fn barcode_code128(&mut self, data: &str, height: Option<u8>, width: Option<u8>) -> Result<(), String> {
+        let height = height.unwrap_or(50);
+        let width = width.unwrap_or(2).clamp(2, 6);
+
+        // GS H n - HRI character print position: 2 = below barcode
+        self.raw(&[0x1D, 0x48, 0x02])?;
+
+        // GS h n - Set barcode height
+        self.raw(&[0x1D, 0x68, height])?;
+
+        // GS w n - Set barcode width
+        self.raw(&[0x1D, 0x77, width])?;
+
+        // GS k m n d1...dn - Print barcode
+        // m = 73 (0x49) for CODE128
+        let data_bytes = data.as_bytes();
+        let n = data_bytes.len() as u8;
+        let mut cmd = vec![0x1D, 0x6B, 0x49, n];
+        cmd.extend_from_slice(data_bytes);
+        self.raw(&cmd)?;
+
+        Ok(())
+    }
+
+    /// Print CODE128 barcode centered
+    pub fn barcode_code128_center(&mut self, data: &str, height: Option<u8>, width: Option<u8>) -> Result<(), String> {
+        self.set_align(Align::Center)?;
+        self.barcode_code128(data, height, width)?;
+        self.set_align(Align::Left)?;
+        Ok(())
+    }
+
     /// Print text with padding to fill line (for reverse style)
     pub fn jp_textln_padded(&mut self, txt: &str, style: TextStyle) -> Result<(), String> {
-        let char_count = txt.chars().count();
+        let char_width = Self::print_width(txt);
+        // 倍角の場合は各文字が2倍幅になるため、行幅も半分で計算
         let line_width = if style.double_width || (style.double_width && style.double_height) {
             self.paper_width.chars_jp()
         } else {
             self.paper_width.chars()
         };
 
+        // 倍角時は印刷幅も2倍になるため、実効幅を調整
+        let effective_char_width = if style.double_width {
+            char_width // 倍角時はline_widthが既に半分なので、そのまま
+        } else {
+            char_width
+        };
+
         let padded = match style.align {
             Align::Center => {
-                let padding = line_width.saturating_sub(char_count);
+                let padding = line_width.saturating_sub(effective_char_width);
                 let left_pad = padding / 2;
                 let right_pad = padding - left_pad;
                 format!("{}{}{}", " ".repeat(left_pad), txt, " ".repeat(right_pad))
             }
             Align::Right => {
-                let padding = line_width.saturating_sub(char_count);
+                let padding = line_width.saturating_sub(effective_char_width);
                 format!("{}{}", " ".repeat(padding), txt)
             }
             Align::Left => {
-                let padding = line_width.saturating_sub(char_count);
+                let padding = line_width.saturating_sub(effective_char_width);
                 format!("{}{}", txt, " ".repeat(padding))
             }
         };

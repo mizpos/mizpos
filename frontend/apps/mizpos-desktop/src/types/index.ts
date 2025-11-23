@@ -128,3 +128,17 @@ export interface AppliedCoupon {
   discount_value: number;
   discount_amount: number; // 実際の割引額
 }
+
+// イベント情報
+export interface PosEvent {
+  event_id: string;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  location?: string;
+  publisher_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

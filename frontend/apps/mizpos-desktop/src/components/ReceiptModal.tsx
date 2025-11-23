@@ -36,12 +36,17 @@ function convertToFullReceiptData(
     }
   })();
 
+  // 発売日時をフォーマット（YYYY/MM/DD HH:mm）
+  const saleDate = new Date(sale.timestamp);
+  const saleDatetime = `${saleDate.getFullYear()}/${String(saleDate.getMonth() + 1).padStart(2, "0")}/${String(saleDate.getDate()).padStart(2, "0")} ${String(saleDate.getHours()).padStart(2, "0")}:${String(saleDate.getMinutes()).padStart(2, "0")}`;
+
   return {
     event_name: eventName,
     staff_id: sale.employee_number,
+    sale_datetime: saleDatetime,
     customer_name: undefined, // 必要に応じて設定可能
     items: sale.items.map((item) => ({
-      circle_name: item.product.publisher_id || "",
+      circle_name: item.product.title,
       jan: item.product.barcode || "",
       isbn: item.product.isdn || "",
       quantity: item.quantity,

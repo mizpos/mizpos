@@ -47,6 +47,8 @@ mod desktop_printer {
         pub event_name: String,
         /// スタッフ番号
         pub staff_id: String,
+        /// 発売日時（ISO 8601形式）
+        pub sale_datetime: String,
         /// 宛名（様の前に表示）
         pub customer_name: Option<String>,
         /// 商品明細リスト
@@ -201,22 +203,28 @@ mod desktop_printer {
         printer.init()?;
 
         // イベント名称
-        printer.jp_textln(&receipt.event_name, TextStyle::default().center())?;
+        printer.jp_textln(&receipt.event_name, TextStyle::default().center().double())?;
+
+        // 発売日時（分まで）
+        printer.jp_textln(&format!("発売日時: {}", &receipt.sale_datetime), TextStyle::default())?;
 
         // 責ID: {スタッフ番号}
-        printer.jp_textln(&format!("責ID:{}", receipt.staff_id), TextStyle::default())?;
+        printer.jp_textln(&format!("責ID: {}", receipt.staff_id), TextStyle::default())?;
+
+        // インボイスではないよ表記
+        printer.textln("当店は消費税非課税事業者であり、本書はインボイスではありません。インボイス対応の適格請求書は発行していません。")?;
 
         // 領収書（黒背景中央揃え文字２倍サイズ）
         printer.jp_textln_padded("領収書", TextStyle::default().double().reverse().center())?;
 
         printer.textln("")?;
 
-        // 様（右寄せ黒背景文字２倍サイズ下線）
+        // 様（右寄せアンダーバー文字２倍サイズ下線）
         if let Some(ref name) = receipt.customer_name {
             let customer_line = format!("{}　様", name);
-            printer.jp_textln_padded(&customer_line, TextStyle::default().double().reverse().underline().right())?;
+            printer.jp_textln(&customer_line, TextStyle::default().double_height().underline().right())?;
         } else {
-            printer.jp_textln_padded("　　　　　　　　　様", TextStyle::default().double().reverse().underline().right())?;
+            printer.jp_textln("　　　　　　　　　　　　　　様", TextStyle::default().double_height().underline().right())?;
         }
 
         printer.textln("")?;
@@ -261,8 +269,8 @@ mod desktop_printer {
 
         printer.textln("")?;
 
-        // QRコード（レシート番号）
-        printer.qr_code_center(&receipt.receipt_number, Some(6))?;
+        // バーコード（レシート番号）- CODE128
+        printer.barcode_code128_center(&receipt.receipt_number, Some(50), Some(2))?;
 
         printer.feed(3)?;
         printer.cut()?;

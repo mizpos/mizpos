@@ -4,6 +4,7 @@ import createClient from "openapi-fetch";
 import type {
   AppliedCoupon,
   LoginRequest,
+  PosEvent,
   PosSession,
   Product,
 } from "../types";
@@ -244,4 +245,43 @@ export async function lookupCoupon(
   _code: string,
 ): Promise<{ coupon: AppliedCoupon }> {
   throw new ApiError("Coupon API not available in OpenAPI spec", 501);
+}
+
+// イベント一覧を取得
+interface ApiEventResponse {
+  event_id: string;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  location?: string;
+  publisher_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchEvents(publisherId?: string): Promise<PosEvent[]> {
+  const { data, error, response } = await stockClient.GET("/events", {
+    params: { query: publisherId ? { publisher_id: publisherId } : {} },
+  });
+
+  if (error || !response.ok) {
+    throw new ApiError("Failed to fetch events", response.status);
+  }
+
+  const responseData = data as { events?: ApiEventResponse[] };
+  const apiEvents = responseData.events || [];
+  return apiEvents.map((event) => ({
+    event_id: event.event_id,
+    name: event.name,
+    description: event.description,
+    start_date: event.start_date,
+    end_date: event.end_date,
+    location: event.location,
+    publisher_id: event.publisher_id,
+    is_active: event.is_active,
+    created_at: event.created_at,
+    updated_at: event.updated_at,
+  }));
 }

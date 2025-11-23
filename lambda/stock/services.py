@@ -303,6 +303,62 @@ def generate_unique_event_code() -> str:
     raise ValueError("No available event codes")
 
 
+def date_str_to_timestamp(date_str: str | None) -> int | None:
+    """日付文字列（YYYY-MM-DD）をUNIXタイムスタンプに変換
+
+    Args:
+        date_str: 日付文字列（YYYY-MM-DD形式）
+
+    Returns:
+        UNIXタイムスタンプ（秒）、Noneの場合はNone
+    """
+    if not date_str:
+        return None
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    except ValueError:
+        return None
+
+
+def timestamp_to_date_str(timestamp: int | None) -> str | None:
+    """UNIXタイムスタンプを日付文字列（YYYY-MM-DD）に変換
+
+    Args:
+        timestamp: UNIXタイムスタンプ（秒）
+
+    Returns:
+        日付文字列（YYYY-MM-DD形式）、Noneの場合はNone
+    """
+    if timestamp is None:
+        return None
+    try:
+        dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        return dt.strftime("%Y-%m-%d")
+    except (ValueError, OSError):
+        return None
+
+
+def event_from_dynamo(item: dict) -> dict:
+    """DynamoDBのイベントアイテムをAPIレスポンス形式に変換
+
+    start_date/end_dateをタイムスタンプから日付文字列に変換
+
+    Args:
+        item: DynamoDBのアイテム
+
+    Returns:
+        APIレスポンス形式のイベント
+    """
+    result = dynamo_to_dict(item)
+    # タイムスタンプを日付文字列に変換
+    if "start_date" in result and isinstance(result["start_date"], int):
+        result["start_date"] = timestamp_to_date_str(result["start_date"])
+    if "end_date" in result and isinstance(result["end_date"], int):
+        result["end_date"] = timestamp_to_date_str(result["end_date"])
+    return result
+
+
 def create_event(event_data: dict) -> dict:
     """イベントを新規作成
 
@@ -316,13 +372,17 @@ def create_event(event_data: dict) -> dict:
     event_code = generate_unique_event_code()
     now = datetime.now(timezone.utc).isoformat()
 
+    # 日付文字列をタイムスタンプに変換（DynamoDBインデックス用）
+    start_date_ts = date_str_to_timestamp(event_data.get("start_date"))
+    end_date_ts = date_str_to_timestamp(event_data.get("end_date"))
+
     item = {
         "event_id": event_id,
         "event_code": event_code,
         "name": event_data["name"],
         "description": event_data.get("description", ""),
-        "start_date": event_data.get("start_date"),
-        "end_date": event_data.get("end_date"),
+        "start_date": start_date_ts,
+        "end_date": end_date_ts,
         "location": event_data.get("location", ""),
         "publisher_id": event_data.get("publisher_id"),
         "is_active": True,
@@ -330,8 +390,11 @@ def create_event(event_data: dict) -> dict:
         "updated_at": now,
     }
 
+    # None値を除去（DynamoDBはNoneを受け付けない）
+    item = {k: v for k, v in item.items() if v is not None}
+
     events_table.put_item(Item=item)
-    return dynamo_to_dict(item)
+    return event_from_dynamo(item)
 
 
 def get_event(event_id: str) -> dict | None:
@@ -345,7 +408,7 @@ def get_event(event_id: str) -> dict | None:
     """
     response = events_table.get_item(Key={"event_id": event_id})
     item = response.get("Item")
-    return dynamo_to_dict(item) if item else None
+    return event_from_dynamo(item) if item else None
 
 
 def list_events(publisher_id: str | None = None) -> list[dict]:
@@ -368,7 +431,7 @@ def list_events(publisher_id: str | None = None) -> list[dict]:
         response = events_table.scan()
 
     items = response.get("Items", [])
-    return [dynamo_to_dict(item) for item in items]
+    return [event_from_dynamo(item) for item in items]
 
 
 def update_event(event_id: str, update_data: dict) -> dict | None:
@@ -383,11 +446,18 @@ def update_event(event_id: str, update_data: dict) -> dict | None:
     """
     now = datetime.now(timezone.utc).isoformat()
 
+    # 日付フィールドをタイムスタンプに変換
+    processed_data = update_data.copy()
+    if "start_date" in processed_data and processed_data["start_date"] is not None:
+        processed_data["start_date"] = date_str_to_timestamp(processed_data["start_date"])
+    if "end_date" in processed_data and processed_data["end_date"] is not None:
+        processed_data["end_date"] = date_str_to_timestamp(processed_data["end_date"])
+
     # 更新式を構築
     update_expr_parts = []
     expr_attr_values = {":updated_at": now}
 
-    for key, value in update_data.items():
+    for key, value in processed_data.items():
         if value is not None:
             update_expr_parts.append(f"{key} = :{key}")
             expr_attr_values[f":{key}"] = value
@@ -406,7 +476,7 @@ def update_event(event_id: str, update_data: dict) -> dict | None:
             ExpressionAttributeValues=expr_attr_values,
             ReturnValues="ALL_NEW",
         )
-        return dynamo_to_dict(response["Attributes"])
+        return event_from_dynamo(response["Attributes"])
     except ClientError:
         return None
 

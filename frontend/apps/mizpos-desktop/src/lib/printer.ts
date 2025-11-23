@@ -201,6 +201,7 @@ export interface ReceiptData {
   total?: string;
   footer?: string;
   paperWidth?: number;
+  qrCode?: string;
 }
 
 /**
@@ -237,6 +238,8 @@ export interface FullReceiptData {
   event_name: string;
   /** スタッフ番号 */
   staff_id: string;
+  /** 発売日時（フォーマット済み文字列） */
+  sale_datetime: string;
   /** 宛名（様の前に表示） */
   customer_name?: string;
   /** 商品明細リスト */
@@ -410,13 +413,14 @@ export class UnifiedPrinter {
       return bluetoothPrintReceipt({
         header: `${data.event_name}\n責ID:${data.staff_id}`,
         items: data.items.map((item) => ({
-          name: `${item.circle_name} ${item.jan}\n  ${item.isbn}`,
+          name: item.circle_name,
           price: String(item.price),
           quantity: item.quantity,
         })),
         total: String(data.total),
-        footer: `消費税(${data.tax_rate}%): ¥${data.tax_amount}\nレシート番号: ${data.receipt_number}`,
+        footer: `消費税(${data.tax_rate}%): \\${data.tax_amount}\nレシート番号: ${data.receipt_number}`,
         paperWidth: this.config.paperWidth,
+        qrCode: data.receipt_number,
       });
     }
 
