@@ -1,0 +1,3 @@
+[submodule "enterprise"]
+	path = enterprise
+	url = git@github.com:mizpos/mizpos-enterprise-android-manager.git

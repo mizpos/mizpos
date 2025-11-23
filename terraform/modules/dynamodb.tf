@@ -479,3 +479,85 @@ resource "aws_dynamodb_table" "coupons" {
     Name = "${var.environment}-mizpos-coupons"
   }
 }
+
+# MDM Enterprises table - Android Enterprise登録情報
+resource "aws_dynamodb_table" "mdm_enterprises" {
+  name         = "${var.environment}-mizpos-mdm-enterprises"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "enterprise_id"
+
+  attribute {
+    name = "enterprise_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-mdm-enterprises"
+  }
+}
+
+# MDM Policies table - デバイスポリシー設定
+resource "aws_dynamodb_table" "mdm_policies" {
+  name         = "${var.environment}-mizpos-mdm-policies"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "policy_id"
+
+  attribute {
+    name = "policy_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "enterprise_id"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "EnterpriseIndex"
+    hash_key        = "enterprise_id"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-mdm-policies"
+  }
+}
+
+# MDM Devices table - 管理対象デバイス
+resource "aws_dynamodb_table" "mdm_devices" {
+  name         = "${var.environment}-mizpos-mdm-devices"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "device_id"
+
+  attribute {
+    name = "device_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "enterprise_id"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "EnterpriseIndex"
+    hash_key        = "enterprise_id"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-mdm-devices"
+  }
+}

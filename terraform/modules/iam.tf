@@ -294,3 +294,72 @@ resource "aws_iam_role_policy" "lambda_sales" {
     ]
   })
 }
+
+# Lambda実行ロール - mdm
+resource "aws_iam_role" "lambda_mdm" {
+  name = "${var.environment}-${var.project_name}-lambda-mdm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.environment}-${var.project_name}-lambda-mdm-role"
+  }
+}
+
+# Lambda mdm用ポリシー
+resource "aws_iam_role_policy" "lambda_mdm" {
+  name = "${var.environment}-${var.project_name}-lambda-mdm-policy"
+  role = aws_iam_role.lambda_mdm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          aws_dynamodb_table.mdm_enterprises.arn,
+          "${aws_dynamodb_table.mdm_enterprises.arn}/index/*",
+          aws_dynamodb_table.mdm_policies.arn,
+          "${aws_dynamodb_table.mdm_policies.arn}/index/*",
+          aws_dynamodb_table.mdm_devices.arn,
+          "${aws_dynamodb_table.mdm_devices.arn}/index/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = aws_secretsmanager_secret.gcp_service_account.arn
+      }
+    ]
+  })
+}

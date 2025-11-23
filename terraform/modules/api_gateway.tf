@@ -199,3 +199,47 @@ resource "aws_lambda_permission" "sales" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
+
+# Lambda Integration - mdm
+resource "aws_apigatewayv2_integration" "mdm" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  connection_type        = "INTERNET"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.mdm.invoke_arn
+  payload_format_version = "2.0"
+}
+
+# Routes - mdm (JWT validation handled by Lambda)
+resource "aws_apigatewayv2_route" "mdm" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "ANY /mdm/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.mdm.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "openapi_mdm" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /mdm/openapi.json"
+  target    = "integrations/${aws_apigatewayv2_integration.mdm.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "docs_mdm" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /mdm/docs"
+  target    = "integrations/${aws_apigatewayv2_integration.mdm.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_lambda_permission" "mdm" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.mdm.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}

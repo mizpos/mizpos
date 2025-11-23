@@ -150,3 +150,49 @@ resource "aws_cloudwatch_log_group" "sales" {
     Name = "${var.environment}-${var.project_name}-sales-logs"
   }
 }
+
+# Lambda Function - mdm (Android Enterprise MDM)
+resource "aws_lambda_function" "mdm" {
+  function_name = "${var.environment}-${var.project_name}-mdm"
+  role          = aws_iam_role.lambda_mdm.arn
+  handler       = "main.handler"
+  runtime       = "python3.12"
+  timeout       = 30
+  memory_size   = 256
+
+  filename         = "${path.module}/lambda_placeholder.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambda_placeholder.zip")
+
+  environment {
+    variables = {
+      ENVIRONMENT                    = var.environment
+      ENTERPRISES_TABLE_NAME         = aws_dynamodb_table.mdm_enterprises.name
+      POLICIES_TABLE_NAME            = aws_dynamodb_table.mdm_policies.name
+      DEVICES_TABLE_NAME             = aws_dynamodb_table.mdm_devices.name
+      USER_POOL_ID                   = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID              = aws_cognito_user_pool_client.main.id
+      GCP_SERVICE_ACCOUNT_SECRET_NAME = aws_secretsmanager_secret.gcp_service_account.name
+    }
+  }
+
+  tags = {
+    Name = "${var.environment}-${var.project_name}-mdm"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash
+    ]
+  }
+}
+
+# CloudWatch Logs - mdm
+resource "aws_cloudwatch_log_group" "mdm" {
+  name              = "/aws/lambda/${aws_lambda_function.mdm.function_name}"
+  retention_in_days = var.environment == "prod" ? 30 : 7
+
+  tags = {
+    Name = "${var.environment}-${var.project_name}-mdm-logs"
+  }
+}
