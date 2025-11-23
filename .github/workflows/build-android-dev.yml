@@ -92,7 +92,7 @@ jobs:
 
       - name: Build Android App (unsigned)
         working-directory: frontend/apps/mizpos-desktop
-        run: pnpm tauri android build --target aarch64
+        run: pnpm tauri android build --target aarch64 --config '{"build":{"beforeBuildCommand":"pnpm build:dev"}}'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

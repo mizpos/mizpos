@@ -7,6 +7,7 @@
     "dev": "tauri dev",
     "dev:vite": "vite",
     "build": "tsc && vite build",
+    "build:dev": "tsc && vite build --mode development",
     "preview": "vite preview",
     "tauri": "tauri",
     "fix": "biome check --write",
