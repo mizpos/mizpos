@@ -878,12 +878,13 @@ function AndroidEnterprisePage() {
                 columns={enterpriseColumns}
                 data={enterprises.filter(
                   (e) =>
-                    (e.enterprise_id || "")
+                    e &&
+                    (String(e.enterprise_id || "")
                       .toLowerCase()
                       .includes(searchTerm.toLowerCase()) ||
-                    (e.display_name || e.enterprise_display_name || "")
-                      .toLowerCase()
-                      .includes(searchTerm.toLowerCase()),
+                      String(e.display_name || e.enterprise_display_name || "")
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())),
                 )}
                 keyExtractor={(item) => item.enterprise_id}
                 emptyMessage="エンタープライズがありません"
