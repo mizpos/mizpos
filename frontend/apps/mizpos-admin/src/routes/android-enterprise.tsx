@@ -11,6 +11,7 @@ import {
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
@@ -1262,10 +1263,10 @@ function AndroidEnterprisePage() {
                   marginBottom: "4",
                 })}
               >
-                <img
-                  src={`data:image/png;base64,${enrollmentToken.qr_code}`}
-                  alt="Enrollment QR Code"
-                  className={css({ maxWidth: "200px" })}
+                <QRCodeSVG
+                  value={enrollmentToken.qr_code}
+                  size={200}
+                  level="M"
                 />
               </div>
             )}
