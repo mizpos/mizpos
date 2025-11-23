@@ -109,6 +109,23 @@ export async function usbTextPrint(
   });
 }
 
+/**
+ * USB プリンターで領収書形式のレシートを印刷
+ */
+export async function usbPrintFullReceipt(
+  vendorId: number,
+  deviceId: number,
+  receipt: FullReceiptData,
+  paperWidth?: number,
+): Promise<void> {
+  return invoke("print_receipt", {
+    vendorId,
+    deviceId,
+    receipt,
+    paperWidth,
+  });
+}
+
 // ===================
 // Android Bluetooth Functions
 // ===================
@@ -184,6 +201,56 @@ export interface ReceiptData {
   total?: string;
   footer?: string;
   paperWidth?: number;
+}
+
+/**
+ * レシート印刷用の商品明細
+ */
+export interface ReceiptItem {
+  /** 出版サークル名 */
+  circle_name: string;
+  /** JAN */
+  jan: string;
+  /** ISBN */
+  isbn: string;
+  /** 商品数 */
+  quantity: number;
+  /** 値段（単価 x 数量） */
+  price: number;
+}
+
+/**
+ * レシート印刷用の支払情報
+ */
+export interface PaymentInfo {
+  /** 支払手段名（現金、クレジットカードなど） */
+  method: string;
+  /** 支払金額 */
+  amount: number;
+}
+
+/**
+ * 新レシート印刷データ（領収書形式）
+ */
+export interface FullReceiptData {
+  /** イベント名称 */
+  event_name: string;
+  /** スタッフ番号 */
+  staff_id: string;
+  /** 宛名（様の前に表示） */
+  customer_name?: string;
+  /** 商品明細リスト */
+  items: ReceiptItem[];
+  /** 合計金額 */
+  total: number;
+  /** 支払情報リスト */
+  payments: PaymentInfo[];
+  /** 消費税率（%） */
+  tax_rate: number;
+  /** 消費税金額 */
+  tax_amount: number;
+  /** レシート番号 */
+  receipt_number: string;
 }
 
 export function bluetoothPrintReceipt(data: ReceiptData): PrinterResult {
@@ -325,5 +392,49 @@ export class UnifiedPrinter {
     }
 
     return this.textPrint(text);
+  }
+
+  /**
+   * 領収書形式のフルレシートを印刷
+   * - イベント名称、スタッフID
+   * - 「領収書」ヘッダー（黒背景・中央揃え・2倍サイズ）
+   * - 宛名（黒背景・右寄せ・下線）
+   * - 商品明細（サークル名、JAN、ISBN、数量、価格）
+   * - 合計（全角数字）
+   * - 支払情報・消費税
+   * - レシート番号とQRコード
+   */
+  async printFullReceipt(data: FullReceiptData): Promise<PrinterResult> {
+    if (this.config.platform === "android") {
+      // Android: 既存のJavaScript Interfaceを使用
+      return bluetoothPrintReceipt({
+        header: `${data.event_name}\n責ID:${data.staff_id}`,
+        items: data.items.map((item) => ({
+          name: `${item.circle_name} ${item.jan}\n  ${item.isbn}`,
+          price: String(item.price),
+          quantity: item.quantity,
+        })),
+        total: String(data.total),
+        footer: `消費税(${data.tax_rate}%): ¥${data.tax_amount}\nレシート番号: ${data.receipt_number}`,
+        paperWidth: this.config.paperWidth,
+      });
+    }
+
+    // Desktop USB: Rust側の新しいprint_receiptコマンドを使用
+    if (!this.config.vendorId || !this.config.deviceId) {
+      return { success: false, error: "Printer not configured" };
+    }
+
+    try {
+      await usbPrintFullReceipt(
+        this.config.vendorId,
+        this.config.deviceId,
+        data,
+        this.config.paperWidth,
+      );
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
   }
 }
