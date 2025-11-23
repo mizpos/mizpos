@@ -97,3 +97,12 @@ jobs:
           ENV: dev
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
           LAMBDA_FUNTION_PATH: lambda/sales
+
+      - name: Deploy "Enterprise" Lambda Functions
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: ./.github/actions/deploy-lambda
+        with:
+          WORKING_DIR: ${{ env.WORKING_DIR }}
+          ENV: dev
+          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
+          LAMBDA_FUNTION_PATH: lambda/enterprise
