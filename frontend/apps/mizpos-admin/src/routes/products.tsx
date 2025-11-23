@@ -46,6 +46,7 @@ interface Product {
 type CreateProductForm = StockComponents["schemas"]["CreateProductRequest"] & {
   publisher_id?: string;
   isdn?: string;
+  jan_code?: string;
   download_url?: string;
 };
 
@@ -79,6 +80,7 @@ function ProductsPage() {
     publisher_id: "",
     variant_type: "physical",
     isdn: "",
+    jan_code: "",
     download_url: "",
     stock_quantity: 0,
     operator_id: user?.userId || "",
@@ -845,6 +847,26 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
           className={inputClass}
           placeholder="278-4-xxx-xxxxx-x"
         />
+      </div>
+
+      <div>
+        <label htmlFor="jan_code" className={labelClass}>
+          JANコード (流通用バーコード)
+        </label>
+        <input
+          id="jan_code"
+          type="text"
+          value={(data as CreateProductForm).jan_code || ""}
+          onChange={(e) => onChange({ ...data, jan_code: e.target.value })}
+          className={inputClass}
+          placeholder="4912345678901"
+          maxLength={13}
+        />
+        <p
+          className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
+        >
+          流通書籍やグッズのJANコード（13桁）
+        </p>
       </div>
 
       <div>

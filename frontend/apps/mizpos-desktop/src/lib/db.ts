@@ -66,6 +66,7 @@ export const db = new PosDatabase();
 /**
  * 古い形式（name, stock_quantity）から新しい形式（title, quantity）への変換
  * 後方互換性のため、両方の形式をサポート
+ * IndexedDBから取得時に文字列になる可能性があるため、数値フィールドを明示的に変換
  */
 function normalizeProduct(
   product: Product & { name?: string; stock_quantity?: number },
@@ -73,7 +74,8 @@ function normalizeProduct(
   return {
     ...product,
     title: product.title || product.name || "",
-    quantity: product.quantity ?? product.stock_quantity ?? 0,
+    quantity: Number(product.quantity ?? product.stock_quantity) || 0,
+    price: Number(product.price) || 0,
   };
 }
 
@@ -139,17 +141,55 @@ export async function findProductByIsdn(
 }
 
 /**
- * バーコードまたはISDNで商品を検索（スキャナー用）
+ * JANコードをISDN形式に変換
+ * 例: 9784123456789 → 978-4-123456-78-9
+ */
+function janToIsdn(jan: string): string | null {
+  // 13桁の数字でない場合はnull
+  if (!/^\d{13}$/.test(jan)) return null;
+  // 978または979で始まるISBN/ISDN系
+  if (!jan.startsWith("978") && !jan.startsWith("979")) return null;
+
+  // ISDN形式に変換: 978-4-XXXXXX-XX-X
+  return `${jan.slice(0, 3)}-${jan.slice(3, 4)}-${jan.slice(4, 10)}-${jan.slice(10, 12)}-${jan.slice(12)}`;
+}
+
+/**
+ * ISDNからハイフンを除去してJANコードに変換
+ * 例: 978-4-123456-78-9 → 9784123456789
+ */
+function isdnToJan(isdn: string): string {
+  return isdn.replace(/-/g, "");
+}
+
+/**
+ * バーコード（JAN）またはISDNで商品を検索（スキャナー用）
+ * - JANコード（13桁数字）をスキャンした場合、ISDN形式に変換して検索
+ * - ISDN（ハイフン区切り）をそのまま検索
  */
 export async function findProductByCode(
   code: string,
 ): Promise<Product | undefined> {
-  // まずバーコードで検索
+  // まずバーコードで検索（barcodeフィールドがある場合）
   let product = await db.products.where("barcode").equals(code).first();
 
-  // 見つからなければISDNで検索
+  // 見つからなければISDNで検索（そのまま）
   if (!product) {
     product = await db.products.where("isdn").equals(code).first();
+  }
+
+  // JANコード（13桁数字）の場合、ISDN形式に変換して検索
+  if (!product && /^\d{13}$/.test(code)) {
+    const isdnFormat = janToIsdn(code);
+    if (isdnFormat) {
+      product = await db.products.where("isdn").equals(isdnFormat).first();
+    }
+  }
+
+  // ISDNからハイフンを除去したJANコードでも検索
+  if (!product && code.includes("-")) {
+    const janFormat = isdnToJan(code);
+    product = await db.products.where("barcode").equals(janFormat).first();
   }
 
   if (!product) return undefined;
