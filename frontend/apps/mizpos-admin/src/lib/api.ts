@@ -1,5 +1,6 @@
 import {
   createAccountsClient,
+  createMdmClient,
   createSalesClient,
   createStockClient,
 } from "@mizpos/api";
@@ -52,7 +53,13 @@ export const sales = createSalesClient({
   },
 });
 
-// 認証付きAPIクライアントを取得する関数
+export const mdm = createMdmClient({
+  baseUrl: `${API_GATEWAY_BASE}/mdm`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 export async function getAuthenticatedClients() {
   const headers = await getAuthHeaders();
 
@@ -67,6 +74,10 @@ export async function getAuthenticatedClients() {
     }),
     sales: createSalesClient({
       baseUrl: `${API_GATEWAY_BASE}/sales`,
+      headers,
+    }),
+    mdm: createMdmClient({
+      baseUrl: `${API_GATEWAY_BASE}/mdm`,
       headers,
     }),
   };

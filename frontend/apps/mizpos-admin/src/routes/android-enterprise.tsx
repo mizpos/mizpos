@@ -1,3 +1,4 @@
+import type { MdmComponents } from "@mizpos/api";
 import {
   IconDeviceMobile,
   IconPlus,
@@ -15,37 +16,15 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { getAuthHeaders } from "../lib/api";
+import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/android-enterprise")({
   component: AndroidEnterprisePage,
 });
 
-interface Enterprise {
-  enterprise_id: string;
-  name: string;
-  display_name?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Policy {
-  policy_id: string;
-  policy_name: string;
-  policy_display_name?: string;
-  enterprise_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Device {
-  device_id: string;
-  name: string;
-  enterprise_id: string;
-  policy_name: string;
-  enrollment_state: string;
-  last_status_report_time?: string;
-}
+type Enterprise = MdmComponents["schemas"]["Enterprise"];
+type Policy = MdmComponents["schemas"]["Policy"];
+type Device = MdmComponents["schemas"]["Device"];
 
 interface EnrollmentToken {
   token: string;
@@ -56,16 +35,11 @@ interface EnrollmentToken {
   expiration_timestamp: string;
 }
 
-const API_GATEWAY_BASE =
-  import.meta.env.VITE_API_GATEWAY_BASE ||
-  "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
-const MDM_API_BASE = `${API_GATEWAY_BASE}/mdm`;
-
 function AndroidEnterprisePage() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<
-    "enterprises" | "policies" | "devices"
-  >("enterprises");
+  const [activeTab, setActiveTab] = useState<"policies" | "devices">(
+    "policies",
+  );
   const [selectedEnterprise, setSelectedEnterprise] =
     useState<Enterprise | null>(null);
   const [isCreateEnterpriseModalOpen, setIsCreateEnterpriseModalOpen] =
@@ -77,14 +51,16 @@ function AndroidEnterprisePage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [policyForm, setPolicyForm] = useState({
-    policy_name: "",
-    policy_display_name: "",
-    password_required: true,
-    password_minimum_length: 6,
-    screen_capture_disabled: false,
-    camera_disabled: false,
-    kiosk_mode_enabled: false,
-    kiosk_launcher_package: "",
+    name: "",
+    policy_data: {
+      passwordRequirements: {
+        requirePasswordUnlock: "REQUIRE_PASSWORD_UNLOCK_UNSPECIFIED",
+        passwordMinimumLength: 6,
+      },
+      screenCaptureDisabled: false,
+      cameraDisabled: false,
+      kioskCustomLauncherEnabled: false,
+    } as Record<string, unknown>,
   });
 
   const [selectedPolicy, setSelectedPolicy] = useState("");
@@ -92,101 +68,81 @@ function AndroidEnterprisePage() {
   const { data: enterprises = [], isLoading: enterprisesLoading } = useQuery({
     queryKey: ["mdm-enterprises"],
     queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${MDM_API_BASE}/enterprises`, {
-        headers,
-      });
-      if (!response.ok) throw new Error("Failed to fetch enterprises");
-      const data = await response.json();
-      return (data.enterprises || []) as Enterprise[];
+      const { mdm } = await getAuthenticatedClients();
+      const { data, error } = await mdm.GET("/enterprises");
+      if (error) throw new Error("Failed to fetch enterprises");
+      return data?.enterprises || [];
     },
   });
 
   const { data: policies = [], isLoading: policiesLoading } = useQuery({
-    queryKey: ["mdm-policies", selectedEnterprise?.enterprise_id],
+    queryKey: ["mdm-policies", selectedEnterprise?.id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
-      const headers = await getAuthHeaders();
-      const response = await fetch(
-        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/policies`,
-        { headers },
-      );
-      if (!response.ok) throw new Error("Failed to fetch policies");
-      const data = await response.json();
-      return (data.policies || []) as Policy[];
+      const { mdm } = await getAuthenticatedClients();
+      const { data, error } = await mdm.GET("/policies", {
+        params: { query: { enterprise_id: selectedEnterprise.id } },
+      });
+      if (error) throw new Error("Failed to fetch policies");
+      return data?.policies || [];
     },
     enabled: !!selectedEnterprise,
   });
 
   const { data: devices = [], isLoading: devicesLoading } = useQuery({
-    queryKey: ["mdm-devices", selectedEnterprise?.enterprise_id],
+    queryKey: ["mdm-devices", selectedEnterprise?.id],
     queryFn: async () => {
       if (!selectedEnterprise) return [];
-      const headers = await getAuthHeaders();
-      const response = await fetch(
-        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/devices`,
-        { headers },
-      );
-      if (!response.ok) throw new Error("Failed to fetch devices");
-      const data = await response.json();
-      return (data.devices || []) as Device[];
+      const { mdm } = await getAuthenticatedClients();
+      const { data, error } = await mdm.GET("/devices", {
+        params: { query: { enterprise_id: selectedEnterprise.id } },
+      });
+      if (error) throw new Error("Failed to fetch devices");
+      return data?.devices || [];
     },
     enabled: !!selectedEnterprise,
   });
 
   const createPolicyMutation = useMutation({
-    mutationFn: async (data: typeof policyForm) => {
+    mutationFn: async (formData: typeof policyForm) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const headers = await getAuthHeaders();
-      const response = await fetch(
-        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/policies`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify(data),
+      const { mdm } = await getAuthenticatedClients();
+      const { data, error } = await mdm.POST("/policies", {
+        body: {
+          enterprise_id: selectedEnterprise.id,
+          name: formData.name,
+          policy_data: formData.policy_data,
         },
-      );
-      if (!response.ok) throw new Error("Failed to create policy");
-      return response.json();
+      });
+      if (error) throw new Error("Failed to create policy");
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["mdm-policies", selectedEnterprise?.enterprise_id],
+        queryKey: ["mdm-policies", selectedEnterprise?.id],
       });
       setIsCreatePolicyModalOpen(false);
       setPolicyForm({
-        policy_name: "",
-        policy_display_name: "",
-        password_required: true,
-        password_minimum_length: 6,
-        screen_capture_disabled: false,
-        camera_disabled: false,
-        kiosk_mode_enabled: false,
-        kiosk_launcher_package: "",
+        name: "",
+        policy_data: {
+          passwordRequirements: {
+            requirePasswordUnlock: "REQUIRE_PASSWORD_UNLOCK_UNSPECIFIED",
+            passwordMinimumLength: 6,
+          },
+          screenCaptureDisabled: false,
+          cameraDisabled: false,
+          kioskCustomLauncherEnabled: false,
+        },
       });
     },
   });
 
   const createEnrollmentTokenMutation = useMutation({
-    mutationFn: async (policyName: string) => {
+    mutationFn: async (_policyName: string) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const headers = await getAuthHeaders();
-      const response = await fetch(
-        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/enrollment-tokens`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            policy_name: policyName,
-            enrollment_type: "QR_CODE",
-          }),
-        },
-      );
-      if (!response.ok) throw new Error("Failed to create enrollment token");
-      const data = await response.json();
-      return data.enrollment_token as EnrollmentToken;
+      throw new Error("Enrollment token API not yet implemented");
     },
-    onSuccess: (data) => {
+    onSuccess: (data: EnrollmentToken) => {
       setEnrollmentToken(data);
     },
   });
@@ -194,19 +150,15 @@ function AndroidEnterprisePage() {
   const deleteDeviceMutation = useMutation({
     mutationFn: async (deviceId: string) => {
       if (!selectedEnterprise) throw new Error("No enterprise selected");
-      const headers = await getAuthHeaders();
-      const response = await fetch(
-        `${MDM_API_BASE}/enterprises/${selectedEnterprise.enterprise_id}/devices/${deviceId}?wipe_data=true`,
-        {
-          method: "DELETE",
-          headers,
-        },
-      );
-      if (!response.ok) throw new Error("Failed to delete device");
+      const { mdm } = await getAuthenticatedClients();
+      const { error } = await mdm.DELETE("/devices/{device_id}", {
+        params: { path: { device_id: deviceId } },
+      });
+      if (error) throw new Error("Failed to delete device");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["mdm-devices", selectedEnterprise?.enterprise_id],
+        queryKey: ["mdm-devices", selectedEnterprise?.id],
       });
     },
   });
@@ -222,8 +174,8 @@ function AndroidEnterprisePage() {
   };
 
   const enterpriseColumns = [
-    { key: "enterprise_id", header: "ID" },
-    { key: "display_name", header: "表示名" },
+    { key: "id", header: "ID" },
+    { key: "enterprise_display_name", header: "表示名" },
     {
       key: "created_at",
       header: "作成日時",
@@ -245,8 +197,7 @@ function AndroidEnterprisePage() {
   ];
 
   const policyColumns = [
-    { key: "policy_name", header: "ポリシー名" },
-    { key: "policy_display_name", header: "表示名" },
+    { key: "name", header: "ポリシー名" },
     {
       key: "created_at",
       header: "作成日時",
@@ -255,9 +206,9 @@ function AndroidEnterprisePage() {
   ];
 
   const deviceColumns = [
-    { key: "device_id", header: "デバイスID" },
-    { key: "policy_name", header: "ポリシー" },
-    { key: "enrollment_state", header: "状態" },
+    { key: "id", header: "デバイスID" },
+    { key: "applied_policy_name", header: "ポリシー" },
+    { key: "state", header: "状態" },
     {
       key: "last_status_report_time",
       header: "最終レポート",
@@ -279,7 +230,7 @@ function AndroidEnterprisePage() {
                 "このデバイスを削除しますか？デバイスのデータは消去されます。",
               )
             ) {
-              deleteDeviceMutation.mutate(item.device_id);
+              deleteDeviceMutation.mutate(item.id);
             }
           }}
           disabled={deleteDeviceMutation.isPending}
@@ -364,8 +315,8 @@ function AndroidEnterprisePage() {
                     color: "gray.900",
                   })}
                 >
-                  {selectedEnterprise.display_name ||
-                    selectedEnterprise.enterprise_id}
+                  {selectedEnterprise.enterprise_display_name ||
+                    selectedEnterprise.id}
                 </h2>
               </div>
               <div className={css({ display: "flex", gap: "2" })}>
@@ -418,7 +369,7 @@ function AndroidEnterprisePage() {
                   <Table
                     columns={policyColumns}
                     data={policies}
-                    keyExtractor={(item) => item.policy_id}
+                    keyExtractor={(item) => item.id}
                     emptyMessage="ポリシーがありません"
                   />
                 )}
@@ -440,10 +391,7 @@ function AndroidEnterprisePage() {
                       variant="secondary"
                       onClick={() =>
                         queryClient.invalidateQueries({
-                          queryKey: [
-                            "mdm-devices",
-                            selectedEnterprise.enterprise_id,
-                          ],
+                          queryKey: ["mdm-devices", selectedEnterprise.id],
                         })
                       }
                     >
@@ -466,7 +414,7 @@ function AndroidEnterprisePage() {
                   <Table
                     columns={deviceColumns}
                     data={devices}
-                    keyExtractor={(item) => item.device_id}
+                    keyExtractor={(item) => item.id}
                     emptyMessage="デバイスがありません"
                   />
                 )}
@@ -537,14 +485,12 @@ function AndroidEnterprisePage() {
                 columns={enterpriseColumns}
                 data={enterprises.filter(
                   (e) =>
-                    e.enterprise_id
-                      .toLowerCase()
-                      .includes(searchTerm.toLowerCase()) ||
-                    (e.display_name || "")
+                    e.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (e.enterprise_display_name || "")
                       .toLowerCase()
                       .includes(searchTerm.toLowerCase()),
                 )}
-                keyExtractor={(item) => item.enterprise_id}
+                keyExtractor={(item) => item.id}
                 emptyMessage="エンタープライズがありません"
               />
             )}
@@ -607,53 +553,13 @@ function AndroidEnterprisePage() {
                 id="policy_name"
                 type="text"
                 required
-                value={policyForm.policy_name}
+                value={policyForm.name}
                 onChange={(e) =>
-                  setPolicyForm({ ...policyForm, policy_name: e.target.value })
+                  setPolicyForm({ ...policyForm, name: e.target.value })
                 }
                 className={inputClass}
                 placeholder="例: pos-kiosk-policy"
               />
-            </div>
-            <div>
-              <label htmlFor="policy_display_name" className={labelClass}>
-                表示名
-              </label>
-              <input
-                id="policy_display_name"
-                type="text"
-                value={policyForm.policy_display_name}
-                onChange={(e) =>
-                  setPolicyForm({
-                    ...policyForm,
-                    policy_display_name: e.target.value,
-                  })
-                }
-                className={inputClass}
-                placeholder="例: POSキオスクポリシー"
-              />
-            </div>
-            <div
-              className={css({
-                display: "flex",
-                alignItems: "center",
-                gap: "2",
-              })}
-            >
-              <input
-                id="password_required"
-                type="checkbox"
-                checked={policyForm.password_required}
-                onChange={(e) =>
-                  setPolicyForm({
-                    ...policyForm,
-                    password_required: e.target.checked,
-                  })
-                }
-              />
-              <label htmlFor="password_required" className={labelClass}>
-                パスワード必須
-              </label>
             </div>
             <div
               className={css({
@@ -665,11 +571,16 @@ function AndroidEnterprisePage() {
               <input
                 id="screen_capture_disabled"
                 type="checkbox"
-                checked={policyForm.screen_capture_disabled}
+                checked={
+                  policyForm.policy_data.screenCaptureDisabled as boolean
+                }
                 onChange={(e) =>
                   setPolicyForm({
                     ...policyForm,
-                    screen_capture_disabled: e.target.checked,
+                    policy_data: {
+                      ...policyForm.policy_data,
+                      screenCaptureDisabled: e.target.checked,
+                    },
                   })
                 }
               />
@@ -687,11 +598,14 @@ function AndroidEnterprisePage() {
               <input
                 id="camera_disabled"
                 type="checkbox"
-                checked={policyForm.camera_disabled}
+                checked={policyForm.policy_data.cameraDisabled as boolean}
                 onChange={(e) =>
                   setPolicyForm({
                     ...policyForm,
-                    camera_disabled: e.target.checked,
+                    policy_data: {
+                      ...policyForm.policy_data,
+                      cameraDisabled: e.target.checked,
+                    },
                   })
                 }
               />
@@ -709,11 +623,16 @@ function AndroidEnterprisePage() {
               <input
                 id="kiosk_mode_enabled"
                 type="checkbox"
-                checked={policyForm.kiosk_mode_enabled}
+                checked={
+                  policyForm.policy_data.kioskCustomLauncherEnabled as boolean
+                }
                 onChange={(e) =>
                   setPolicyForm({
                     ...policyForm,
-                    kiosk_mode_enabled: e.target.checked,
+                    policy_data: {
+                      ...policyForm.policy_data,
+                      kioskCustomLauncherEnabled: e.target.checked,
+                    },
                   })
                 }
               />
@@ -721,26 +640,6 @@ function AndroidEnterprisePage() {
                 キオスクモード有効
               </label>
             </div>
-            {policyForm.kiosk_mode_enabled && (
-              <div>
-                <label htmlFor="kiosk_launcher_package" className={labelClass}>
-                  キオスクアプリパッケージ名
-                </label>
-                <input
-                  id="kiosk_launcher_package"
-                  type="text"
-                  value={policyForm.kiosk_launcher_package}
-                  onChange={(e) =>
-                    setPolicyForm({
-                      ...policyForm,
-                      kiosk_launcher_package: e.target.value,
-                    })
-                  }
-                  className={inputClass}
-                  placeholder="例: com.mizpos.pos"
-                />
-              </div>
-            )}
           </div>
           <div
             className={css({
@@ -822,8 +721,8 @@ function AndroidEnterprisePage() {
               >
                 <option value="">選択してください</option>
                 {policies.map((p) => (
-                  <option key={p.policy_id} value={p.policy_name}>
-                    {p.policy_display_name || p.policy_name}
+                  <option key={p.id} value={p.name}>
+                    {p.name}
                   </option>
                 ))}
               </select>
