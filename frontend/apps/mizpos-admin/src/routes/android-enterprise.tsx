@@ -526,7 +526,9 @@ function AndroidEnterprisePage() {
                       );
                     }
                   }}
-                  disabled={devices.length > 0 || deleteEnterpriseMutation.isPending}
+                  disabled={
+                    devices.length > 0 || deleteEnterpriseMutation.isPending
+                  }
                   title={
                     devices.length > 0
                       ? "登録されているデバイスがあるため削除できません"
