@@ -30,8 +30,16 @@ class CitizenPrinter(private val context: Context) {
         private const val CHARS_58MM = 32  // Characters per line for 58mm
         private const val CHARS_80MM = 48  // Characters per line for 80mm
 
+        // Print area width in dots (58mm = 384 dots, 80mm = 576 dots)
+        private const val DOTS_58MM = 384
+        private const val DOTS_80MM = 576
+
         // ESC/POS Commands
         private val ESC_INIT = byteArrayOf(0x1B, 0x40) // Initialize printer
+
+        // GS W nL nH - Set print area width (384 dots for 58mm = 0x80 0x01)
+        private val ESC_PRINT_AREA_58MM = byteArrayOf(0x1D, 0x57, 0x80.toByte(), 0x01) // 384 dots
+        private val ESC_PRINT_AREA_80MM = byteArrayOf(0x1D, 0x57, 0x40, 0x02) // 576 dots
         private val ESC_CUT = byteArrayOf(0x1D, 0x56, 0x00) // Full cut
         private val ESC_FEED = byteArrayOf(0x1B, 0x64) // Feed n lines
         private val ESC_BOLD_ON = byteArrayOf(0x1B, 0x45, 0x01)
@@ -126,10 +134,25 @@ class CitizenPrinter(private val context: Context) {
     }
 
     /**
-     * Initialize printer
+     * Initialize printer with 58mm paper width (fixed)
+     * Sends ESC @ to reset, then GS W to set print area to 384 dots (58mm)
      */
     fun init(): Boolean {
-        return write(ESC_INIT)
+        if (!write(ESC_INIT)) return false
+        // Set print area width to 58mm (384 dots) - fixed for CMP-30II
+        return write(ESC_PRINT_AREA_58MM)
+    }
+
+    /**
+     * Initialize printer with specified paper width
+     */
+    fun init(paperWidth: Int): Boolean {
+        if (!write(ESC_INIT)) return false
+        // Set print area width based on paper size
+        return when (paperWidth) {
+            PAPER_80MM -> write(ESC_PRINT_AREA_80MM)
+            else -> write(ESC_PRINT_AREA_58MM) // Default to 58mm
+        }
     }
 
     /**
@@ -211,7 +234,8 @@ class CitizenPrinter(private val context: Context) {
     fun printWelcome(terminalId: String, paperWidth: Int = PAPER_58MM): Boolean {
         if (!isConnected()) return false
 
-        init()
+        // Initialize with specified paper width (default 58mm)
+        init(paperWidth)
 
         // Header
         write(ESC_BOLD_ON)
