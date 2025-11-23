@@ -1,5 +1,6 @@
 import {
   IconDeviceMobile,
+  IconExternalLink,
   IconPlus,
   IconQrcode,
   IconRefresh,
@@ -8,8 +9,8 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
@@ -17,8 +18,22 @@ import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
 import { getAuthenticatedClients } from "../lib/api";
 
+// URLパラメータの型定義
+interface AndroidEnterpriseSearch {
+  enterpriseToken?: string;
+  signupUrlName?: string;
+}
+
 export const Route = createFileRoute("/android-enterprise")({
   component: AndroidEnterprisePage,
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): AndroidEnterpriseSearch => {
+    return {
+      enterpriseToken: search.enterpriseToken as string | undefined,
+      signupUrlName: search.signupUrlName as string | undefined,
+    };
+  },
 });
 
 // API レスポンスの型定義（OpenAPI スキーマに定義がないため、ローカルで定義）
@@ -57,6 +72,8 @@ interface EnrollmentToken {
 
 function AndroidEnterprisePage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearch({ from: "/android-enterprise" });
+
   const [activeTab, setActiveTab] = useState<"policies" | "devices">(
     "policies",
   );
@@ -69,6 +86,14 @@ function AndroidEnterprisePage() {
   const [enrollmentToken, setEnrollmentToken] =
     useState<EnrollmentToken | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // サインアップフロー用の状態
+  const [signupStep, setSignupStep] = useState<
+    "initial" | "waiting" | "complete" | "error"
+  >("initial");
+  const [signupUrl, setSignupUrl] = useState<string | null>(null);
+  const [signupUrlName, setSignupUrlName] = useState<string | null>(null);
+  const [signupError, setSignupError] = useState<string | null>(null);
 
   const [policyForm, setPolicyForm] = useState({
     name: "",
@@ -128,6 +153,77 @@ function AndroidEnterprisePage() {
     },
     enabled: !!selectedEnterprise,
   });
+
+  // サインアップURL生成
+  const createSignupUrlMutation = useMutation({
+    mutationFn: async () => {
+      const { androidMgmt } = await getAuthenticatedClients();
+      // コールバックURLは現在のページのURL
+      const callbackUrl = `${window.location.origin}/android-enterprise`;
+      const { data, error } = await androidMgmt.POST("/signup-urls", {
+        body: { callback_url: callbackUrl },
+      });
+      if (error) throw new Error("Failed to create signup URL");
+      return data as { signup_url: { name: string; url: string } };
+    },
+    onSuccess: (data) => {
+      setSignupUrlName(data.signup_url.name);
+      setSignupUrl(data.signup_url.url);
+      setSignupStep("waiting");
+    },
+    onError: (error) => {
+      setSignupError(error.message);
+      setSignupStep("error");
+    },
+  });
+
+  // エンタープライズ作成（コールバック後）
+  const createEnterpriseMutation = useMutation({
+    mutationFn: async ({
+      enterpriseToken,
+      signupUrlName: urlName,
+    }: {
+      enterpriseToken: string;
+      signupUrlName: string;
+    }) => {
+      const { androidMgmt } = await getAuthenticatedClients();
+      const { data, error } = await androidMgmt.POST("/enterprises", {
+        body: {
+          enterprise_token: enterpriseToken,
+          signup_url_name: urlName,
+        },
+      });
+      if (error) throw new Error("Failed to create enterprise");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["android-mgmt-enterprises"] });
+      setSignupStep("complete");
+      // URLパラメータをクリア
+      window.history.replaceState({}, "", "/android-enterprise");
+    },
+    onError: (error) => {
+      setSignupError(error.message);
+      setSignupStep("error");
+    },
+  });
+
+  // URLパラメータからコールバックを処理
+  useEffect(() => {
+    if (searchParams.enterpriseToken && searchParams.signupUrlName) {
+      setIsCreateEnterpriseModalOpen(true);
+      setSignupStep("waiting");
+      createEnterpriseMutation.mutate({
+        enterpriseToken: searchParams.enterpriseToken,
+        signupUrlName: searchParams.signupUrlName,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    searchParams.enterpriseToken,
+    searchParams.signupUrlName,
+    createEnterpriseMutation,
+  ]);
 
   const createPolicyMutation = useMutation({
     mutationFn: async (formData: typeof policyForm) => {
@@ -550,29 +646,209 @@ function AndroidEnterprisePage() {
 
       <Modal
         isOpen={isCreateEnterpriseModalOpen}
-        onClose={() => setIsCreateEnterpriseModalOpen(false)}
+        onClose={() => {
+          setIsCreateEnterpriseModalOpen(false);
+          setSignupStep("initial");
+          setSignupUrl(null);
+          setSignupUrlName(null);
+          setSignupError(null);
+        }}
         title="エンタープライズ登録"
         size="lg"
       >
         <div className={css({ padding: "4" })}>
-          <p className={css({ marginBottom: "4", color: "gray.600" })}>
-            Android
-            Enterpriseのエンタープライズを登録するには、Google管理コンソールでの設定が必要です。
-          </p>
-          <ol
-            className={css({
-              paddingLeft: "6",
-              marginBottom: "4",
-              color: "gray.700",
-            })}
-          >
-            <li>サインアップURLを生成</li>
-            <li>管理者がURLにアクセスして登録</li>
-            <li>コールバックで取得したトークンでエンタープライズを作成</li>
-          </ol>
-          <p className={css({ color: "gray.500", fontSize: "sm" })}>
-            詳細な手順はGoogle Developers ドキュメントを参照してください。
-          </p>
+          {signupStep === "initial" && (
+            <>
+              <p className={css({ marginBottom: "4", color: "gray.600" })}>
+                Android Enterpriseのエンタープライズを登録します。
+                「サインアップURLを生成」ボタンをクリックしてGoogleの登録ページに進んでください。
+              </p>
+              <ol
+                className={css({
+                  paddingLeft: "6",
+                  marginBottom: "4",
+                  color: "gray.700",
+                  listStyleType: "decimal",
+                })}
+              >
+                <li className={css({ marginBottom: "2" })}>
+                  サインアップURLを生成
+                </li>
+                <li className={css({ marginBottom: "2" })}>
+                  Googleの画面でエンタープライズを登録
+                </li>
+                <li className={css({ marginBottom: "2" })}>
+                  自動的にこの画面に戻り、登録が完了します
+                </li>
+              </ol>
+              <div
+                className={css({
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "2",
+                  marginTop: "6",
+                })}
+              >
+                <Button
+                  variant="secondary"
+                  onClick={() => setIsCreateEnterpriseModalOpen(false)}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => createSignupUrlMutation.mutate()}
+                  disabled={createSignupUrlMutation.isPending}
+                >
+                  {createSignupUrlMutation.isPending
+                    ? "生成中..."
+                    : "サインアップURLを生成"}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {signupStep === "waiting" && signupUrl && (
+            <>
+              <p className={css({ marginBottom: "4", color: "gray.600" })}>
+                以下のURLをクリックしてGoogleの登録ページに進んでください。
+                登録完了後、自動的にこの画面に戻ります。
+              </p>
+              <div
+                className={css({
+                  backgroundColor: "gray.100",
+                  padding: "4",
+                  borderRadius: "md",
+                  marginBottom: "4",
+                })}
+              >
+                <a
+                  href={signupUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={css({
+                    color: "primary.600",
+                    textDecoration: "underline",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "2",
+                    wordBreak: "break-all",
+                  })}
+                >
+                  <IconExternalLink size={16} />
+                  Googleエンタープライズ登録ページを開く
+                </a>
+              </div>
+              <p className={css({ color: "gray.500", fontSize: "sm" })}>
+                SignupURL Name: {signupUrlName}
+              </p>
+            </>
+          )}
+
+          {signupStep === "waiting" && !signupUrl && (
+            <div className={css({ textAlign: "center", padding: "8" })}>
+              <div
+                className={css({
+                  width: "8",
+                  height: "8",
+                  border: "2px solid",
+                  borderColor: "gray.300",
+                  borderTopColor: "primary.500",
+                  borderRadius: "full",
+                  animation: "spin 1s linear infinite",
+                  margin: "0 auto 4",
+                })}
+              />
+              <p className={css({ color: "gray.600" })}>
+                エンタープライズを作成中...
+              </p>
+            </div>
+          )}
+
+          {signupStep === "complete" && (
+            <>
+              <div
+                className={css({
+                  textAlign: "center",
+                  padding: "4",
+                  backgroundColor: "green.50",
+                  borderRadius: "md",
+                  marginBottom: "4",
+                })}
+              >
+                <p
+                  className={css({
+                    color: "green.700",
+                    fontWeight: "bold",
+                    fontSize: "lg",
+                  })}
+                >
+                  エンタープライズの登録が完了しました！
+                </p>
+              </div>
+              <div
+                className={css({ display: "flex", justifyContent: "center" })}
+              >
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setIsCreateEnterpriseModalOpen(false);
+                    setSignupStep("initial");
+                  }}
+                >
+                  閉じる
+                </Button>
+              </div>
+            </>
+          )}
+
+          {signupStep === "error" && (
+            <>
+              <div
+                className={css({
+                  textAlign: "center",
+                  padding: "4",
+                  backgroundColor: "red.50",
+                  borderRadius: "md",
+                  marginBottom: "4",
+                })}
+              >
+                <p className={css({ color: "red.700", fontWeight: "bold" })}>
+                  エラーが発生しました
+                </p>
+                <p className={css({ color: "red.600", fontSize: "sm" })}>
+                  {signupError}
+                </p>
+              </div>
+              <div
+                className={css({
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "2",
+                })}
+              >
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setIsCreateEnterpriseModalOpen(false);
+                    setSignupStep("initial");
+                    setSignupError(null);
+                  }}
+                >
+                  閉じる
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setSignupStep("initial");
+                    setSignupError(null);
+                  }}
+                >
+                  やり直す
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 
