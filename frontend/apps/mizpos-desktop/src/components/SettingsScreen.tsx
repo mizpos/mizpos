@@ -381,9 +381,29 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
     initialize,
   } = usePrinterStore();
 
+  // 認証ストアからセッション情報を取得
+  const { session } = useAuthStore();
+
+  // イベントストア
+  const {
+    events,
+    selectedEvent,
+    isLoading: isLoadingEvents,
+    fetchEventList,
+    selectEvent,
+  } = useEventStore();
+
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [selectedPaperWidth, setSelectedPaperWidth] =
     useState<PaperWidth>(paperWidth);
+  const [localSelectedEvent, setLocalSelectedEvent] = useState<PosEvent | null>(
+    selectedEvent,
+  );
+
+  // ユーザーがイベントに紐づいているかどうか
+  const hasSessionEvent = !!session?.event_id;
+  // セッションに紐づくイベントを検索
+  const sessionEvent = events.find((e) => e.event_id === session?.event_id);
 
   // Initialize printer store on mount
   useEffect(() => {

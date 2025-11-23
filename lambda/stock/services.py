@@ -449,7 +449,9 @@ def update_event(event_id: str, update_data: dict) -> dict | None:
     # 日付フィールドをタイムスタンプに変換
     processed_data = update_data.copy()
     if "start_date" in processed_data and processed_data["start_date"] is not None:
-        processed_data["start_date"] = date_str_to_timestamp(processed_data["start_date"])
+        processed_data["start_date"] = date_str_to_timestamp(
+            processed_data["start_date"]
+        )
     if "end_date" in processed_data and processed_data["end_date"] is not None:
         processed_data["end_date"] = date_str_to_timestamp(processed_data["end_date"])
 
