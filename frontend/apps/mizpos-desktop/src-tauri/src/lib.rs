@@ -7,12 +7,60 @@ mod jp_escpos;
 mod desktop_printer {
     use escpos::driver::NativeUsbDriver;
     use crate::jp_escpos::{JpPrinter, PaperWidth, TextStyle};
+    use serde::Deserialize;
 
     #[derive(Debug, Clone, serde::Serialize)]
     pub struct DeviceInfo {
         pub vendor_id: u16,
         pub device_id: u16,
         pub name: String,
+    }
+
+    /// 商品明細
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct ReceiptItem {
+        /// 出版サークル名
+        pub circle_name: String,
+        /// JAN
+        pub jan: String,
+        /// ISBN
+        pub isbn: String,
+        /// 商品数
+        pub quantity: u32,
+        /// 値段（単価 x 数量）
+        pub price: u32,
+    }
+
+    /// 支払情報
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct PaymentInfo {
+        /// 支払手段名（現金、クレジットカードなど）
+        pub method: String,
+        /// 支払金額
+        pub amount: u32,
+    }
+
+    /// レシートデータ
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct ReceiptData {
+        /// イベント名称
+        pub event_name: String,
+        /// スタッフ番号
+        pub staff_id: String,
+        /// 宛名（様の前に表示）
+        pub customer_name: Option<String>,
+        /// 商品明細リスト
+        pub items: Vec<ReceiptItem>,
+        /// 合計金額
+        pub total: u32,
+        /// 支払情報リスト
+        pub payments: Vec<PaymentInfo>,
+        /// 消費税率（%）
+        pub tax_rate: u32,
+        /// 消費税金額
+        pub tax_amount: u32,
+        /// レシート番号
+        pub receipt_number: String,
     }
 
     #[tauri::command]
@@ -98,6 +146,124 @@ mod desktop_printer {
         let mut printer = JpPrinter::with_paper_width(driver, width);
         printer.init()?;
         printer.textln(&text)?;
+        printer.feed(3)?;
+        printer.cut()?;
+
+        Ok(())
+    }
+
+    /// 数値を全角数字に変換
+    fn to_fullwidth_number(num: u32) -> String {
+        num.to_string()
+            .chars()
+            .map(|c| match c {
+                '0' => '０',
+                '1' => '１',
+                '2' => '２',
+                '3' => '３',
+                '4' => '４',
+                '5' => '５',
+                '6' => '６',
+                '7' => '７',
+                '8' => '８',
+                '9' => '９',
+                _ => c,
+            })
+            .collect()
+    }
+
+    /// 金額をフォーマット（カンマ区切り + 円）
+    fn format_price(price: u32) -> String {
+        let s = price.to_string();
+        let mut result = String::new();
+        for (i, c) in s.chars().rev().enumerate() {
+            if i > 0 && i % 3 == 0 {
+                result.insert(0, ',');
+            }
+            result.insert(0, c);
+        }
+        format!("¥{}", result)
+    }
+
+    /// レシート印刷
+    #[tauri::command]
+    pub fn print_receipt(
+        vendor_id: u16,
+        device_id: u16,
+        receipt: ReceiptData,
+        paper_width: Option<u8>,
+    ) -> Result<(), String> {
+        let driver = NativeUsbDriver::open(vendor_id, device_id)
+            .map_err(|e| e.to_string())?;
+
+        let width = parse_paper_width(paper_width);
+        let mut printer = JpPrinter::with_paper_width(driver, width);
+        printer.init()?;
+
+        // イベント名称
+        printer.jp_textln(&receipt.event_name, TextStyle::default().center())?;
+
+        // 責ID: {スタッフ番号}
+        printer.jp_textln(&format!("責ID:{}", receipt.staff_id), TextStyle::default())?;
+
+        // 領収書（黒背景中央揃え文字２倍サイズ）
+        printer.jp_textln_padded("領収書", TextStyle::default().double().reverse().center())?;
+
+        printer.textln("")?;
+
+        // 様（右寄せ黒背景文字２倍サイズ下線）
+        if let Some(ref name) = receipt.customer_name {
+            let customer_line = format!("{}　様", name);
+            printer.jp_textln_padded(&customer_line, TextStyle::default().double().reverse().underline().right())?;
+        } else {
+            printer.jp_textln_padded("　　　　　　　　　様", TextStyle::default().double().reverse().underline().right())?;
+        }
+
+        printer.textln("")?;
+
+        // お買上明細（中央揃え）
+        printer.jp_textln("お買上明細", TextStyle::default().center())?;
+
+        printer.separator()?;
+
+        // 商品明細
+        for item in &receipt.items {
+            // {出版サークル}    {JAN}
+            printer.row_auto(&item.circle_name, &item.jan)?;
+            // 　　{ISBN}    商品数    値段
+            let quantity_price = format!("{}点    {}", item.quantity, format_price(item.price));
+            printer.row_auto(&format!("  {}", item.isbn), &quantity_price)?;
+        }
+
+        printer.separator()?;
+
+        // 合計（右寄せ、全角数字）
+        let total_fullwidth = to_fullwidth_number(receipt.total);
+        printer.jp_textln(&format!("合計　　¥{}", total_fullwidth), TextStyle::default().right().bold())?;
+
+        printer.textln("")?;
+
+        // 支払情報
+        for payment in &receipt.payments {
+            printer.row_auto(&payment.method, &format_price(payment.amount))?;
+        }
+
+        // 内消費税
+        printer.jp_textln(
+            &format!("　　（内消費税{}%　{}）", receipt.tax_rate, format_price(receipt.tax_amount)),
+            TextStyle::default().right()
+        )?;
+
+        printer.separator()?;
+
+        // レシート番号
+        printer.row_auto("レシート番号", &receipt.receipt_number)?;
+
+        printer.textln("")?;
+
+        // QRコード（レシート番号）
+        printer.qr_code_center(&receipt.receipt_number, Some(6))?;
+
         printer.feed(3)?;
         printer.cut()?;
 
@@ -190,6 +356,8 @@ pub fn run() {
             desktop_printer::text_print,
             #[cfg(not(target_os = "android"))]
             desktop_printer::welcome_print,
+            #[cfg(not(target_os = "android"))]
+            desktop_printer::print_receipt,
             #[cfg(target_os = "android")]
             android_printer::get_bluetooth_devices,
             #[cfg(target_os = "android")]

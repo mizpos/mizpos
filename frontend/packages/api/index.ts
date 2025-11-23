@@ -2,7 +2,7 @@ import createClient from "openapi-fetch";
 import type { paths as accountsPaths } from "./generated/accounts";
 import type { paths as salesPaths } from "./generated/sales";
 import type { paths as stockPaths } from "./generated/stock";
-import type { paths as androidMgmtPaths } from "./types/android-management";
+import type { paths as androidMgmtPaths } from "./generated/android-management";
 
 export type {
   components as AccountsComponents,
