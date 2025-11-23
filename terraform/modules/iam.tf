@@ -358,7 +358,7 @@ resource "aws_iam_role_policy" "lambda_android_mgmt" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = aws_secretsmanager_secret.gcp_service_account.arn
+        Resource = aws_secretsmanager_secret.google_service_account.arn
       }
     ]
   })

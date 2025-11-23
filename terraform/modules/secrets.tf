@@ -30,7 +30,7 @@ resource "aws_secretsmanager_secret_version" "stripe_api_key" {
 # instead of Secrets Manager to allow per-location/event configuration
 
 # GCP Service Account for Android Management API
-resource "aws_secretsmanager_secret" "gcp_service_account" {
+resource "aws_secretsmanager_secret" "google_service_account" {
   name        = "${var.environment}-${var.project_name}-gcp-service-account"
   description = "Google Cloud service account key for Android Management API"
 
@@ -41,8 +41,8 @@ resource "aws_secretsmanager_secret" "gcp_service_account" {
   }
 }
 
-resource "aws_secretsmanager_secret_version" "gcp_service_account" {
-  secret_id = aws_secretsmanager_secret.gcp_service_account.id
+resource "aws_secretsmanager_secret_version" "google_service_account" {
+  secret_id = aws_secretsmanager_secret.google_service_account.id
   secret_string = jsonencode({
     type                        = "service_account"
     project_id                  = "PLACEHOLDER_PROJECT_ID"
