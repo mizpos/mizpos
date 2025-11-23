@@ -1,3 +1,3 @@
-[submodule "enterprise"]
-	path = lambda/enterprise
+[submodule "mizpos-enterprise-android-manager"]
+	path = mizpos-enterprise-android-manager
 	url = git@github.com:mizpos/mizpos-enterprise-android-manager.git

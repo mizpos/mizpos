@@ -11,7 +11,6 @@ on:
         options:
           - all
           - infrastructure
-          - lambda
           - frontend
 
 env:
@@ -98,56 +97,13 @@ jobs:
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
           LAMBDA_FUNTION_PATH: lambda/sales
 
-  deploy-lambda-only:
-    name: Deploy Training Lambda Functions
-    runs-on: ubuntu-slim
-    if: github.event.inputs.deploy_type == 'lambda'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get AWS Account ID and Save to Environment Variable
-        shell: bash
-        run: |
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          export AWS_ACCOUNT_ID
-          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
-
-      - name: Install Lambroll
-        shell: bash
-        run: |
-          curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ env.LAMBROLL_VERSION }}/lambroll_v${{ env.LAMBROLL_VERSION }}_linux_amd64.tar.gz | tar -xz
-          sudo mv lambroll /usr/local/bin/
-
-      - name: Deploy "Accounts" Lambda Functions
+      - name: Deploy "Enterprise" Lambda Functions
         uses: ./.github/actions/deploy-lambda
         with:
           WORKING_DIR: ${{ env.WORKING_DIR }}
           ENV: training
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/accounts
-
-      - name: Deploy "STOCK" Lambda Functions
-        uses: ./.github/actions/deploy-lambda
-        with:
-          WORKING_DIR: ${{ env.WORKING_DIR }}
-          ENV: training
-          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/stock
-
-      - name: Deploy "SALES" Lambda Functions
-        uses: ./.github/actions/deploy-lambda
-        with:
-          WORKING_DIR: ${{ env.WORKING_DIR }}
-          ENV: training
-          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/sales
+          LAMBDA_FUNTION_PATH: lambda/mizpos-enterprise-android-manager
 
   build-frontend:
     name: Build Training Frontend

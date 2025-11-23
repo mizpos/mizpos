@@ -105,4 +105,4 @@ jobs:
           WORKING_DIR: ${{ env.WORKING_DIR }}
           ENV: dev
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
-          LAMBDA_FUNTION_PATH: lambda/enterprise
+          LAMBDA_FUNTION_PATH: lambda/mizpos-enterprise-android-manager

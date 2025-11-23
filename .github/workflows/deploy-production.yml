@@ -98,6 +98,14 @@ jobs:
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
           LAMBDA_FUNTION_PATH: lambda/sales
 
+      - name: Deploy "Enterprise" Lambda Functions
+        uses: ./.github/actions/deploy-lambda
+        with:
+          WORKING_DIR: ${{ env.WORKING_DIR }}
+          ENV: prod
+          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
+          LAMBDA_FUNTION_PATH: lambda/mizpos-enterprise-android-manager
+
   deploy-lambda-only:
     name: Deploy Production Lambda Functions
     runs-on: ubuntu-slim
@@ -148,6 +156,14 @@ jobs:
           ENV: prod
           AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
           LAMBDA_FUNTION_PATH: lambda/sales
+
+      - name: Deploy "Enterprise" Lambda Functions
+        uses: ./.github/actions/deploy-lambda
+        with:
+          WORKING_DIR: ${{ env.WORKING_DIR }}
+          ENV: prod
+          AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
+          LAMBDA_FUNTION_PATH: lambda/mizpos-enterprise-android-manager
 
   build-frontend:
     name: Build Production Frontend
