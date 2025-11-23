@@ -180,8 +180,11 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
   // チェックアウト（販売処理）
   checkout: async (paymentMethod: "cash" | "card" | "other") => {
-    const { items, appliedCoupon, discountAmount, subtotal, totalAmount } =
-      get();
+    const state = get();
+    const { items, appliedCoupon, discountAmount } = state;
+    // getter プロパティは直接計算する（Zustandのget()ではgetterが動作しない）
+    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const totalAmount = Math.max(0, subtotal - discountAmount);
     const session = useAuthStore.getState().session;
     const networkStatus = useNetworkStore.getState().status;
     const isOnline = networkStatus === "online";
