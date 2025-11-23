@@ -113,7 +113,7 @@ jobs:
         with:
           name: desktop-${{ matrix.os_name }}-${{ steps.version.outputs.version }}
           path: |
-            frontend/apps/mizpos-desktop/src-tauri/target/release/bundle/**/*
+            frontend/apps/mizpos-desktop/src-tauri/target/debug/bundle/**/*
           retention-days: 7
 
   deploy:
