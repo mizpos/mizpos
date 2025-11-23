@@ -107,7 +107,7 @@ interface ApiProductResponse {
   price: number;
   stock_quantity: number;
   category?: string;
-  barcode?: string;
+  jan_code?: string;
   isdn?: string;
   image_url?: string;
   publisher_id?: string;
@@ -124,7 +124,7 @@ function mapApiProductToProduct(apiProduct: ApiProductResponse): Product {
     price: apiProduct.price,
     quantity: apiProduct.stock_quantity,
     category: apiProduct.category,
-    barcode: apiProduct.barcode,
+    barcode: apiProduct.jan_code,
     isdn: apiProduct.isdn,
     image_url: apiProduct.image_url,
     publisher_id: apiProduct.publisher_id,

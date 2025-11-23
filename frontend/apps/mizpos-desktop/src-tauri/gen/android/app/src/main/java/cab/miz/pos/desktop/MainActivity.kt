@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
@@ -21,6 +24,33 @@ class MainActivity : TauriActivity() {
         super.onCreate(savedInstanceState)
         printer = CitizenPrinter(this)
         requestBluetoothPermissions()
+        hideSystemUI()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemUI()
+        }
+    }
+
+    private fun hideSystemUI() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.let { controller ->
+                controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+            )
+        }
     }
 
     override fun onWebViewCreate(webView: WebView) {
@@ -148,7 +178,7 @@ class MainActivity : TauriActivity() {
         }
 
         @JavascriptInterface
-        fun welcomePrint(terminalId: String): String {
+        fun welcomePrint(terminalId: String, paperWidth: Int = CitizenPrinter.PAPER_58MM): String {
             return try {
                 if (!printer.isConnected()) {
                     return JSONObject().apply {
@@ -156,7 +186,7 @@ class MainActivity : TauriActivity() {
                         put("error", "Printer not connected")
                     }.toString()
                 }
-                val success = printer.printWelcome(terminalId)
+                val success = printer.printWelcome(terminalId, paperWidth)
                 JSONObject().apply {
                     put("success", success)
                     if (!success) put("error", "Print failed")
@@ -180,6 +210,7 @@ class MainActivity : TauriActivity() {
                 }
 
                 val data = JSONObject(jsonData)
+                val paperWidth = data.optInt("paperWidth", CitizenPrinter.PAPER_58MM)
                 printer.init()
 
                 // Header
@@ -191,7 +222,7 @@ class MainActivity : TauriActivity() {
                 // Items
                 if (data.has("items")) {
                     val items = data.getJSONArray("items")
-                    printer.printSeparator()
+                    printer.printSeparator(paperWidth)
                     for (i in 0 until items.length()) {
                         val item = items.getJSONObject(i)
                         val name = item.getString("name")
@@ -200,7 +231,7 @@ class MainActivity : TauriActivity() {
                         printer.printLine("$name x$qty")
                         printer.printLine("  ¥$price")
                     }
-                    printer.printSeparator()
+                    printer.printSeparator(paperWidth)
                 }
 
                 // Total

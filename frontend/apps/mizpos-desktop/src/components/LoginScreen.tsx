@@ -9,10 +9,12 @@ const styles = {
   screen: css({
     minHeight: "100vh",
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
     background: "linear-gradient(135deg, #1a237e 0%, #3949ab 100%)",
     padding: "20px",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
   }),
   container: css({
     background: "white",
@@ -21,6 +23,9 @@ const styles = {
     maxWidth: "400px",
     width: "100%",
     boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+    marginTop: "auto",
+    marginBottom: "auto",
+    flexShrink: 0,
   }),
   header: css({
     textAlign: "center",

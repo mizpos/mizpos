@@ -142,6 +142,8 @@ async def create_product(
             product_item["publisher_id"] = request.publisher_id
         if request.isdn:
             product_item["isdn"] = request.isdn
+        if request.jan_code:
+            product_item["jan_code"] = request.jan_code
         if request.download_url:
             product_item["download_url"] = request.download_url
 
