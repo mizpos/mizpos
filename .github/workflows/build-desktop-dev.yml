@@ -128,7 +128,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: mizpos-enterprise-android-manager
+          repositories: mizpos,mizpos-enterprise-android-manager
 
       - name: Checkout
         uses: actions/checkout@v4
