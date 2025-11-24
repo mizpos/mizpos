@@ -24,6 +24,7 @@ POS_SESSIONS_TABLE = os.environ.get(
 OFFLINE_SALES_QUEUE_TABLE = os.environ.get(
     "OFFLINE_SALES_QUEUE_TABLE", f"{ENVIRONMENT}-mizpos-offline-sales-queue"
 )
+EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
 
 # セッション有効期間（秒）: 12時間
 SESSION_EXPIRY_SECONDS = 12 * 60 * 60
@@ -36,6 +37,7 @@ dynamodb = boto3.resource("dynamodb")
 pos_employees_table = dynamodb.Table(POS_EMPLOYEES_TABLE)
 pos_sessions_table = dynamodb.Table(POS_SESSIONS_TABLE)
 offline_sales_queue_table = dynamodb.Table(OFFLINE_SALES_QUEUE_TABLE)
+events_table = dynamodb.Table(EVENTS_TABLE)
 
 
 def dynamo_to_dict(item: dict) -> dict:
@@ -793,3 +795,18 @@ def record_pos_sale(
         "total_amount": total_amount,
         "status": "completed",
     }
+
+
+# ==========================================
+# POSイベント一覧
+# ==========================================
+
+
+def list_pos_events() -> list[dict]:
+    """POS用イベント一覧を取得
+
+    Returns:
+        イベントデータのリスト
+    """
+    response = events_table.scan()
+    return [dynamo_to_dict(item) for item in response.get("Items", [])]

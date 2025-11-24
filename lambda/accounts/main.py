@@ -59,6 +59,7 @@ from pos_services import (
     invalidate_employee_sessions,
     invalidate_session,
     list_pos_employees,
+    list_pos_events,
     mark_offline_sale_failed,
     mark_offline_sale_synced,
     record_pos_sale,
@@ -809,6 +810,21 @@ async def set_address_as_default(
 # ==========================================
 # POS従業員管理エンドポイント（mizpos-desktop用）
 # ==========================================
+
+
+# POSイベント一覧（認証不要 - POS端末向け）
+@router.get("/pos/events", response_model=dict)
+async def list_pos_events_endpoint():
+    """POS用イベント一覧取得
+
+    認証不要エンドポイント（POS端末専用）
+    """
+    try:
+        events = list_pos_events()
+        return {"events": events}
+    except Exception as e:
+        logger.error(f"Error listing POS events: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # POS従業員管理（管理者用）
