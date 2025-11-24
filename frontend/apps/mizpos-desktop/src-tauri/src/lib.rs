@@ -289,6 +289,9 @@ mod desktop_printer {
 
         printer.textln("")?;
 
+        // インボイスではないよ表記
+        printer.textln("当店発売品については、委託商品を含め製品に瑕疵がある場合を除き、返品・交換等をお受けできません。製品の不備（落丁乱丁等）等返品・交換が必要な場合はレシート画像を添付の上mizpos-support@pos.miz.cabまでお問い合わせください。")?;
+
         // バーコード（レシート番号）- CODE128
         printer.barcode_code128_center(&receipt.receipt_number, Some(50), Some(2))?;
 

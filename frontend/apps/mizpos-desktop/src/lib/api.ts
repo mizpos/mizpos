@@ -247,7 +247,7 @@ export async function lookupCoupon(
   throw new ApiError("Coupon API not available in OpenAPI spec", 501);
 }
 
-// イベント一覧を取得（POS用認証なしエンドポイント）
+// イベント一覧を取得
 interface ApiEventResponse {
   event_id: string;
   name: string;
@@ -265,7 +265,7 @@ export async function fetchPosEvents(): Promise<PosEvent[]> {
   // TODO: バックエンドデプロイ後にOpenAPI定義を再生成し、型キャストを削除する
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error, response } = await (accountsClient as any).GET("/pos/events", {});
-
+  
   if (error || !response.ok) {
     throw new ApiError("Failed to fetch events", response.status);
   }
