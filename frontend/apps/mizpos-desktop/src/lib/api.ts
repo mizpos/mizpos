@@ -263,9 +263,12 @@ interface ApiEventResponse {
 
 export async function fetchPosEvents(): Promise<PosEvent[]> {
   // TODO: バックエンドデプロイ後にOpenAPI定義を再生成し、型キャストを削除する
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error, response } = await (accountsClient as any).GET("/pos/events", {});
-  
+  // biome-ignore lint/suspicious/noExplicitAny: OpenAPI定義にまだ含まれていない
+  const { data, error, response } = await (accountsClient as any).GET(
+    "/pos/events",
+    {},
+  );
+
   if (error || !response.ok) {
     throw new ApiError("Failed to fetch events", response.status);
   }
