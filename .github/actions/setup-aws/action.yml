@@ -1,0 +1,51 @@
+name: 'Setup AWS and Terraform'
+description: 'Configure AWS credentials via OIDC and setup Terraform with remote state'
+inputs:
+  aws-role-arn:
+    description: 'AWS Role ARN for OIDC'
+    required: true
+  aws-region:
+    description: 'AWS Region'
+    required: false
+    default: 'ap-northeast-1'
+  terraform-version:
+    description: 'Terraform version'
+    required: false
+    default: '1.9.8'
+  terraform-dir:
+    description: 'Terraform directory'
+    required: false
+    default: 'terraform'
+  environment:
+    description: 'Environment (dev/prod)'
+    required: true
+
+outputs:
+  terraform-state-bucket:
+    description: 'Terraform state bucket name'
+    value: ${{ steps.terraform-state.outputs.bucket }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+
+    - name: Get Terraform state configuration
+      id: terraform-state
+      working-directory: ${{ inputs.terraform-dir }}
+      shell: bash
+      run: |
+        if [ "${{ inputs.environment }}" = "prod" ]; then
+          echo "bucket=mizphses-opensource-mizpos-prod" >> $GITHUB_OUTPUT
+        else
+          echo "bucket=mizphses-opensource-mizpos-dev" >> $GITHUB_OUTPUT
+        fi

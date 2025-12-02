@@ -1,0 +1,36 @@
+name: 'Setup Rust Environment'
+description: 'Setup Rust toolchain with caching for Tauri builds'
+inputs:
+  rust-version:
+    description: 'Rust version'
+    required: false
+    default: 'stable'
+  targets:
+    description: 'Rust targets to install (comma-separated)'
+    required: false
+    default: ''
+  components:
+    description: 'Rust components to install (comma-separated)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ inputs.rust-version }}
+        targets: ${{ inputs.targets }}
+        components: ${{ inputs.components }}
+
+    - name: Setup Rust cache
+      uses: swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ inputs.rust-version }}
+        shared-key: "rust-cache"
+        cache-directories: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          target/

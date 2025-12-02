@@ -1,0 +1,188 @@
+name: Build Android App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/apps/mizpos-desktop/**"
+      - "frontend/packages/**"
+      - ".github/workflows/build-android.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to build for"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10"
+  AWS_REGION: ap-northeast-1
+  JAVA_VERSION: "17"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  setup-env:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      cdn-bucket: ${{ steps.set-env.outputs.cdn-bucket }}
+      cdn-distribution-id: ${{ steps.set-env.outputs.cdn-distribution-id }}
+      cdn-domain: ${{ steps.set-env.outputs.cdn-domain }}
+      aws-role-arn: ${{ steps.set-env.outputs.aws-role-arn }}
+      keystore-secret: ${{ steps.set-env.outputs.keystore-secret }}
+    steps:
+      - id: set-env
+        run: |
+          # Determine environment
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            ENV="dev"
+          fi
+          
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          
+          # Set environment-specific values
+          if [[ "$ENV" == "prod" ]]; then
+            echo "cdn-bucket=prod-mizpos-cdn-assets" >> $GITHUB_OUTPUT
+            echo "cdn-distribution-id=E3K8Z7XI6AMQJ5" >> $GITHUB_OUTPUT
+            echo "cdn-domain=https://d2xppn5ml53jqk.cloudfront.net" >> $GITHUB_OUTPUT
+            echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_OUTPUT
+            echo "keystore-secret=ANDROID_KEYSTORE_PROD" >> $GITHUB_OUTPUT
+          else
+            echo "cdn-bucket=dev-mizpos-cdn-assets" >> $GITHUB_OUTPUT
+            echo "cdn-distribution-id=E195S6TD7VY00" >> $GITHUB_OUTPUT
+            echo "cdn-domain=https://d1o5hbbhoeegz0.cloudfront.net" >> $GITHUB_OUTPUT
+            echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_DEV }}" >> $GITHUB_OUTPUT
+            echo "keystore-secret=ANDROID_KEYSTORE_DEV" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    name: Build Android App (${{ needs.setup-env.outputs.environment }})
+    needs: setup-env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Frontend Environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          working-directory: frontend
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 33
+          build-tools: 33.0.2
+          ndk-version: 25.2.9519653
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install Rust Android targets
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Set environment variables
+        working-directory: frontend/apps/mizpos-desktop
+        run: |
+          ENV="${{ needs.setup-env.outputs.environment }}"
+          if [[ "$ENV" == "prod" ]]; then
+            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api.mizpos.com" >> $GITHUB_ENV
+            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin.mizpos.com" >> $GITHUB_ENV
+          else
+            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api-dev.mizpos.com" >> $GITHUB_ENV
+            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin-dev.mizpos.com" >> $GITHUB_ENV
+          fi
+          echo "VITE_MIZU_POS_FRONTEND_DOMAIN=${{ needs.setup-env.outputs.cdn-domain }}" >> $GITHUB_ENV
+
+      - name: Generate API Types
+        working-directory: frontend
+        run: pnpm generate-api-types
+
+      - name: Build Android APK/AAB
+        working-directory: frontend/apps/mizpos-desktop
+        run: |
+          npm run tauri android init
+          npm run tauri android build -- --apk --aab
+
+      - name: Setup Android keystore
+        run: |
+          echo "${{ secrets[needs.setup-env.outputs.keystore-secret] }}" | base64 -d > keystore.jks
+          echo "ANDROID_KEYSTORE_PATH=$PWD/keystore.jks" >> $GITHUB_ENV
+
+      - name: Sign APK/AAB
+        run: |
+          BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
+          
+          # Sign APK
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore $ANDROID_KEYSTORE_PATH \
+            -storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
+            $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
+            ${{ secrets.ANDROID_KEY_ALIAS }}
+            
+          # Align APK
+          zipalign -v 4 $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
+            $BUILD_DIR/apk/universal/release/mizpos-${{ needs.setup-env.outputs.environment }}.apk
+            
+          # Sign AAB
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore $ANDROID_KEYSTORE_PATH \
+            -storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
+            $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
+            ${{ secrets.ANDROID_KEY_ALIAS }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.aws-role-arn }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload to CDN
+        env:
+          ENV: ${{ needs.setup-env.outputs.environment }}
+          CDN_BUCKET: ${{ needs.setup-env.outputs.cdn-bucket }}
+        run: |
+          BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
+          
+          # Upload APK
+          aws s3 cp $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
+            s3://$CDN_BUCKET/android/$ENV/mizpos-latest.apk --acl public-read
+            
+          # Upload AAB (for Play Store)
+          if [[ "$ENV" == "prod" ]]; then
+            aws s3 cp $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
+              s3://$CDN_BUCKET/android/$ENV/mizpos-latest.aab --acl public-read
+          fi
+
+      - name: Create deployment summary
+        run: |
+          echo "## Android Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ needs.setup-env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Download URL**: ${{ needs.setup-env.outputs.cdn-domain }}/android/${{ needs.setup-env.outputs.environment }}/mizpos-latest.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- **Built at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
