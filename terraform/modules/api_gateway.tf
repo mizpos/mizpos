@@ -211,31 +211,6 @@ resource "aws_apigatewayv2_integration" "android_mgmt" {
   payload_format_version = "2.0"
 }
 
-# Routes - android-mgmt (JWT validation handled by Lambda)
-resource "aws_apigatewayv2_route" "android_mgmt" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "ANY /mizpos-enterprise-android-manager/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.android_mgmt.id}"
-
-  authorization_type = "NONE"
-}
-
-resource "aws_apigatewayv2_route" "openapi_android_mgmt" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "GET /mizpos-enterprise-android-manager/openapi.json"
-  target    = "integrations/${aws_apigatewayv2_integration.android_mgmt.id}"
-
-  authorization_type = "NONE"
-}
-
-resource "aws_apigatewayv2_route" "docs_android_mgmt" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "GET /mizpos-enterprise-android-manager/docs"
-  target    = "integrations/${aws_apigatewayv2_integration.android_mgmt.id}"
-
-  authorization_type = "NONE"
-}
-
 resource "aws_lambda_permission" "android_mgmt" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"

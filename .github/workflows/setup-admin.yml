@@ -38,14 +38,6 @@ jobs:
     name: Create Admin User
     runs-on: ubuntu-slim
     steps:
-      - name: Generate token
-        id: generate-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: mizpos,mizpos-enterprise-android-manager
-
       - name: Checkout
         uses: actions/checkout@v4
 

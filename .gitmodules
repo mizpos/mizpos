@@ -1,4 +1,0 @@
-[submodule "lambda/mizpos-enterprise-android-manager"]
-	path = lambda/mizpos-enterprise-android-manager
-	url = https://github.com/mizpos/mizpos-enterprise-android-manager.git
-	branch = main
