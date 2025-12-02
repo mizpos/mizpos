@@ -1,0 +1,189 @@
+name: Build Desktop App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/apps/mizpos-desktop/**"
+      - "frontend/packages/**"
+      - ".github/workflows/build-desktop.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to build for"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10"
+  AWS_REGION: ap-northeast-1
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  setup-env:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      cdn-bucket: ${{ steps.set-env.outputs.cdn-bucket }}
+      cdn-distribution-id: ${{ steps.set-env.outputs.cdn-distribution-id }}
+      cdn-domain: ${{ steps.set-env.outputs.cdn-domain }}
+      aws-role-arn: ${{ steps.set-env.outputs.aws-role-arn }}
+    steps:
+      - id: set-env
+        run: |
+          # Determine environment
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            ENV="prod"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            ENV="dev"
+          fi
+          
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          
+          # Set environment-specific values
+          if [[ "$ENV" == "prod" ]]; then
+            echo "cdn-bucket=prod-mizpos-cdn-assets" >> $GITHUB_OUTPUT
+            echo "cdn-distribution-id=E3K8Z7XI6AMQJ5" >> $GITHUB_OUTPUT
+            echo "cdn-domain=https://d2xppn5ml53jqk.cloudfront.net" >> $GITHUB_OUTPUT
+            echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_OUTPUT
+          else
+            echo "cdn-bucket=dev-mizpos-cdn-assets" >> $GITHUB_OUTPUT
+            echo "cdn-distribution-id=E195S6TD7VY00" >> $GITHUB_OUTPUT
+            echo "cdn-domain=https://d1o5hbbhoeegz0.cloudfront.net" >> $GITHUB_OUTPUT
+            echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_DEV }}" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    name: Build Desktop App (${{ matrix.platform }} - ${{ needs.setup-env.outputs.environment }})
+    needs: setup-env
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            os_name: windows
+            artifact_ext: ".exe,.msi"
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            os_name: linux
+            artifact_ext: ".AppImage,.deb"
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Frontend Environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          working-directory: frontend
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev \
+            build-essential \
+            curl \
+            wget \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Set environment variables
+        working-directory: frontend/apps/mizpos-desktop
+        run: |
+          ENV="${{ needs.setup-env.outputs.environment }}"
+          if [[ "$ENV" == "prod" ]]; then
+            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api.mizpos.com" >> $GITHUB_ENV
+            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin.mizpos.com" >> $GITHUB_ENV
+          else
+            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api-dev.mizpos.com" >> $GITHUB_ENV
+            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin-dev.mizpos.com" >> $GITHUB_ENV
+          fi
+          echo "VITE_MIZU_POS_FRONTEND_DOMAIN=${{ needs.setup-env.outputs.cdn-domain }}" >> $GITHUB_ENV
+
+      - name: Generate API Types
+        working-directory: frontend
+        run: pnpm generate-api-types
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+        with:
+          projectPath: frontend/apps/mizpos-desktop
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.aws-role-arn }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Prepare and Upload to CDN
+        env:
+          ENV: ${{ needs.setup-env.outputs.environment }}
+          CDN_BUCKET: ${{ needs.setup-env.outputs.cdn-bucket }}
+        shell: bash
+        run: |
+          BUNDLE_DIR="frontend/apps/mizpos-desktop/src-tauri/target/release/bundle"
+          
+          # Prepare files based on platform
+          if [[ "${{ matrix.os_name }}" == "windows" ]]; then
+            cd $BUNDLE_DIR/msi
+            for file in *.msi; do
+              aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/ --acl public-read
+            done
+          else
+            cd $BUNDLE_DIR
+            # AppImage
+            if [ -d "appimage" ]; then
+              cd appimage
+              for file in *.AppImage; do
+                aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/ --acl public-read
+              done
+              cd ..
+            fi
+            # Debian package
+            if [ -d "deb" ]; then
+              cd deb
+              for file in *.deb; do
+                aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/ --acl public-read
+              done
+            fi
+          fi
+
+      - name: Upload artifacts to GitHub Release (Production only)
+        if: github.event_name == 'release' && needs.setup-env.outputs.environment == 'prod'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            frontend/apps/mizpos-desktop/src-tauri/target/release/bundle/**/*${{ matrix.artifact_ext }}
+
+      - name: Generate update manifest
+        if: needs.setup-env.outputs.environment == 'prod'
+        run: |
+          echo "Update manifest generation would go here"
+          # TODO: Implement update manifest generation for Tauri updater

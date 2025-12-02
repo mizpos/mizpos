@@ -1,47 +1,35 @@
-name: "Deploy Lambda Functions"
-description: "Deploy Lambda Functions"
-
+name: 'Deploy Lambda Function'
+description: 'Deploy Lambda functions using Lambroll'
 inputs:
-  WORKING_DIR:
-    description: "ディレクトリ"
+  function-path:
+    description: 'Path to Lambda function'
     required: true
-  ENV:
-    description: "Env"
+  environment:
+    description: 'Environment (dev/prod)'
     required: true
-  AWS_ACCOUNT_ID:
-    description: "AWS Account ID"
+  aws-account-id:
+    description: 'AWS Account ID'
     required: true
-  LAMBDA_FUNTION_PATH:
-    description: "Lambda Function Path"
-    required: true
+  lambroll-version:
+    description: 'Lambroll version'
+    required: false
+    default: '1.3.2'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: install uv
+    - name: Install Lambroll
       shell: bash
       run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
+        if ! command -v lambroll &> /dev/null; then
+          curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ inputs.lambroll-version }}/lambroll_v${{ inputs.lambroll-version }}_linux_amd64.tar.gz | tar -xz
+          sudo mv lambroll /usr/local/bin/
+        fi
 
-    - name: Create requirements.txt
+    - name: Deploy Lambda Function
       shell: bash
-      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
+      working-directory: ${{ inputs.function-path }}
       run: |
-        uv pip compile pyproject.toml > requirements.txt
-
-    - name: Deploy Lambda Functions
-      shell: bash
-      env:
-        ENV: ${{ inputs.ENV }}
-        AWS_ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
-      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
-      run: |
-        echo "Installing dependencies for ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
-        pip install -r requirements.txt -t .
-        echo "Deploying ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
-        lambroll deploy \
-          --function function.jsonnet \
-          --ext-str ENV=${{ inputs.ENV }} \
-          --ext-str AWS_ACCOUNT_ID=${{ inputs.AWS_ACCOUNT_ID }} \
-          --src . \
-          --exclude-file .lambdaignore
+        export ENV=${{ inputs.environment }}
+        export AWS_ACCOUNT_ID=${{ inputs.aws-account-id }}
+        make deploy
