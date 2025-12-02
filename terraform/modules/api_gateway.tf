@@ -199,22 +199,3 @@ resource "aws_lambda_permission" "sales" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
-
-# Lambda Integration - android-mgmt
-resource "aws_apigatewayv2_integration" "android_mgmt" {
-  api_id           = aws_apigatewayv2_api.main.id
-  integration_type = "AWS_PROXY"
-
-  connection_type        = "INTERNET"
-  integration_method     = "POST"
-  integration_uri        = aws_lambda_function.android_mgmt.invoke_arn
-  payload_format_version = "2.0"
-}
-
-resource "aws_lambda_permission" "android_mgmt" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.android_mgmt.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
-}
