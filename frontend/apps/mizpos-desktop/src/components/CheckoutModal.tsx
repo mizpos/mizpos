@@ -5,11 +5,194 @@ import { useAuthStore } from "../stores/auth";
 import { useCartStore } from "../stores/cart";
 import { useSettingsStore } from "../stores/settings";
 import type { Payment, PaymentMethod, Transaction } from "../types";
+import { Button, Modal } from "./ui";
 
 interface CheckoutModalProps {
   onClose: () => void;
   onComplete: (transaction: Transaction) => void;
 }
+
+// 合計表示スタイル
+const totalDisplayStyles = {
+  container: css({
+    textAlign: "center",
+    padding: "32px",
+    background: "#0f172a",
+    borderRadius: "14px",
+    marginBottom: "24px",
+  }),
+  label: css({
+    fontSize: "14px",
+    color: "#64748b",
+    marginBottom: "8px",
+    fontWeight: 500,
+  }),
+  amount: css({
+    fontSize: "52px",
+    fontWeight: 700,
+    fontFamily: "monospace",
+    color: "#f8fafc",
+    letterSpacing: "-0.02em",
+    lineHeight: 1,
+  }),
+};
+
+// 支払い方法選択スタイル
+const paymentMethodStyles = {
+  container: css({
+    marginBottom: "24px",
+  }),
+  label: css({
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#94a3b8",
+    marginBottom: "10px",
+  }),
+  buttons: css({
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "10px",
+  }),
+  button: css({
+    padding: "18px",
+    fontSize: "15px",
+    fontWeight: 600,
+    border: "2px solid transparent",
+    borderRadius: "12px",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+  }),
+  buttonCash: css({
+    color: "#0f172a",
+    background: "#22c55e",
+    borderColor: "#22c55e",
+  }),
+  buttonCashless: css({
+    color: "#f8fafc",
+    background: "#3b82f6",
+    borderColor: "#3b82f6",
+  }),
+  buttonInactive: css({
+    color: "#94a3b8",
+    background: "#334155",
+    borderColor: "#334155",
+    _hover: {
+      background: "#475569",
+      borderColor: "#475569",
+    },
+  }),
+};
+
+// 現金入力スタイル
+const cashInputStyles = {
+  label: css({
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#94a3b8",
+    marginBottom: "10px",
+  }),
+  input: css({
+    width: "100%",
+    padding: "18px",
+    fontSize: "32px",
+    fontWeight: 700,
+    fontFamily: "monospace",
+    textAlign: "right",
+    color: "#f8fafc",
+    background: "#0f172a",
+    border: "2px solid #334155",
+    borderRadius: "12px",
+    outline: "none",
+    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+    _focus: {
+      borderColor: "#3b82f6",
+      boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.2)",
+    },
+    _placeholder: { color: "#475569" },
+  }),
+  quickGrid: css({
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "8px",
+    marginTop: "16px",
+    marginBottom: "16px",
+  }),
+  quickButton: css({
+    padding: "14px 8px",
+    fontSize: "15px",
+    fontWeight: 600,
+    fontFamily: "monospace",
+    color: "#f8fafc",
+    background: "#334155",
+    border: "none",
+    borderRadius: "10px",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+    _hover: { background: "#475569" },
+    _active: { transform: "scale(0.97)" },
+  }),
+  quickButtonExact: css({
+    color: "#0f172a",
+    background: "#22c55e",
+    _hover: { background: "#16a34a" },
+  }),
+};
+
+// おつり表示スタイル
+const changeDisplayStyles = {
+  container: css({
+    padding: "18px 20px",
+    borderRadius: "12px",
+    marginBottom: "24px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }),
+  valid: css({
+    background: "#14532d",
+  }),
+  invalid: css({
+    background: "#7f1d1d",
+  }),
+  label: css({
+    fontSize: "15px",
+    fontWeight: 500,
+  }),
+  labelValid: css({
+    color: "#86efac",
+  }),
+  labelInvalid: css({
+    color: "#fecaca",
+  }),
+  amount: css({
+    fontSize: "32px",
+    fontWeight: 700,
+    fontFamily: "monospace",
+    color: "#f8fafc",
+  }),
+};
+
+// キャッシュレス表示スタイル
+const cashlessDisplayStyles = {
+  container: css({
+    padding: "28px",
+    background: "#1e40af",
+    borderRadius: "14px",
+    marginBottom: "24px",
+    textAlign: "center",
+  }),
+  label: css({
+    fontSize: "14px",
+    color: "#93c5fd",
+    marginBottom: "8px",
+    fontWeight: 500,
+  }),
+  amount: css({
+    fontSize: "36px",
+    fontWeight: 700,
+    fontFamily: "monospace",
+  }),
+};
 
 export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -34,27 +217,30 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     }
   }, [paymentMethod]);
 
-  // ESCキーで閉じる
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isProcessing) {
-        onClose();
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value.replace(/\D/g, "");
+      if (value === "" || Number.parseInt(value, 10) <= 10000000) {
+        setReceivedAmount(value);
       }
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose, isProcessing]);
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "");
-    if (value === "" || Number.parseInt(value, 10) <= 10000000) {
-      setReceivedAmount(value);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const handleQuickAmount = useCallback((amount: number) => {
     setReceivedAmount(String(amount));
   }, []);
+
+  // Enterキーで会計完了
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && paymentMethod === "cash" && change >= 0) {
+        e.preventDefault();
+        handleComplete();
+      }
+    },
+    [paymentMethod, change],
+  );
 
   const handleComplete = useCallback(async () => {
     if (!session) return;
@@ -105,308 +291,123 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
   ]);
 
   const quickAmounts = [1000, 2000, 3000, 5000, 10000];
+  const canComplete = paymentMethod !== "cash" || change >= 0;
 
   return (
-    <div className={css({
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0, 0, 0, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 1000,
-    })}>
-      <div className={css({
-        background: "#1e293b",
-        borderRadius: "16px",
-        width: "100%",
-        maxWidth: "480px",
-        maxHeight: "90vh",
-        overflow: "auto",
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-        color: "#f8fafc",
-      })}>
-        {/* ヘッダー */}
-        <div className={css({
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "20px 24px",
-          borderBottom: "1px solid #334155",
-        })}>
-          <h2 className={css({ margin: 0, fontSize: "20px", fontWeight: 700 })}>
-            会計
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isProcessing}
-            className={css({
-              width: "36px",
-              height: "36px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#334155",
-              border: "none",
-              borderRadius: "8px",
-              color: "#94a3b8",
-              fontSize: "20px",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              "&:hover": { background: "#475569", color: "#f8fafc" },
-              "&:disabled": { cursor: "not-allowed", opacity: 0.5 },
-            })}
-          >
-            ×
-          </button>
+    <Modal
+      open
+      onClose={onClose}
+      title="会計"
+      maxWidth="500px"
+      disableClose={isProcessing}
+    >
+      {/* 合計金額 */}
+      <div className={totalDisplayStyles.container}>
+        <div className={totalDisplayStyles.label}>お会計</div>
+        <div className={totalDisplayStyles.amount}>
+          ¥{total.toLocaleString()}
         </div>
+      </div>
 
-        {/* コンテンツ */}
-        <div className={css({ padding: "24px" })}>
-          {/* 合計金額 */}
-          <div className={css({
-            textAlign: "center",
-            padding: "28px",
-            background: "#0f172a",
-            borderRadius: "12px",
-            marginBottom: "24px",
-          })}>
-            <div className={css({ fontSize: "13px", color: "#64748b", marginBottom: "8px" })}>
-              お会計
-            </div>
-            <div className={css({
-              fontSize: "48px",
-              fontWeight: 700,
-              fontFamily: "monospace",
-              color: "#f8fafc",
-              letterSpacing: "-0.02em",
-            })}>
-              ¥{total.toLocaleString()}
-            </div>
-          </div>
-
-          {/* 支払い方法 */}
-          <div className={css({ marginBottom: "24px" })}>
-            <div className={css({
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#94a3b8",
-              marginBottom: "10px",
-            })}>
-              支払い方法
-            </div>
-            <div className={css({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" })}>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("cash")}
-                className={css({
-                  padding: "16px",
-                  fontSize: "15px",
-                  fontWeight: 600,
-                  color: paymentMethod === "cash" ? "#0f172a" : "#94a3b8",
-                  background: paymentMethod === "cash" ? "#22c55e" : "#334155",
-                  border: "none",
-                  borderRadius: "10px",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  "&:hover": {
-                    background: paymentMethod === "cash" ? "#22c55e" : "#475569",
-                  },
-                })}
-              >
-                現金
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("oya_cashless")}
-                className={css({
-                  padding: "16px",
-                  fontSize: "15px",
-                  fontWeight: 600,
-                  color: paymentMethod === "oya_cashless" ? "#0f172a" : "#94a3b8",
-                  background: paymentMethod === "oya_cashless" ? "#3b82f6" : "#334155",
-                  border: "none",
-                  borderRadius: "10px",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  "&:hover": {
-                    background: paymentMethod === "oya_cashless" ? "#3b82f6" : "#475569",
-                  },
-                })}
-              >
-                大家キャッシュレス
-              </button>
-            </div>
-          </div>
-
-          {/* 現金入力 */}
-          {paymentMethod === "cash" && (
-            <>
-              {/* 金額入力 */}
-              <div className={css({ marginBottom: "16px" })}>
-                <div className={css({
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#94a3b8",
-                  marginBottom: "10px",
-                })}>
-                  お預かり金額
-                </div>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  inputMode="numeric"
-                  value={receivedAmount ? `¥${Number.parseInt(receivedAmount, 10).toLocaleString()}` : ""}
-                  onChange={handleInputChange}
-                  placeholder="¥0"
-                  className={css({
-                    width: "100%",
-                    padding: "16px",
-                    fontSize: "28px",
-                    fontWeight: 700,
-                    fontFamily: "monospace",
-                    textAlign: "right",
-                    color: "#f8fafc",
-                    background: "#0f172a",
-                    border: "2px solid #334155",
-                    borderRadius: "10px",
-                    outline: "none",
-                    transition: "border-color 0.15s",
-                    "&:focus": { borderColor: "#3b82f6" },
-                    "&::placeholder": { color: "#475569" },
-                  })}
-                />
-              </div>
-
-              {/* クイック金額ボタン */}
-              <div className={css({
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: "8px",
-                marginBottom: "16px",
-              })}>
-                {quickAmounts.map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => handleQuickAmount(amount)}
-                    className={css({
-                      padding: "14px 8px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      fontFamily: "monospace",
-                      color: "#f8fafc",
-                      background: "#334155",
-                      border: "none",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      transition: "background 0.15s",
-                      "&:hover": { background: "#475569" },
-                    })}
-                  >
-                    ¥{amount.toLocaleString()}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => handleQuickAmount(total)}
-                  className={css({
-                    padding: "14px 8px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "#0f172a",
-                    background: "#22c55e",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                    "&:hover": { background: "#16a34a" },
-                  })}
-                >
-                  ぴったり
-                </button>
-              </div>
-
-              {/* おつり表示 */}
-              <div className={css({
-                padding: "16px 20px",
-                background: change >= 0 ? "#14532d" : "#7f1d1d",
-                borderRadius: "10px",
-                marginBottom: "24px",
-              })}>
-                <div className={css({
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                })}>
-                  <span className={css({ fontSize: "14px", color: change >= 0 ? "#86efac" : "#fecaca" })}>
-                    おつり
-                  </span>
-                  <span className={css({
-                    fontSize: "28px",
-                    fontWeight: 700,
-                    fontFamily: "monospace",
-                    color: "#f8fafc",
-                  })}>
-                    {change >= 0 ? `¥${change.toLocaleString()}` : "−"}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* キャッシュレス選択時 */}
-          {paymentMethod === "oya_cashless" && (
-            <div className={css({
-              padding: "24px",
-              background: "#1e40af",
-              borderRadius: "10px",
-              marginBottom: "24px",
-              textAlign: "center",
-            })}>
-              <div className={css({ fontSize: "14px", color: "#93c5fd", marginBottom: "4px" })}>
-                決済金額
-              </div>
-              <div className={css({
-                fontSize: "32px",
-                fontWeight: 700,
-                fontFamily: "monospace",
-              })}>
-                ¥{total.toLocaleString()}
-              </div>
-            </div>
-          )}
-
-          {/* 完了ボタン */}
+      {/* 支払い方法 */}
+      <div className={paymentMethodStyles.container}>
+        <div className={paymentMethodStyles.label}>支払い方法</div>
+        <div className={paymentMethodStyles.buttons}>
           <button
             type="button"
-            onClick={handleComplete}
-            disabled={isProcessing || (paymentMethod === "cash" && change < 0)}
-            className={css({
-              width: "100%",
-              padding: "20px",
-              fontSize: "20px",
-              fontWeight: 700,
-              color: "#0f172a",
-              background: "#22c55e",
-              border: "none",
-              borderRadius: "12px",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              "&:hover:not(:disabled)": { background: "#16a34a" },
-              "&:active:not(:disabled)": { transform: "scale(0.98)" },
-              "&:disabled": {
-                background: "#334155",
-                color: "#64748b",
-                cursor: "not-allowed",
-              },
-            })}
+            onClick={() => setPaymentMethod("cash")}
+            className={`${paymentMethodStyles.button} ${paymentMethod === "cash" ? paymentMethodStyles.buttonCash : paymentMethodStyles.buttonInactive}`}
           >
-            {isProcessing ? "処理中..." : "会計完了"}
+            現金
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaymentMethod("oya_cashless")}
+            className={`${paymentMethodStyles.button} ${paymentMethod === "oya_cashless" ? paymentMethodStyles.buttonCashless : paymentMethodStyles.buttonInactive}`}
+          >
+            大家キャッシュレス
           </button>
         </div>
       </div>
-    </div>
+
+      {/* 現金入力 */}
+      {paymentMethod === "cash" && (
+        <>
+          <div className={css({ marginBottom: "16px" })}>
+            <div className={cashInputStyles.label}>お預かり金額</div>
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              value={
+                receivedAmount
+                  ? `¥${Number.parseInt(receivedAmount, 10).toLocaleString()}`
+                  : ""
+              }
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="¥0"
+              className={cashInputStyles.input}
+            />
+          </div>
+
+          {/* クイック金額ボタン */}
+          <div className={cashInputStyles.quickGrid}>
+            {quickAmounts.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => handleQuickAmount(amount)}
+                className={cashInputStyles.quickButton}
+              >
+                ¥{amount.toLocaleString()}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => handleQuickAmount(total)}
+              className={`${cashInputStyles.quickButton} ${cashInputStyles.quickButtonExact}`}
+            >
+              ぴったり
+            </button>
+          </div>
+
+          {/* おつり表示 */}
+          <div
+            className={`${changeDisplayStyles.container} ${change >= 0 ? changeDisplayStyles.valid : changeDisplayStyles.invalid}`}
+          >
+            <span
+              className={`${changeDisplayStyles.label} ${change >= 0 ? changeDisplayStyles.labelValid : changeDisplayStyles.labelInvalid}`}
+            >
+              おつり
+            </span>
+            <span className={changeDisplayStyles.amount}>
+              {change >= 0 ? `¥${change.toLocaleString()}` : "−"}
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* キャッシュレス選択時 */}
+      {paymentMethod === "oya_cashless" && (
+        <div className={cashlessDisplayStyles.container}>
+          <div className={cashlessDisplayStyles.label}>決済金額</div>
+          <div className={cashlessDisplayStyles.amount}>
+            ¥{total.toLocaleString()}
+          </div>
+        </div>
+      )}
+
+      {/* 完了ボタン */}
+      <Button
+        variant="primary"
+        size="xl"
+        fullWidth
+        onClick={handleComplete}
+        disabled={isProcessing || !canComplete}
+      >
+        {isProcessing ? "処理中..." : "会計完了 (Enter)"}
+      </Button>
+    </Modal>
   );
 }
