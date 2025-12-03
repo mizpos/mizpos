@@ -2,11 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import {
+  type BluetoothDevice,
   getBluetoothDevices,
   getPlatform,
   getUsbDevices,
   isAndroid,
-  type BluetoothDevice,
   type Platform,
   type UsbDevice,
 } from "../lib/printer";
@@ -25,11 +25,13 @@ function SettingsPage() {
 
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [usbDevices, setUsbDevices] = useState<UsbDevice[]>([]);
-  const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>([]);
-  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
-  const [selectedPrinter, setSelectedPrinter] = useState<PrinterConfig | undefined>(
-    settings.printer
+  const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>(
+    [],
   );
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
+  const [selectedPrinter, setSelectedPrinter] = useState<
+    PrinterConfig | undefined
+  >(settings.printer);
 
   useEffect(() => {
     if (!session) {
@@ -72,7 +74,15 @@ function SettingsPage() {
     });
     await updatePrinter(selectedPrinter);
     navigate({ to: "/pos" });
-  }, [eventName, terminalId, taxRate, selectedPrinter, updateSettings, updatePrinter, navigate]);
+  }, [
+    eventName,
+    terminalId,
+    taxRate,
+    selectedPrinter,
+    updateSettings,
+    updatePrinter,
+    navigate,
+  ]);
 
   const handleBack = useCallback(() => {
     navigate({ to: "/pos" });
@@ -83,7 +93,8 @@ function SettingsPage() {
       type: "usb",
       vendorId: device.vendor_id,
       deviceId: device.device_id,
-      name: device.name || `USB Printer (${device.vendor_id}:${device.device_id})`,
+      name:
+        device.name || `USB Printer (${device.vendor_id}:${device.device_id})`,
       paperWidth: 58,
     });
   }, []);
@@ -102,23 +113,27 @@ function SettingsPage() {
   }
 
   return (
-    <div className={css({
-      display: "flex",
-      flexDirection: "column",
-      height: "100vh",
-      background: "#0f172a",
-      color: "#f8fafc",
-    })}>
-      {/* ヘッダー */}
-      <header className={css({
+    <div
+      className={css({
         display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        padding: "16px 24px",
-        background: "#1e293b",
-        borderBottom: "1px solid #334155",
-        flexShrink: 0,
-      })}>
+        flexDirection: "column",
+        height: "100vh",
+        background: "#0f172a",
+        color: "#f8fafc",
+      })}
+    >
+      {/* ヘッダー */}
+      <header
+        className={css({
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          padding: "16px 24px",
+          background: "#1e293b",
+          borderBottom: "1px solid #334155",
+          flexShrink: 0,
+        })}
+      >
         <button
           type="button"
           onClick={handleBack}
@@ -143,43 +158,55 @@ function SettingsPage() {
       </header>
 
       {/* コンテンツ */}
-      <div className={css({
-        flex: 1,
-        overflowY: "auto",
-        padding: "24px",
-      })}>
-        <div className={css({
-          maxWidth: "560px",
-          margin: "0 auto",
-        })}>
+      <div
+        className={css({
+          flex: 1,
+          overflowY: "auto",
+          padding: "24px",
+        })}
+      >
+        <div
+          className={css({
+            maxWidth: "560px",
+            margin: "0 auto",
+          })}
+        >
           {/* 基本設定 */}
-          <section className={css({
-            background: "#1e293b",
-            borderRadius: "12px",
-            padding: "24px",
-            marginBottom: "20px",
-            border: "1px solid #334155",
-          })}>
-            <h2 className={css({
-              margin: "0 0 20px 0",
-              fontSize: "16px",
-              fontWeight: 600,
-              color: "#f8fafc",
-            })}>
+          <section
+            className={css({
+              background: "#1e293b",
+              borderRadius: "12px",
+              padding: "24px",
+              marginBottom: "20px",
+              border: "1px solid #334155",
+            })}
+          >
+            <h2
+              className={css({
+                margin: "0 0 20px 0",
+                fontSize: "16px",
+                fontWeight: 600,
+                color: "#f8fafc",
+              })}
+            >
               基本設定
             </h2>
 
             <div className={css({ marginBottom: "16px" })}>
-              <label className={css({
-                display: "block",
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#94a3b8",
-                marginBottom: "8px",
-              })}>
+              <label
+                htmlFor="eventName"
+                className={css({
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#94a3b8",
+                  marginBottom: "8px",
+                })}
+              >
                 イベント名
               </label>
               <input
+                id="eventName"
                 type="text"
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
@@ -199,16 +226,20 @@ function SettingsPage() {
             </div>
 
             <div className={css({ marginBottom: "16px" })}>
-              <label className={css({
-                display: "block",
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#94a3b8",
-                marginBottom: "8px",
-              })}>
+              <label
+                htmlFor="terminalId"
+                className={css({
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#94a3b8",
+                  marginBottom: "8px",
+                })}
+              >
                 端末ID
               </label>
               <input
+                id="terminalId"
                 type="text"
                 value={terminalId}
                 onChange={(e) => setTerminalId(e.target.value)}
@@ -228,16 +259,20 @@ function SettingsPage() {
             </div>
 
             <div>
-              <label className={css({
-                display: "block",
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#94a3b8",
-                marginBottom: "8px",
-              })}>
+              <label
+                htmlFor="taxRate"
+                className={css({
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#94a3b8",
+                  marginBottom: "8px",
+                })}
+              >
                 消費税率 (%)
               </label>
               <input
+                id="taxRate"
                 type="number"
                 value={taxRate}
                 onChange={(e) => setTaxRate(e.target.value)}
@@ -260,25 +295,31 @@ function SettingsPage() {
           </section>
 
           {/* プリンター設定 */}
-          <section className={css({
-            background: "#1e293b",
-            borderRadius: "12px",
-            padding: "24px",
-            marginBottom: "20px",
-            border: "1px solid #334155",
-          })}>
-            <div className={css({
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+          <section
+            className={css({
+              background: "#1e293b",
+              borderRadius: "12px",
+              padding: "24px",
               marginBottom: "20px",
-            })}>
-              <h2 className={css({
-                margin: 0,
-                fontSize: "16px",
-                fontWeight: 600,
-                color: "#f8fafc",
-              })}>
+              border: "1px solid #334155",
+            })}
+          >
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "20px",
+              })}
+            >
+              <h2
+                className={css({
+                  margin: 0,
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#f8fafc",
+                })}
+              >
                 プリンター設定
               </h2>
               <button
@@ -305,16 +346,30 @@ function SettingsPage() {
 
             {/* 現在の選択 */}
             {selectedPrinter && (
-              <div className={css({
-                padding: "14px 16px",
-                background: "#14532d",
-                borderRadius: "8px",
-                marginBottom: "16px",
-              })}>
-                <div className={css({ fontSize: "12px", color: "#86efac", marginBottom: "4px" })}>
+              <div
+                className={css({
+                  padding: "14px 16px",
+                  background: "#14532d",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                })}
+              >
+                <div
+                  className={css({
+                    fontSize: "12px",
+                    color: "#86efac",
+                    marginBottom: "4px",
+                  })}
+                >
                   選択中
                 </div>
-                <div className={css({ fontSize: "15px", fontWeight: 600, color: "#f8fafc" })}>
+                <div
+                  className={css({
+                    fontSize: "15px",
+                    fontWeight: 600,
+                    color: "#f8fafc",
+                  })}
+                >
                   {selectedPrinter.name}
                 </div>
               </div>
@@ -337,20 +392,37 @@ function SettingsPage() {
                 cursor: "pointer",
                 textAlign: "left",
                 transition: "all 0.15s",
-                "&:hover": { background: !selectedPrinter ? "#475569" : "#334155" },
+                "&:hover": {
+                  background: !selectedPrinter ? "#475569" : "#334155",
+                },
               })}
             >
               プリンターなし
             </button>
 
             {/* デバイス一覧 */}
-            <div className={css({ fontSize: "13px", color: "#64748b", marginBottom: "8px", marginTop: "16px" })}>
-              {platform === "android" || isAndroid() ? "Bluetoothプリンター" : "USBプリンター"}
+            <div
+              className={css({
+                fontSize: "13px",
+                color: "#64748b",
+                marginBottom: "8px",
+                marginTop: "16px",
+              })}
+            >
+              {platform === "android" || isAndroid()
+                ? "Bluetoothプリンター"
+                : "USBプリンター"}
             </div>
 
             {platform === "android" || isAndroid() ? (
               bluetoothDevices.length === 0 ? (
-                <div className={css({ fontSize: "14px", color: "#475569", padding: "12px 0" })}>
+                <div
+                  className={css({
+                    fontSize: "14px",
+                    color: "#475569",
+                    padding: "12px 0",
+                  })}
+                >
                   ペアリング済みのデバイスがありません
                 </div>
               ) : (
@@ -365,15 +437,24 @@ function SettingsPage() {
                       marginBottom: "8px",
                       fontSize: "14px",
                       fontWeight: 500,
-                      color: selectedPrinter?.bluetoothAddress === device.address ? "#f8fafc" : "#94a3b8",
-                      background: selectedPrinter?.bluetoothAddress === device.address ? "#3b82f6" : "#0f172a",
+                      color:
+                        selectedPrinter?.bluetoothAddress === device.address
+                          ? "#f8fafc"
+                          : "#94a3b8",
+                      background:
+                        selectedPrinter?.bluetoothAddress === device.address
+                          ? "#3b82f6"
+                          : "#0f172a",
                       border: "1px solid #334155",
                       borderRadius: "8px",
                       cursor: "pointer",
                       textAlign: "left",
                       transition: "all 0.15s",
                       "&:hover": {
-                        background: selectedPrinter?.bluetoothAddress === device.address ? "#2563eb" : "#334155",
+                        background:
+                          selectedPrinter?.bluetoothAddress === device.address
+                            ? "#2563eb"
+                            : "#334155",
                       },
                     })}
                   >
@@ -382,7 +463,13 @@ function SettingsPage() {
                 ))
               )
             ) : usbDevices.length === 0 ? (
-              <div className={css({ fontSize: "14px", color: "#475569", padding: "12px 0" })}>
+              <div
+                className={css({
+                  fontSize: "14px",
+                  color: "#475569",
+                  padding: "12px 0",
+                })}
+              >
                 接続されているUSBプリンターがありません
               </div>
             ) : (
@@ -421,7 +508,8 @@ function SettingsPage() {
                     },
                   })}
                 >
-                  {device.name || `USB Device (${device.vendor_id}:${device.device_id})`}
+                  {device.name ||
+                    `USB Device (${device.vendor_id}:${device.device_id})`}
                 </button>
               ))
             )}

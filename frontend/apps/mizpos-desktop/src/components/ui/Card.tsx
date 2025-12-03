@@ -39,7 +39,7 @@ const cardStyles = cva({
   },
 });
 
-type CardStyleProps = RecipeVariantProps<typeof cardStyles>;
+type CardStyleProps = NonNullable<RecipeVariantProps<typeof cardStyles>>;
 
 export interface CardProps extends CardStyleProps {
   children: React.ReactNode;
@@ -47,8 +47,9 @@ export interface CardProps extends CardStyleProps {
 }
 
 export function Card({ padding, variant, children, className }: CardProps) {
+  const styles = cardStyles.raw({ padding, variant });
   return (
-    <div className={css(cardStyles.raw({ padding, variant }), className)}>
+    <div className={css(styles, className as Parameters<typeof css>[0])}>
       {children}
     </div>
   );

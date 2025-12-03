@@ -66,7 +66,7 @@ const labelStyles = css({
   marginBottom: "8px",
 });
 
-type InputStyleProps = RecipeVariantProps<typeof inputStyles>;
+type InputStyleProps = NonNullable<RecipeVariantProps<typeof inputStyles>>;
 
 export interface InputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
@@ -76,12 +76,13 @@ export interface InputProps
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ size, variant, label, className, ...props }, ref) => {
+    const styles = inputStyles.raw({ size, variant });
     return (
       <div>
         {label && <label className={labelStyles}>{label}</label>}
         <input
           ref={ref}
-          className={css(inputStyles.raw({ size, variant }), className)}
+          className={css(styles, className as Parameters<typeof css>[0])}
           {...props}
         />
       </div>

@@ -70,7 +70,9 @@ const iconButtonStyles = cva({
   },
 });
 
-type IconButtonStyleProps = RecipeVariantProps<typeof iconButtonStyles>;
+type IconButtonStyleProps = NonNullable<
+  RecipeVariantProps<typeof iconButtonStyles>
+>;
 
 export interface IconButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -81,11 +83,12 @@ export interface IconButtonProps
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ variant, size, label, className, children, ...props }, ref) => {
+    const styles = iconButtonStyles.raw({ variant, size });
     return (
       <button
         ref={ref}
         aria-label={label}
-        className={css(iconButtonStyles.raw({ variant, size }), className)}
+        className={css(styles, className as Parameters<typeof css>[0])}
         {...props}
       >
         {children}

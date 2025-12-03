@@ -95,7 +95,7 @@ const buttonStyles = cva({
   },
 });
 
-type ButtonStyleProps = RecipeVariantProps<typeof buttonStyles>;
+type ButtonStyleProps = NonNullable<RecipeVariantProps<typeof buttonStyles>>;
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -105,13 +105,11 @@ export interface ButtonProps
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant, size, fullWidth, className, children, ...props }, ref) => {
+    const styles = buttonStyles.raw({ variant, size, fullWidth });
     return (
       <button
         ref={ref}
-        className={css(
-          buttonStyles.raw({ variant, size, fullWidth }),
-          className,
-        )}
+        className={css(styles, className as Parameters<typeof css>[0])}
         {...props}
       >
         {children}

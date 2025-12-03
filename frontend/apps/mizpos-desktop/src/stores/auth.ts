@@ -1,8 +1,8 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
+import { syncProducts } from "../lib/db";
 import type { Session } from "../types";
 import { useSettingsStore } from "./settings";
-import { syncProducts } from "../lib/db";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -47,7 +47,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         // セッションの有効期限をチェック
         const now = Math.floor(Date.now() / 1000);
         if (savedSession.expiresAt > now) {
-          set({ session: { ...savedSession, loginAt: new Date(savedSession.loginAt) }, isLoading: false });
+          set({
+            session: {
+              ...savedSession,
+              loginAt: new Date(savedSession.loginAt),
+            },
+            isLoading: false,
+          });
         } else {
           // 期限切れの場合はセッションを削除
           await s.delete("session");
@@ -69,13 +75,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       // 7桁のスタッフID（数字のみ）
       if (!/^\d{7}$/.test(staffId)) {
-        set({ isLoading: false, error: "スタッフIDは7桁の数字で入力してください" });
+        set({
+          isLoading: false,
+          error: "スタッフIDは7桁の数字で入力してください",
+        });
         return false;
       }
 
       // 3〜8桁のパスワード（数字のみ）
       if (!/^\d{3,8}$/.test(password)) {
-        set({ isLoading: false, error: "パスワードは3〜8桁の数字で入力してください" });
+        set({
+          isLoading: false,
+          error: "パスワードは3〜8桁の数字で入力してください",
+        });
         return false;
       }
 
@@ -97,7 +109,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!response.ok) {
         if (response.status === 401) {
-          set({ isLoading: false, error: "スタッフIDまたはパスワードが正しくありません" });
+          set({
+            isLoading: false,
+            error: "スタッフIDまたはパスワードが正しくありません",
+          });
         } else {
           set({ isLoading: false, error: "サーバーエラーが発生しました" });
         }

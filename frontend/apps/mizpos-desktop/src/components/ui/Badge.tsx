@@ -55,7 +55,7 @@ const badgeStyles = cva({
   },
 });
 
-type BadgeStyleProps = RecipeVariantProps<typeof badgeStyles>;
+type BadgeStyleProps = NonNullable<RecipeVariantProps<typeof badgeStyles>>;
 
 export interface BadgeProps extends BadgeStyleProps {
   children: React.ReactNode;
@@ -63,8 +63,9 @@ export interface BadgeProps extends BadgeStyleProps {
 }
 
 export function Badge({ variant, size, children, className }: BadgeProps) {
+  const styles = badgeStyles.raw({ variant, size });
   return (
-    <span className={css(badgeStyles.raw({ variant, size }), className)}>
+    <span className={css(styles, className as Parameters<typeof css>[0])}>
       {children}
     </span>
   );

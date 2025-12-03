@@ -1,6 +1,6 @@
 import Dexie, { type Table } from "dexie";
 import type { Product, Transaction } from "../types";
-import { fetchProducts, type ApiProduct } from "./api";
+import { type ApiProduct, fetchProducts } from "./api";
 
 /**
  * ローカルキャッシュ用IndexedDB
@@ -46,14 +46,18 @@ export async function syncProducts(): Promise<number> {
 /**
  * JANコードで商品を検索
  */
-export async function findProductByJan(jan: string): Promise<Product | undefined> {
+export async function findProductByJan(
+  jan: string,
+): Promise<Product | undefined> {
   return db.products.where("jan").equals(jan).first();
 }
 
 /**
  * ISBNで商品を検索
  */
-export async function findProductByIsbn(isbn: string): Promise<Product | undefined> {
+export async function findProductByIsbn(
+  isbn: string,
+): Promise<Product | undefined> {
   return db.products.where("isbn").equals(isbn).first();
 }
 

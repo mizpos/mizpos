@@ -28,7 +28,7 @@ function LoginPage() {
         navigate({ to: "/pos" });
       }
     },
-    [staffId, password, login, navigate]
+    [staffId, password, login, navigate],
   );
 
   const handleStaffIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,52 +42,64 @@ function LoginPage() {
   };
 
   return (
-    <div className={css({
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#0f172a",
-      padding: "20px",
-    })}>
-      <div className={css({
-        background: "#1e293b",
-        borderRadius: "16px",
-        padding: "48px 40px",
-        width: "100%",
-        maxWidth: "420px",
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-      })}>
-        <h1 className={css({
-          fontSize: "32px",
-          fontWeight: 700,
-          color: "#f8fafc",
-          textAlign: "center",
-          margin: "0 0 8px 0",
-        })}>
+    <div
+      className={css({
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0f172a",
+        padding: "20px",
+      })}
+    >
+      <div
+        className={css({
+          background: "#1e293b",
+          borderRadius: "16px",
+          padding: "48px 40px",
+          width: "100%",
+          maxWidth: "420px",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+        })}
+      >
+        <h1
+          className={css({
+            fontSize: "32px",
+            fontWeight: 700,
+            color: "#f8fafc",
+            textAlign: "center",
+            margin: "0 0 8px 0",
+          })}
+        >
           mizPOS
         </h1>
-        <p className={css({
-          fontSize: "14px",
-          color: "#64748b",
-          textAlign: "center",
-          margin: "0 0 40px 0",
-        })}>
+        <p
+          className={css({
+            fontSize: "14px",
+            color: "#64748b",
+            textAlign: "center",
+            margin: "0 0 40px 0",
+          })}
+        >
           スタッフログイン
         </p>
 
         <form onSubmit={handleSubmit}>
           <div className={css({ marginBottom: "24px" })}>
-            <label className={css({
-              display: "block",
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#94a3b8",
-              marginBottom: "10px",
-            })}>
+            <label
+              htmlFor="staffId"
+              className={css({
+                display: "block",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#94a3b8",
+                marginBottom: "10px",
+              })}
+            >
               スタッフID（7桁）
             </label>
             <input
+              id="staffId"
               ref={staffIdRef}
               type="text"
               inputMode="numeric"
@@ -118,16 +130,20 @@ function LoginPage() {
           </div>
 
           <div className={css({ marginBottom: "32px" })}>
-            <label className={css({
-              display: "block",
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#94a3b8",
-              marginBottom: "10px",
-            })}>
+            <label
+              htmlFor="password"
+              className={css({
+                display: "block",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#94a3b8",
+                marginBottom: "10px",
+              })}
+            >
               パスワード（3〜8桁）
             </label>
             <input
+              id="password"
               type="password"
               inputMode="numeric"
               value={password}
@@ -157,15 +173,17 @@ function LoginPage() {
           </div>
 
           {error && (
-            <div className={css({
-              background: "#7f1d1d",
-              color: "#fecaca",
-              padding: "14px 16px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              marginBottom: "24px",
-              textAlign: "center",
-            })}>
+            <div
+              className={css({
+                background: "#7f1d1d",
+                color: "#fecaca",
+                padding: "14px 16px",
+                borderRadius: "8px",
+                fontSize: "14px",
+                marginBottom: "24px",
+                textAlign: "center",
+              })}
+            >
               {error}
             </div>
           )}
