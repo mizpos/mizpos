@@ -158,11 +158,13 @@ function SettingsPage() {
 
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [usbDevices, setUsbDevices] = useState<UsbDevice[]>([]);
-  const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>([]);
-  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
-  const [selectedPrinter, setSelectedPrinter] = useState<PrinterConfig | undefined>(
-    settings.printer,
+  const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>(
+    [],
   );
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
+  const [selectedPrinter, setSelectedPrinter] = useState<
+    PrinterConfig | undefined
+  >(settings.printer);
 
   useEffect(() => {
     if (!session) {
@@ -205,7 +207,15 @@ function SettingsPage() {
     });
     await updatePrinter(selectedPrinter);
     navigate({ to: "/pos" });
-  }, [eventName, terminalId, taxRate, selectedPrinter, updateSettings, updatePrinter, navigate]);
+  }, [
+    eventName,
+    terminalId,
+    taxRate,
+    selectedPrinter,
+    updateSettings,
+    updatePrinter,
+    navigate,
+  ]);
 
   const handleBack = useCallback(() => {
     navigate({ to: "/pos" });
@@ -216,7 +226,8 @@ function SettingsPage() {
       type: "usb",
       vendorId: device.vendor_id,
       deviceId: device.device_id,
-      name: device.name || `USB Printer (${device.vendor_id}:${device.device_id})`,
+      name:
+        device.name || `USB Printer (${device.vendor_id}:${device.device_id})`,
       paperWidth: 58,
     });
   }, []);
@@ -309,8 +320,12 @@ function SettingsPage() {
             {selectedPrinter && (
               <div className={printerStyles.selected}>
                 <div>
-                  <div className={printerStyles.selectedLabel}>選択中のプリンター</div>
-                  <div className={printerStyles.selectedName}>{selectedPrinter.name}</div>
+                  <div className={printerStyles.selectedLabel}>
+                    選択中のプリンター
+                  </div>
+                  <div className={printerStyles.selectedName}>
+                    {selectedPrinter.name}
+                  </div>
                 </div>
                 <Badge variant="success" size="sm">
                   {selectedPrinter.type === "usb" ? "USB" : "Bluetooth"}
@@ -325,7 +340,11 @@ function SettingsPage() {
               className={`${printerStyles.deviceButton} ${!selectedPrinter ? printerStyles.deviceButtonSelected : ""}`}
             >
               <span>プリンターなし（レシート印刷しない）</span>
-              {!selectedPrinter && <Badge variant="info" size="sm">選択中</Badge>}
+              {!selectedPrinter && (
+                <Badge variant="info" size="sm">
+                  選択中
+                </Badge>
+              )}
             </button>
 
             {/* デバイス一覧 */}
@@ -349,7 +368,9 @@ function SettingsPage() {
                     >
                       <span>{device.name || device.address}</span>
                       {isBluetoothDeviceSelected(device) && (
-                        <Badge variant="info" size="sm">選択中</Badge>
+                        <Badge variant="info" size="sm">
+                          選択中
+                        </Badge>
                       )}
                     </button>
                   ))
@@ -367,10 +388,13 @@ function SettingsPage() {
                     className={`${printerStyles.deviceButton} ${isUsbDeviceSelected(device) ? printerStyles.deviceButtonSelected : ""}`}
                   >
                     <span>
-                      {device.name || `USB Device (${device.vendor_id}:${device.device_id})`}
+                      {device.name ||
+                        `USB Device (${device.vendor_id}:${device.device_id})`}
                     </span>
                     {isUsbDeviceSelected(device) && (
-                      <Badge variant="info" size="sm">選択中</Badge>
+                      <Badge variant="info" size="sm">
+                        選択中
+                      </Badge>
                     )}
                   </button>
                 ))

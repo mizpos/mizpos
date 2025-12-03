@@ -275,7 +275,9 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
             )}
           </div>
 
-          {printError && <div className={contentStyles.error}>{printError}</div>}
+          {printError && (
+            <div className={contentStyles.error}>{printError}</div>
+          )}
 
           {/* ボタン */}
           <div className={contentStyles.buttons}>

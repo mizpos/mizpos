@@ -19,7 +19,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   addItem: (product: Product, quantity = 1) => {
     set((state) => {
       const existingIndex = state.items.findIndex(
-        (item) => item.product.id === product.id
+        (item) => item.product.id === product.id,
       );
 
       if (existingIndex >= 0) {
@@ -49,7 +49,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     set((state) => ({
       items: state.items.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
+        item.product.id === productId ? { ...item, quantity } : item,
       ),
     }));
   },
@@ -62,7 +62,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     const { items } = get();
     return items.reduce(
       (sum, item) => sum + item.product.price * item.quantity,
-      0
+      0,
     );
   },
 

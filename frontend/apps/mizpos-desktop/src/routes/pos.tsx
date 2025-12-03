@@ -357,7 +357,10 @@ function POSPage() {
         setShowManualEntry(true);
       }
       // F2 または Enter（空入力時）: 会計
-      if (e.key === "F2" || (e.key === "Enter" && !barcodeInput && items.length > 0)) {
+      if (
+        e.key === "F2" ||
+        (e.key === "Enter" && !barcodeInput && items.length > 0)
+      ) {
         e.preventDefault();
         if (items.length > 0) setShowCheckout(true);
       }
@@ -375,7 +378,14 @@ function POSPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showManualEntry, showCheckout, completedTransaction, barcodeInput, items.length, clear]);
+  }, [
+    showManualEntry,
+    showCheckout,
+    completedTransaction,
+    barcodeInput,
+    items.length,
+    clear,
+  ]);
 
   const processBarcode = useCallback(
     async (code: string) => {
@@ -404,10 +414,16 @@ function POSPage() {
             message: `${product.name} を追加しました`,
           });
         } else {
-          setNotification({ type: "warning", message: `未登録のコード: ${cleaned}` });
+          setNotification({
+            type: "warning",
+            message: `未登録のコード: ${cleaned}`,
+          });
         }
       } catch {
-        setNotification({ type: "error", message: "処理中にエラーが発生しました" });
+        setNotification({
+          type: "error",
+          message: "処理中にエラーが発生しました",
+        });
       } finally {
         setIsProcessing(false);
         setBarcodeInput("");
@@ -523,7 +539,10 @@ function POSPage() {
                   {barcodeInput || "バーコードをスキャン / F1で手動入力"}
                 </div>
               </div>
-              <Button variant="secondary" onClick={() => setShowManualEntry(true)}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowManualEntry(true)}
+              >
                 手動入力 (F1)
               </Button>
             </div>
@@ -562,7 +581,9 @@ function POSPage() {
                       >
                         −
                       </IconButton>
-                      <span className={itemStyles.quantity}>{item.quantity}</span>
+                      <span className={itemStyles.quantity}>
+                        {item.quantity}
+                      </span>
                       <IconButton
                         label="数量を増やす"
                         onClick={() =>
