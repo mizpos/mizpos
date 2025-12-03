@@ -87,7 +87,15 @@ export function Modal({
   );
 
   const handleOverlayClick = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.MouseEvent | React.KeyboardEvent) => {
+      if ("key" in e) {
+        if (e.key === "Enter" || e.key === " ") {
+          if (!disableClose) {
+            onClose();
+          }
+        }
+        return;
+      }
       if (e.target === e.currentTarget && !disableClose) {
         onClose();
       }
@@ -109,15 +117,26 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className={overlayStyles} onClick={handleOverlayClick}>
+    // biome-ignore lint/a11y/noStaticElementInteractions: overlay needs click to close
+    <div
+      className={overlayStyles}
+      onClick={handleOverlayClick}
+      onKeyDown={handleOverlayClick}
+    >
       <div
         ref={contentRef}
         className={contentStyles}
         style={{ maxWidth }}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
       >
         <div className={headerStyles}>
-          <h2 className={titleStyles}>{title}</h2>
+          <h2 id="modal-title" className={titleStyles}>
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}

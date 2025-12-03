@@ -231,17 +231,6 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     setReceivedAmount(String(amount));
   }, []);
 
-  // Enterキーで会計完了
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && paymentMethod === "cash" && change >= 0) {
-        e.preventDefault();
-        handleComplete();
-      }
-    },
-    [paymentMethod, change],
-  );
-
   const handleComplete = useCallback(async () => {
     if (!session) return;
     if (paymentMethod === "cash" && change < 0) return;
@@ -289,6 +278,17 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     clear,
     onComplete,
   ]);
+
+  // Enterキーで会計完了
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && paymentMethod === "cash" && change >= 0) {
+        e.preventDefault();
+        handleComplete();
+      }
+    },
+    [paymentMethod, change, handleComplete],
+  );
 
   const quickAmounts = [1000, 2000, 3000, 5000, 10000];
   const canComplete = paymentMethod !== "cash" || change >= 0;

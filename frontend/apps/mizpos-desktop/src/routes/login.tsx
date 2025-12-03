@@ -119,6 +119,18 @@ const inputDotFilled = css({
   background: "#3b82f6",
 });
 
+// Static arrays for input progress indicators
+const staffIdDots = Array.from({ length: 7 }, (_, i) => ({
+  id: `staff-dot-${i}`,
+  index: i,
+}));
+
+const passwordDots = Array.from({ length: 8 }, (_, i) => ({
+  id: `pass-dot-${i}`,
+  index: i,
+  isRequired: i < 3,
+}));
+
 function LoginPage() {
   const [staffId, setStaffId] = useState("");
   const [password, setPassword] = useState("");
@@ -186,10 +198,10 @@ function LoginPage() {
             />
             {/* 入力進捗インジケーター */}
             <div className={inputIndicator}>
-              {[...Array(7)].map((_, i) => (
+              {staffIdDots.map((dot) => (
                 <div
-                  key={`staff-${i}`}
-                  className={`${inputDot} ${i < staffId.length ? inputDotFilled : ""}`}
+                  key={dot.id}
+                  className={`${inputDot} ${dot.index < staffId.length ? inputDotFilled : ""}`}
                 />
               ))}
             </div>
@@ -212,11 +224,19 @@ function LoginPage() {
             />
             {/* 入力進捗インジケーター（最小3桁を示す） */}
             <div className={inputIndicator}>
-              {[...Array(8)].map((_, i) => (
+              {passwordDots.map((dot) => (
                 <div
-                  key={`pass-${i}`}
-                  className={`${inputDot} ${i < password.length ? inputDotFilled : ""}`}
-                  style={i < 3 ? { borderColor: "#475569", borderWidth: "1px", borderStyle: "solid" } : {}}
+                  key={dot.id}
+                  className={`${inputDot} ${dot.index < password.length ? inputDotFilled : ""}`}
+                  style={
+                    dot.isRequired
+                      ? {
+                          borderColor: "#475569",
+                          borderWidth: "1px",
+                          borderStyle: "solid",
+                        }
+                      : {}
+                  }
                 />
               ))}
             </div>

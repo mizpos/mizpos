@@ -74,14 +74,22 @@ export interface InputProps
   label?: string;
 }
 
+let inputIdCounter = 0;
+
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ size, variant, label, className, ...props }, ref) => {
+  ({ size, variant, label, className, id, ...props }, ref) => {
     const styles = inputStyles.raw({ size, variant });
+    const inputId = id || (label ? `input-${++inputIdCounter}` : undefined);
     return (
       <div>
-        {label && <label className={labelStyles}>{label}</label>}
+        {label && (
+          <label htmlFor={inputId} className={labelStyles}>
+            {label}
+          </label>
+        )}
         <input
           ref={ref}
+          id={inputId}
           className={css(styles, className as Parameters<typeof css>[0])}
           {...props}
         />

@@ -136,6 +136,7 @@ export function ManualProductEntry({ onClose }: ManualProductEntryProps) {
         {/* 価格 */}
         <div className={fieldStyles.containerLast}>
           <label
+            htmlFor="price-input"
             className={css({
               display: "block",
               fontSize: "13px",
@@ -149,6 +150,7 @@ export function ManualProductEntry({ onClose }: ManualProductEntryProps) {
           <div className={priceInputStyles.wrapper}>
             <span className={priceInputStyles.prefix}>¥</span>
             <input
+              id="price-input"
               type="text"
               inputMode="numeric"
               value={price ? Number.parseInt(price, 10).toLocaleString() : ""}
