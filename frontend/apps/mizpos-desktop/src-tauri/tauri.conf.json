@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "mizpos-desktop",
-        "width": 800,
-        "height": 600
+        "title": "mizPOS",
+        "fullscreen": true,
+        "resizable": true,
+        "width": 1024,
+        "height": 768
       }
     ],
     "security": {

@@ -1,247 +1,42 @@
-import type { paths as AccountsPaths } from "@mizpos/api/accounts";
-import type { paths as StockPaths } from "@mizpos/api/stock";
-import createClient from "openapi-fetch";
-import type {
-  AppliedCoupon,
-  LoginRequest,
-  PosSession,
-  Product,
-} from "../types";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
-
-export const accountsClient = createClient<AccountsPaths>({
-  baseUrl: `${API_BASE_URL}/accounts`,
-});
-
-export const stockClient = createClient<StockPaths>({
-  baseUrl: `${API_BASE_URL}/stock`,
-});
-
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number,
-    public detail?: string,
-  ) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
-
-export async function posLogin(request: LoginRequest): Promise<PosSession> {
-  const { data, error, response } = await accountsClient.POST(
-    "/pos/auth/login",
-    {
-      body: {
-        employee_number: request.employee_number,
-        pin: request.pin,
-        terminal_id: request.terminal_id,
-      },
-    },
-  );
-
-  if (error || !response.ok) {
-    const detail = (error as { detail?: string })?.detail || "Login failed";
-    throw new ApiError(detail, response.status, detail);
-  }
-
-  return data as unknown as PosSession;
-}
-
-export async function verifySession(
-  sessionId: string,
-): Promise<{ valid: boolean; session?: PosSession }> {
-  const { data, error, response } = await accountsClient.GET(
-    "/pos/auth/verify",
-    {
-      params: { query: { session_id: sessionId } },
-    },
-  );
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      return { valid: false };
-    }
-    throw new ApiError("Session verification failed", response.status);
-  }
-
-  if (error) {
-    return { valid: false };
-  }
-
-  return data as unknown as { valid: boolean; session?: PosSession };
-}
-
-export async function refreshSession(sessionId: string): Promise<PosSession> {
-  const { data, error, response } = await accountsClient.POST(
-    "/pos/auth/refresh",
-    {
-      body: { session_id: sessionId },
-    },
-  );
-
-  if (error || !response.ok) {
-    const detail =
-      (error as { detail?: string })?.detail || "Session refresh failed";
-    throw new ApiError(detail, response.status, detail);
-  }
-
-  return data as unknown as PosSession;
-}
-
-export async function posLogout(sessionId: string): Promise<void> {
-  await accountsClient
-    .POST("/pos/auth/logout", {
-      body: { session_id: sessionId },
-    })
-    .catch(() => {});
-}
-
-interface ApiProductResponse {
+export interface ApiProduct {
   product_id: string;
   name: string;
-  description?: string;
   price: number;
-  stock_quantity: number;
-  category?: string;
   jan_code?: string;
-  isdn?: string;
-  image_url?: string;
+  isbn?: string;
+  category?: string;
   publisher_id?: string;
-  event_id?: string;
-  created_at: string;
-  updated_at: string;
+  publisher_name?: string;
+  stock_quantity?: number;
+  image_url?: string;
 }
 
-function mapApiProductToProduct(apiProduct: ApiProductResponse): Product {
-  return {
-    product_id: apiProduct.product_id,
-    title: apiProduct.name,
-    description: apiProduct.description,
-    price: apiProduct.price,
-    quantity: apiProduct.stock_quantity,
-    category: apiProduct.category,
-    barcode: apiProduct.jan_code,
-    isdn: apiProduct.isdn,
-    image_url: apiProduct.image_url,
-    publisher_id: apiProduct.publisher_id,
-    event_id: apiProduct.event_id,
-    created_at: apiProduct.created_at,
-    updated_at: apiProduct.updated_at,
-  };
+interface ProductsResponse {
+  products: ApiProduct[];
 }
 
-export async function fetchProducts(eventId?: string): Promise<Product[]> {
-  const { data, error, response } = await stockClient.GET("/products", {
-    params: { query: eventId ? { category: eventId } : {} },
-  });
-
-  if (error || !response.ok) {
-    throw new ApiError("Failed to fetch products", response.status);
+/**
+ * 商品一覧を取得
+ */
+export async function fetchProducts(category?: string): Promise<ApiProduct[]> {
+  const url = new URL(`${API_BASE_URL}/stock/products`);
+  if (category) {
+    url.searchParams.set("category", category);
   }
 
-  const responseData = data as { products?: ApiProductResponse[] };
-  const apiProducts = responseData.products || [];
-  return apiProducts.map(mapApiProductToProduct);
-}
-
-interface OfflineSale {
-  queue_id: string;
-  created_at: number;
-  sale_data: unknown;
-}
-
-interface SyncResult {
-  synced_count: number;
-  failed_items: Array<{ queue_id: string; error: string }>;
-  sync_timestamp: number;
-}
-
-export async function syncOfflineSales(
-  terminalId: string,
-  sales: OfflineSale[],
-): Promise<SyncResult> {
-  const { data, error, response } = await accountsClient.POST(
-    "/pos/sync/sales",
-    {
-      body: {
-        terminal_id: terminalId,
-        sales: sales as unknown as { [key: string]: unknown }[],
-      },
-    },
-  );
-
-  if (error || !response.ok) {
-    throw new ApiError("Failed to sync offline sales", response.status);
-  }
-
-  return data as unknown as SyncResult;
-}
-
-export async function recordSale(
-  sessionId: string,
-  saleData: {
-    items: Array<{
-      product_id: string;
-      quantity: number;
-      unit_price: number;
-    }>;
-    total_amount: number;
-    payment_method: string;
-    event_id?: string;
-    terminal_id?: string;
-  },
-): Promise<{ sale_id: string }> {
-  const { data, error, response } = await accountsClient.POST("/pos/sales", {
-    body: saleData,
+  const response = await fetch(url.toString(), {
+    method: "GET",
     headers: {
-      "X-POS-Session": sessionId,
+      "Content-Type": "application/json",
     },
   });
 
-  if (error || !response.ok) {
-    const detail =
-      (error as { detail?: string })?.detail || "Sale recording failed";
-    throw new ApiError(detail, response.status, detail);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch products: ${response.status}`);
   }
 
-  return data as unknown as { sale_id: string };
-}
-
-export async function checkApiHealth(): Promise<boolean> {
-  try {
-    const { response } = await stockClient.GET("/products", {
-      params: { query: {} },
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-export async function checkNetworkConnectivity(): Promise<boolean> {
-  if (!navigator.onLine) {
-    return false;
-  }
-
-  return checkApiHealth();
-}
-
-export async function applyCoupon(
-  _sessionId: string,
-  _code: string,
-  _subtotal: number,
-  _publisherId?: string,
-): Promise<AppliedCoupon & { new_total: number }> {
-  throw new ApiError("Coupon API not available in OpenAPI spec", 501);
-}
-
-export async function lookupCoupon(
-  _sessionId: string,
-  _code: string,
-): Promise<{ coupon: AppliedCoupon }> {
-  throw new ApiError("Coupon API not available in OpenAPI spec", 501);
+  const data: ProductsResponse = await response.json();
+  return data.products;
 }
