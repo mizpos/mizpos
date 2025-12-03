@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
+import { Badge, Button, Card, Input } from "../components/ui";
 import {
   type BluetoothDevice,
   getBluetoothDevices,
@@ -14,6 +15,138 @@ import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
 import type { PrinterConfig } from "../types";
 
+// ページレイアウトスタイル
+const pageStyles = {
+  container: css({
+    display: "flex",
+    flexDirection: "column",
+    height: "100vh",
+    background: "#0f172a",
+    color: "#f8fafc",
+  }),
+  header: css({
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    padding: "16px 24px",
+    background: "#1e293b",
+    borderBottom: "1px solid #334155",
+    flexShrink: 0,
+  }),
+  title: css({
+    margin: 0,
+    fontSize: "20px",
+    fontWeight: 700,
+  }),
+  content: css({
+    flex: 1,
+    overflowY: "auto",
+    padding: "24px",
+  }),
+  contentInner: css({
+    maxWidth: "600px",
+    margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+  }),
+};
+
+// セクションスタイル
+const sectionStyles = {
+  header: css({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "20px",
+  }),
+  title: css({
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "#f8fafc",
+  }),
+  field: css({
+    marginBottom: "16px",
+  }),
+  fieldLast: css({
+    marginBottom: 0,
+  }),
+};
+
+// プリンター選択スタイル
+const printerStyles = {
+  selected: css({
+    padding: "16px",
+    background: "#14532d",
+    borderRadius: "10px",
+    marginBottom: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  }),
+  selectedLabel: css({
+    fontSize: "12px",
+    color: "#86efac",
+    marginBottom: "4px",
+  }),
+  selectedName: css({
+    fontSize: "15px",
+    fontWeight: 600,
+    color: "#f8fafc",
+  }),
+  deviceList: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  }),
+  deviceButton: css({
+    width: "100%",
+    padding: "14px 16px",
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#94a3b8",
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: "10px",
+    cursor: "pointer",
+    textAlign: "left",
+    transition: "all 0.15s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    _hover: {
+      background: "#334155",
+      borderColor: "#475569",
+    },
+  }),
+  deviceButtonSelected: css({
+    color: "#f8fafc",
+    background: "#3b82f6",
+    borderColor: "#3b82f6",
+    _hover: {
+      background: "#2563eb",
+      borderColor: "#2563eb",
+    },
+  }),
+  emptyState: css({
+    fontSize: "14px",
+    color: "#64748b",
+    padding: "16px",
+    textAlign: "center",
+    background: "#0f172a",
+    borderRadius: "10px",
+    border: "1px dashed #334155",
+  }),
+  sectionLabel: css({
+    fontSize: "13px",
+    color: "#64748b",
+    marginBottom: "12px",
+    marginTop: "20px",
+    fontWeight: 500,
+  }),
+};
+
 function SettingsPage() {
   const { session } = useAuthStore();
   const { settings, updateSettings, updatePrinter } = useSettingsStore();
@@ -25,13 +158,11 @@ function SettingsPage() {
 
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [usbDevices, setUsbDevices] = useState<UsbDevice[]>([]);
-  const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>(
-    [],
-  );
+  const [bluetoothDevices, setBluetoothDevices] = useState<BluetoothDevice[]>([]);
   const [isLoadingDevices, setIsLoadingDevices] = useState(false);
-  const [selectedPrinter, setSelectedPrinter] = useState<
-    PrinterConfig | undefined
-  >(settings.printer);
+  const [selectedPrinter, setSelectedPrinter] = useState<PrinterConfig | undefined>(
+    settings.printer,
+  );
 
   useEffect(() => {
     if (!session) {
@@ -74,15 +205,7 @@ function SettingsPage() {
     });
     await updatePrinter(selectedPrinter);
     navigate({ to: "/pos" });
-  }, [
-    eventName,
-    terminalId,
-    taxRate,
-    selectedPrinter,
-    updateSettings,
-    updatePrinter,
-    navigate,
-  ]);
+  }, [eventName, terminalId, taxRate, selectedPrinter, updateSettings, updatePrinter, navigate]);
 
   const handleBack = useCallback(() => {
     navigate({ to: "/pos" });
@@ -93,8 +216,7 @@ function SettingsPage() {
       type: "usb",
       vendorId: device.vendor_id,
       deviceId: device.device_id,
-      name:
-        device.name || `USB Printer (${device.vendor_id}:${device.device_id})`,
+      name: device.name || `USB Printer (${device.vendor_id}:${device.device_id})`,
       paperWidth: 58,
     });
   }, []);
@@ -108,270 +230,91 @@ function SettingsPage() {
     });
   }, []);
 
+  const isUsbDeviceSelected = (device: UsbDevice) =>
+    selectedPrinter?.vendorId === device.vendor_id &&
+    selectedPrinter?.deviceId === device.device_id;
+
+  const isBluetoothDeviceSelected = (device: BluetoothDevice) =>
+    selectedPrinter?.bluetoothAddress === device.address;
+
   if (!session) {
     return null;
   }
 
+  const isBluetoothMode = platform === "android" || isAndroid();
+
   return (
-    <div
-      className={css({
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        background: "#0f172a",
-        color: "#f8fafc",
-      })}
-    >
+    <div className={pageStyles.container}>
       {/* ヘッダー */}
-      <header
-        className={css({
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          padding: "16px 24px",
-          background: "#1e293b",
-          borderBottom: "1px solid #334155",
-          flexShrink: 0,
-        })}
-      >
-        <button
-          type="button"
-          onClick={handleBack}
-          className={css({
-            padding: "8px 16px",
-            fontSize: "14px",
-            fontWeight: 600,
-            color: "#94a3b8",
-            background: "#334155",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            transition: "all 0.15s",
-            "&:hover": { background: "#475569", color: "#f8fafc" },
-          })}
-        >
+      <header className={pageStyles.header}>
+        <Button variant="ghost" size="sm" onClick={handleBack}>
           ← 戻る
-        </button>
-        <h1 className={css({ margin: 0, fontSize: "20px", fontWeight: 700 })}>
-          設定
-        </h1>
+        </Button>
+        <h1 className={pageStyles.title}>設定</h1>
       </header>
 
       {/* コンテンツ */}
-      <div
-        className={css({
-          flex: 1,
-          overflowY: "auto",
-          padding: "24px",
-        })}
-      >
-        <div
-          className={css({
-            maxWidth: "560px",
-            margin: "0 auto",
-          })}
-        >
+      <div className={pageStyles.content}>
+        <div className={pageStyles.contentInner}>
           {/* 基本設定 */}
-          <section
-            className={css({
-              background: "#1e293b",
-              borderRadius: "12px",
-              padding: "24px",
-              marginBottom: "20px",
-              border: "1px solid #334155",
-            })}
-          >
-            <h2
-              className={css({
-                margin: "0 0 20px 0",
-                fontSize: "16px",
-                fontWeight: 600,
-                color: "#f8fafc",
-              })}
-            >
-              基本設定
-            </h2>
+          <Card padding="lg">
+            <h2 className={sectionStyles.title}>基本設定</h2>
+            <div className={css({ marginTop: "20px" })}>
+              <div className={sectionStyles.field}>
+                <Input
+                  label="イベント名"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  placeholder="例: コミックマーケット C104"
+                />
+              </div>
 
-            <div className={css({ marginBottom: "16px" })}>
-              <label
-                htmlFor="eventName"
-                className={css({
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#94a3b8",
-                  marginBottom: "8px",
-                })}
-              >
-                イベント名
-              </label>
-              <input
-                id="eventName"
-                type="text"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                className={css({
-                  width: "100%",
-                  padding: "12px 16px",
-                  fontSize: "15px",
-                  color: "#f8fafc",
-                  background: "#0f172a",
-                  border: "2px solid #334155",
-                  borderRadius: "8px",
-                  outline: "none",
-                  transition: "border-color 0.15s",
-                  "&:focus": { borderColor: "#3b82f6" },
-                })}
-              />
-            </div>
+              <div className={sectionStyles.field}>
+                <Input
+                  label="端末ID"
+                  value={terminalId}
+                  onChange={(e) => setTerminalId(e.target.value)}
+                  placeholder="例: POS-01"
+                />
+              </div>
 
-            <div className={css({ marginBottom: "16px" })}>
-              <label
-                htmlFor="terminalId"
-                className={css({
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#94a3b8",
-                  marginBottom: "8px",
-                })}
-              >
-                端末ID
-              </label>
-              <input
-                id="terminalId"
-                type="text"
-                value={terminalId}
-                onChange={(e) => setTerminalId(e.target.value)}
-                className={css({
-                  width: "100%",
-                  padding: "12px 16px",
-                  fontSize: "15px",
-                  color: "#f8fafc",
-                  background: "#0f172a",
-                  border: "2px solid #334155",
-                  borderRadius: "8px",
-                  outline: "none",
-                  transition: "border-color 0.15s",
-                  "&:focus": { borderColor: "#3b82f6" },
-                })}
-              />
+              <div className={sectionStyles.fieldLast}>
+                <Input
+                  label="消費税率 (%)"
+                  type="number"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(e.target.value)}
+                  min={0}
+                  max={100}
+                />
+              </div>
             </div>
-
-            <div>
-              <label
-                htmlFor="taxRate"
-                className={css({
-                  display: "block",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#94a3b8",
-                  marginBottom: "8px",
-                })}
-              >
-                消費税率 (%)
-              </label>
-              <input
-                id="taxRate"
-                type="number"
-                value={taxRate}
-                onChange={(e) => setTaxRate(e.target.value)}
-                min={0}
-                max={100}
-                className={css({
-                  width: "100%",
-                  padding: "12px 16px",
-                  fontSize: "15px",
-                  color: "#f8fafc",
-                  background: "#0f172a",
-                  border: "2px solid #334155",
-                  borderRadius: "8px",
-                  outline: "none",
-                  transition: "border-color 0.15s",
-                  "&:focus": { borderColor: "#3b82f6" },
-                })}
-              />
-            </div>
-          </section>
+          </Card>
 
           {/* プリンター設定 */}
-          <section
-            className={css({
-              background: "#1e293b",
-              borderRadius: "12px",
-              padding: "24px",
-              marginBottom: "20px",
-              border: "1px solid #334155",
-            })}
-          >
-            <div
-              className={css({
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "20px",
-              })}
-            >
-              <h2
-                className={css({
-                  margin: 0,
-                  fontSize: "16px",
-                  fontWeight: 600,
-                  color: "#f8fafc",
-                })}
-              >
-                プリンター設定
-              </h2>
-              <button
-                type="button"
+          <Card padding="lg">
+            <div className={sectionStyles.header}>
+              <h2 className={sectionStyles.title}>プリンター設定</h2>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={refreshDevices}
                 disabled={isLoadingDevices}
-                className={css({
-                  padding: "8px 14px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#3b82f6",
-                  background: "transparent",
-                  border: "1px solid #3b82f6",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  "&:hover": { background: "#3b82f6", color: "#f8fafc" },
-                  "&:disabled": { opacity: 0.5, cursor: "wait" },
-                })}
               >
-                {isLoadingDevices ? "検索中..." : "更新"}
-              </button>
+                {isLoadingDevices ? "検索中..." : "デバイス更新"}
+              </Button>
             </div>
 
             {/* 現在の選択 */}
             {selectedPrinter && (
-              <div
-                className={css({
-                  padding: "14px 16px",
-                  background: "#14532d",
-                  borderRadius: "8px",
-                  marginBottom: "16px",
-                })}
-              >
-                <div
-                  className={css({
-                    fontSize: "12px",
-                    color: "#86efac",
-                    marginBottom: "4px",
-                  })}
-                >
-                  選択中
+              <div className={printerStyles.selected}>
+                <div>
+                  <div className={printerStyles.selectedLabel}>選択中のプリンター</div>
+                  <div className={printerStyles.selectedName}>{selectedPrinter.name}</div>
                 </div>
-                <div
-                  className={css({
-                    fontSize: "15px",
-                    fontWeight: 600,
-                    color: "#f8fafc",
-                  })}
-                >
-                  {selectedPrinter.name}
-                </div>
+                <Badge variant="success" size="sm">
+                  {selectedPrinter.type === "usb" ? "USB" : "Bluetooth"}
+                </Badge>
               </div>
             )}
 
@@ -379,163 +322,66 @@ function SettingsPage() {
             <button
               type="button"
               onClick={() => setSelectedPrinter(undefined)}
-              className={css({
-                width: "100%",
-                padding: "12px 16px",
-                marginBottom: "12px",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: !selectedPrinter ? "#f8fafc" : "#94a3b8",
-                background: !selectedPrinter ? "#475569" : "#0f172a",
-                border: "1px solid #334155",
-                borderRadius: "8px",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.15s",
-                "&:hover": {
-                  background: !selectedPrinter ? "#475569" : "#334155",
-                },
-              })}
+              className={`${printerStyles.deviceButton} ${!selectedPrinter ? printerStyles.deviceButtonSelected : ""}`}
             >
-              プリンターなし
+              <span>プリンターなし（レシート印刷しない）</span>
+              {!selectedPrinter && <Badge variant="info" size="sm">選択中</Badge>}
             </button>
 
             {/* デバイス一覧 */}
-            <div
-              className={css({
-                fontSize: "13px",
-                color: "#64748b",
-                marginBottom: "8px",
-                marginTop: "16px",
-              })}
-            >
-              {platform === "android" || isAndroid()
-                ? "Bluetoothプリンター"
-                : "USBプリンター"}
+            <div className={printerStyles.sectionLabel}>
+              {isBluetoothMode ? "Bluetoothプリンター" : "USBプリンター"}
             </div>
 
-            {platform === "android" || isAndroid() ? (
-              bluetoothDevices.length === 0 ? (
-                <div
-                  className={css({
-                    fontSize: "14px",
-                    color: "#475569",
-                    padding: "12px 0",
-                  })}
-                >
-                  ペアリング済みのデバイスがありません
+            <div className={printerStyles.deviceList}>
+              {isBluetoothMode ? (
+                bluetoothDevices.length === 0 ? (
+                  <div className={printerStyles.emptyState}>
+                    ペアリング済みのBluetoothデバイスがありません
+                  </div>
+                ) : (
+                  bluetoothDevices.map((device) => (
+                    <button
+                      key={device.address}
+                      type="button"
+                      onClick={() => selectBluetoothPrinter(device)}
+                      className={`${printerStyles.deviceButton} ${isBluetoothDeviceSelected(device) ? printerStyles.deviceButtonSelected : ""}`}
+                    >
+                      <span>{device.name || device.address}</span>
+                      {isBluetoothDeviceSelected(device) && (
+                        <Badge variant="info" size="sm">選択中</Badge>
+                      )}
+                    </button>
+                  ))
+                )
+              ) : usbDevices.length === 0 ? (
+                <div className={printerStyles.emptyState}>
+                  接続されているUSBプリンターがありません
                 </div>
               ) : (
-                bluetoothDevices.map((device) => (
+                usbDevices.map((device) => (
                   <button
-                    key={device.address}
+                    key={`${device.vendor_id}-${device.device_id}`}
                     type="button"
-                    onClick={() => selectBluetoothPrinter(device)}
-                    className={css({
-                      width: "100%",
-                      padding: "12px 16px",
-                      marginBottom: "8px",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      color:
-                        selectedPrinter?.bluetoothAddress === device.address
-                          ? "#f8fafc"
-                          : "#94a3b8",
-                      background:
-                        selectedPrinter?.bluetoothAddress === device.address
-                          ? "#3b82f6"
-                          : "#0f172a",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "all 0.15s",
-                      "&:hover": {
-                        background:
-                          selectedPrinter?.bluetoothAddress === device.address
-                            ? "#2563eb"
-                            : "#334155",
-                      },
-                    })}
+                    onClick={() => selectUsbPrinter(device)}
+                    className={`${printerStyles.deviceButton} ${isUsbDeviceSelected(device) ? printerStyles.deviceButtonSelected : ""}`}
                   >
-                    {device.name || device.address}
+                    <span>
+                      {device.name || `USB Device (${device.vendor_id}:${device.device_id})`}
+                    </span>
+                    {isUsbDeviceSelected(device) && (
+                      <Badge variant="info" size="sm">選択中</Badge>
+                    )}
                   </button>
                 ))
-              )
-            ) : usbDevices.length === 0 ? (
-              <div
-                className={css({
-                  fontSize: "14px",
-                  color: "#475569",
-                  padding: "12px 0",
-                })}
-              >
-                接続されているUSBプリンターがありません
-              </div>
-            ) : (
-              usbDevices.map((device) => (
-                <button
-                  key={`${device.vendor_id}-${device.device_id}`}
-                  type="button"
-                  onClick={() => selectUsbPrinter(device)}
-                  className={css({
-                    width: "100%",
-                    padding: "12px 16px",
-                    marginBottom: "8px",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    color:
-                      selectedPrinter?.vendorId === device.vendor_id &&
-                      selectedPrinter?.deviceId === device.device_id
-                        ? "#f8fafc"
-                        : "#94a3b8",
-                    background:
-                      selectedPrinter?.vendorId === device.vendor_id &&
-                      selectedPrinter?.deviceId === device.device_id
-                        ? "#3b82f6"
-                        : "#0f172a",
-                    border: "1px solid #334155",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.15s",
-                    "&:hover": {
-                      background:
-                        selectedPrinter?.vendorId === device.vendor_id &&
-                        selectedPrinter?.deviceId === device.device_id
-                          ? "#2563eb"
-                          : "#334155",
-                    },
-                  })}
-                >
-                  {device.name ||
-                    `USB Device (${device.vendor_id}:${device.device_id})`}
-                </button>
-              ))
-            )}
-          </section>
+              )}
+            </div>
+          </Card>
 
           {/* 保存ボタン */}
-          <button
-            type="button"
-            onClick={handleSave}
-            className={css({
-              width: "100%",
-              padding: "18px",
-              fontSize: "17px",
-              fontWeight: 700,
-              color: "#0f172a",
-              background: "#22c55e",
-              border: "none",
-              borderRadius: "10px",
-              cursor: "pointer",
-              transition: "all 0.15s",
-              "&:hover": { background: "#16a34a" },
-              "&:active": { transform: "scale(0.98)" },
-            })}
-          >
+          <Button variant="primary" size="xl" fullWidth onClick={handleSave}>
             設定を保存
-          </button>
+          </Button>
         </div>
       </div>
     </div>
