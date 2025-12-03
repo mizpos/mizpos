@@ -1,202 +1,166 @@
-/**
- * 認証状態管理ストア
- */
-
+import { Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import { posLogin, posLogout, refreshSession, verifySession } from "../lib/api";
-import {
-  clearSession,
-  getStoredSession,
-  getTerminalId,
-  saveSession,
-} from "../lib/db";
-import type { PosSession } from "../types";
+import type { Session } from "../types";
+import { useSettingsStore } from "./settings";
+import { syncProducts } from "../lib/db";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+interface PosLoginResponse {
+  session_id: string;
+  employee_number: string;
+  display_name: string;
+  event_id?: string;
+  publisher_id?: string;
+  expires_at: number;
+  offline_verification_hash: string;
+}
 
 interface AuthState {
-  // 状態
-  session: PosSession | null;
+  session: Session | null;
   isLoading: boolean;
   error: string | null;
-  terminalId: string | null;
-
-  // アクション
   initialize: () => Promise<void>;
-  login: (employeeNumber: string, pin: string) => Promise<boolean>;
+  login: (staffId: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  refreshSessionToken: () => Promise<boolean>;
-  verifyCurrentSession: () => Promise<boolean>;
-  clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      // 初期状態
-      session: null,
-      isLoading: false,
-      error: null,
-      terminalId: null,
+let store: Store | null = null;
 
-      // 初期化（アプリ起動時に呼び出し）
-      initialize: async () => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // 端末IDを取得
-          const terminalId = await getTerminalId();
-          set({ terminalId });
-
-          // 保存されたセッションを確認
-          const storedSession = await getStoredSession();
-
-          if (storedSession) {
-            // オンラインならサーバーで検証
-            if (navigator.onLine) {
-              try {
-                const result = await verifySession(storedSession.session_id);
-                if (result.valid && result.session) {
-                  set({ session: result.session, isLoading: false });
-                  return;
-                }
-              } catch {
-                // オフラインフォールバック: ローカルセッションを使用
-                set({ session: storedSession, isLoading: false });
-                return;
-              }
-            } else {
-              // オフラインモード: ローカルセッションを使用
-              set({ session: storedSession, isLoading: false });
-              return;
-            }
-          }
-
-          set({ session: null, isLoading: false });
-        } catch (error) {
-          set({
-            isLoading: false,
-            error:
-              error instanceof Error ? error.message : "初期化に失敗しました",
-          });
-        }
-      },
-
-      // ログイン
-      login: async (employeeNumber: string, pin: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          const terminalId = get().terminalId || (await getTerminalId());
-
-          const session = await posLogin({
-            employee_number: employeeNumber,
-            pin,
-            terminal_id: terminalId,
-          });
-
-          // セッションを保存
-          await saveSession(session);
-
-          set({
-            session,
-            terminalId,
-            isLoading: false,
-            error: null,
-          });
-
-          return true;
-        } catch (error) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "ログインに失敗しました。従業員番号またはPINを確認してください。";
-
-          set({
-            isLoading: false,
-            error: message,
-          });
-
-          return false;
-        }
-      },
-
-      // ログアウト
-      logout: async () => {
-        const { session } = get();
-
-        try {
-          if (session) {
-            await posLogout(session.session_id);
-          }
-        } catch {
-          // エラーは無視
-        } finally {
-          await clearSession();
-          set({ session: null, error: null });
-        }
-      },
-
-      // セッション延長
-      refreshSessionToken: async () => {
-        const { session } = get();
-
-        if (!session) return false;
-
-        try {
-          const newSession = await refreshSession(session.session_id);
-          await saveSession(newSession);
-          set({ session: newSession });
-          return true;
-        } catch {
-          return false;
-        }
-      },
-
-      // セッション検証
-      verifyCurrentSession: async () => {
-        const { session } = get();
-
-        if (!session) return false;
-
-        // オフラインの場合はローカル検証のみ
-        if (!navigator.onLine) {
-          const now = Date.now() / 1000;
-          return session.expires_at > now;
-        }
-
-        try {
-          const result = await verifySession(session.session_id);
-          if (!result.valid) {
-            await clearSession();
-            set({ session: null });
-            return false;
-          }
-          return true;
-        } catch {
-          // ネットワークエラーはオフライン検証にフォールバック
-          const now = Date.now() / 1000;
-          return session.expires_at > now;
-        }
-      },
-
-      // エラークリア
-      clearError: () => {
-        set({ error: null });
-      },
-    }),
-    {
-      name: "mizpos-auth",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        terminalId: state.terminalId,
-      }),
-    },
-  ),
-);
-
-// セッションの有効期限が近いかチェック（30分前）
-export function isSessionExpiringSoon(session: PosSession | null): boolean {
-  if (!session) return false;
-  const thirtyMinutesFromNow = Date.now() / 1000 + 30 * 60;
-  return session.expires_at < thirtyMinutesFromNow;
+async function getStore(): Promise<Store> {
+  if (!store) {
+    store = await Store.load("auth.json");
+  }
+  return store;
 }
+
+export const useAuthStore = create<AuthState>((set) => ({
+  session: null,
+  isLoading: true,
+  error: null,
+
+  initialize: async () => {
+    try {
+      const s = await getStore();
+      const savedSession = await s.get<Session>("session");
+      if (savedSession) {
+        // セッションの有効期限をチェック
+        const now = Math.floor(Date.now() / 1000);
+        if (savedSession.expiresAt > now) {
+          set({ session: { ...savedSession, loginAt: new Date(savedSession.loginAt) }, isLoading: false });
+        } else {
+          // 期限切れの場合はセッションを削除
+          await s.delete("session");
+          await s.save();
+          set({ isLoading: false });
+        }
+      } else {
+        set({ isLoading: false });
+      }
+    } catch (error) {
+      console.error("Failed to initialize auth:", error);
+      set({ isLoading: false, error: "認証の初期化に失敗しました" });
+    }
+  },
+
+  login: async (staffId: string, password: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // 7桁のスタッフID（数字のみ）
+      if (!/^\d{7}$/.test(staffId)) {
+        set({ isLoading: false, error: "スタッフIDは7桁の数字で入力してください" });
+        return false;
+      }
+
+      // 3〜8桁のパスワード（数字のみ）
+      if (!/^\d{3,8}$/.test(password)) {
+        set({ isLoading: false, error: "パスワードは3〜8桁の数字で入力してください" });
+        return false;
+      }
+
+      // 端末IDを取得
+      const terminalId = useSettingsStore.getState().settings.terminalId;
+
+      // APIで認証
+      const response = await fetch(`${API_BASE_URL}/accounts/pos/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          employee_number: staffId,
+          pin: password,
+          terminal_id: terminalId,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          set({ isLoading: false, error: "スタッフIDまたはパスワードが正しくありません" });
+        } else {
+          set({ isLoading: false, error: "サーバーエラーが発生しました" });
+        }
+        return false;
+      }
+
+      const data: PosLoginResponse = await response.json();
+
+      const session: Session = {
+        sessionId: data.session_id,
+        staffId: data.employee_number,
+        staffName: data.display_name,
+        eventId: data.event_id,
+        publisherId: data.publisher_id,
+        expiresAt: data.expires_at,
+        offlineVerificationHash: data.offline_verification_hash,
+        loginAt: new Date(),
+      };
+
+      const s = await getStore();
+      await s.set("session", session);
+      await s.save();
+
+      set({ session, isLoading: false });
+
+      // バックグラウンドで商品データを同期
+      syncProducts().catch((err) => {
+        console.error("Failed to sync products:", err);
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Login failed:", error);
+      set({ isLoading: false, error: "ネットワークエラーが発生しました" });
+      return false;
+    }
+  },
+
+  logout: async () => {
+    try {
+      const s = await getStore();
+      const session = await s.get<Session>("session");
+
+      // サーバー側のセッションも無効化（ベストエフォート）
+      if (session?.sessionId) {
+        try {
+          await fetch(`${API_BASE_URL}/accounts/pos/auth/logout`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-POS-Session-ID": session.sessionId,
+            },
+          });
+        } catch {
+          // ログアウトAPI失敗は無視（オフライン時など）
+        }
+      }
+
+      await s.delete("session");
+      await s.save();
+      set({ session: null });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  },
+}));

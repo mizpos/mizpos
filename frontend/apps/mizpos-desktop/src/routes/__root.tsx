@@ -1,33 +1,22 @@
+import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
-import { LoginScreen } from "./components/LoginScreen";
-import { POSScreen } from "./components/POSScreen";
-import { useAuthStore } from "./stores/auth";
-import { useNetworkStore } from "./stores/network";
+import { useAuthStore } from "../stores/auth";
+import { useSettingsStore } from "../stores/settings";
 
-function App() {
+function RootLayout() {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { session, initialize } = useAuthStore();
-  const { startMonitoring, stopMonitoring } = useNetworkStore();
+  const { initialize: initAuth } = useAuthStore();
+  const { initialize: initSettings } = useSettingsStore();
 
-  // アプリ初期化
   useEffect(() => {
     const init = async () => {
-      await initialize();
+      await Promise.all([initAuth(), initSettings()]);
       setIsInitialized(true);
     };
     init();
-  }, [initialize]);
+  }, [initAuth, initSettings]);
 
-  // ネットワーク監視
-  useEffect(() => {
-    startMonitoring();
-    return () => {
-      stopMonitoring();
-    };
-  }, [startMonitoring, stopMonitoring]);
-
-  // 初期化中
   if (!isInitialized) {
     return (
       <div
@@ -57,13 +46,9 @@ function App() {
     );
   }
 
-  // 未ログイン
-  if (!session) {
-    return <LoginScreen />;
-  }
-
-  // メイン画面
-  return <POSScreen />;
+  return <Outlet />;
 }
 
-export default App;
+export const Route = createRootRoute({
+  component: RootLayout,
+});

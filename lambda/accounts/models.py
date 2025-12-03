@@ -148,19 +148,14 @@ class VerifyTurnstileRequest(BaseModel):
 
 
 class CreatePosEmployeeRequest(BaseModel):
-    """POS従業員作成リクエスト
-
-    従業員番号は7桁: イベントコード(4桁) + スタッフ番号(3桁)
-    例: 1234567 = イベント1234のスタッフ567
-    通期スタッフは0000xxx（例: 0000001）
-    """
+    """POS従業員作成リクエスト"""
 
     employee_number: str = Field(
         ...,
         min_length=7,
         max_length=7,
         pattern="^[0-9]{7}$",
-        description="7桁の従業員番号（イベントコード4桁+スタッフ番号3桁）",
+        description="7桁の従業員番号",
     )
     pin: str = Field(
         ...,
@@ -218,7 +213,7 @@ class PosLoginRequest(BaseModel):
         min_length=7,
         max_length=7,
         pattern="^[0-9]{7}$",
-        description="7桁の従業員番号（イベントコード4桁+スタッフ番号3桁）",
+        description="7桁の従業員番号",
     )
     pin: str = Field(
         ...,
