@@ -71,6 +71,10 @@ resource "aws_lambda_function" "stock" {
       ENVIRONMENT         = var.environment
       STOCK_TABLE         = aws_dynamodb_table.stock.name
       STOCK_HISTORY_TABLE = aws_dynamodb_table.stock_history.name
+      EVENTS_TABLE        = aws_dynamodb_table.events.name
+      PUBLISHERS_TABLE    = aws_dynamodb_table.publishers.name
+      ROLES_TABLE         = aws_dynamodb_table.roles.name
+      USERS_TABLE         = aws_dynamodb_table.users.name
       USER_POOL_ID        = aws_cognito_user_pool.main.id
       COGNITO_CLIENT_ID   = aws_cognito_user_pool_client.main.id
       CDN_BUCKET_NAME     = aws_s3_bucket.cdn_assets.id
