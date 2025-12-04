@@ -34,7 +34,7 @@ runs:
         github_token: ${{ inputs.GITHUB_TOKEN }}
         working_directory: ${{ inputs.WORKING_DIR }}
         reporter: github-pr-review
-        fail_on_error: "false"
+        fail_level: "none"
         filter_mode: "nofilter"
         flags: "--call-module-type=all"
 
