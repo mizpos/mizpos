@@ -3,11 +3,27 @@ import type { Product, Transaction } from "../types";
 import { type ApiProduct, fetchProducts } from "./api";
 
 /**
+ * 販売サマリー（レポート用）
+ * コードと版元をKeyとして販売数量・金額を集計
+ */
+export interface SalesSummary {
+  id: string; // コード（JAN/ISBN）+ "_" + circleName のハッシュ
+  jan: string;
+  isbn?: string;
+  productName: string;
+  circleName: string; // 版元（出版社/サークル名）
+  totalQuantity: number;
+  totalAmount: number;
+  lastSoldAt: Date;
+}
+
+/**
  * ローカルキャッシュ用IndexedDB
  */
 class MizPOSDatabase extends Dexie {
   products!: Table<Product>;
   transactions!: Table<Transaction>;
+  salesSummary!: Table<SalesSummary>;
 
   constructor() {
     super("mizpos");
@@ -19,6 +35,17 @@ class MizPOSDatabase extends Dexie {
     this.version(2).stores({
       products: "id, jan, jan2, isbn, name",
       transactions: "id, staffId, createdAt",
+    });
+    // バージョン3: isBookインデックスを追加
+    this.version(3).stores({
+      products: "id, jan, jan2, isbn, isBook, name",
+      transactions: "id, staffId, createdAt",
+    });
+    // バージョン4: deletedAtと販売サマリーテーブルを追加
+    this.version(4).stores({
+      products: "id, jan, jan2, isbn, isBook, name, deletedAt",
+      transactions: "id, staffId, createdAt",
+      salesSummary: "id, jan, isbn, circleName, [jan+circleName], [isbn+circleName]",
     });
   }
 }
@@ -39,6 +66,7 @@ export async function syncProducts(): Promise<number> {
     jan2: p.jan_barcode_2,
     isbn: p.isbn,
     isdn: p.isdn,
+    isBook: p.is_book ?? true, // デフォルトは書籍（後方互換性）
     name: p.name,
     circleName: p.publisher_name || p.publisher,
     price: p.price,

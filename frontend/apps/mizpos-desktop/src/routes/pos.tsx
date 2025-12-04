@@ -128,6 +128,11 @@ const productSectionStyles = {
   scanAreaActive: css({
     background: "#1e40af",
   }),
+  // 書籍2段目待機状態（オレンジ色）
+  scanAreaBookSecond: css({
+    background: "#c2410c",
+    borderBottom: "3px solid #ea580c",
+  }),
   scanContent: css({
     display: "flex",
     alignItems: "center",
@@ -334,6 +339,8 @@ function POSPage() {
     type: "success" | "error" | "warning";
     message: string;
   } | null>(null);
+  // 書籍2段階スキャン: 1段目スキャン後の商品を一時保存
+  const [pendingBookProduct, setPendingBookProduct] = useState<Product | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -437,6 +444,26 @@ function POSPage() {
 
       setIsProcessing(true);
       try {
+        // 書籍2段目待機中の場合
+        if (pendingBookProduct) {
+          // 2段目バーコードを照合
+          if (pendingBookProduct.jan2 === cleaned) {
+            addItem(pendingBookProduct);
+            setNotification({
+              type: "success",
+              message: `${pendingBookProduct.name} を追加しました`,
+            });
+            setPendingBookProduct(null);
+          } else {
+            setNotification({
+              type: "error",
+              message: "2段目バーコードが一致しません。やり直してください。",
+            });
+            setPendingBookProduct(null);
+          }
+          return;
+        }
+
         const codeType = classifyCode(cleaned);
         let product: Product | undefined;
 
@@ -451,11 +478,21 @@ function POSPage() {
         }
 
         if (product) {
-          addItem(product);
-          setNotification({
-            type: "success",
-            message: `${product.name} を追加しました`,
-          });
+          // 書籍かつ2段目バーコードがある場合は2段階スキャン
+          if (product.isBook && product.jan2) {
+            setPendingBookProduct(product);
+            setNotification({
+              type: "warning",
+              message: `${product.name} - 2段目バーコードをスキャンしてください`,
+            });
+          } else {
+            // 非書籍または2段目バーコードがない場合は即追加
+            addItem(product);
+            setNotification({
+              type: "success",
+              message: `${product.name} を追加しました`,
+            });
+          }
         } else {
           setNotification({
             type: "warning",
@@ -472,8 +509,17 @@ function POSPage() {
         setBarcodeInput("");
       }
     },
-    [addItem],
+    [addItem, pendingBookProduct],
   );
+
+  // 書籍2段目待機キャンセル
+  const cancelPendingBook = useCallback(() => {
+    setPendingBookProduct(null);
+    setNotification({
+      type: "warning",
+      message: "書籍スキャンをキャンセルしました",
+    });
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -585,7 +631,13 @@ function POSPage() {
         <section className={productSectionStyles.container}>
           {/* スキャン状態表示 */}
           <div
-            className={`${productSectionStyles.scanArea} ${isProcessing ? productSectionStyles.scanAreaActive : ""}`}
+            className={`${productSectionStyles.scanArea} ${
+              pendingBookProduct
+                ? productSectionStyles.scanAreaBookSecond
+                : isProcessing
+                  ? productSectionStyles.scanAreaActive
+                  : ""
+            }`}
           >
             <div className={productSectionStyles.scanContent}>
               <div>
@@ -601,27 +653,53 @@ function POSPage() {
                       })}
                     />
                   )}
-                  {isProcessing ? "読み取り中..." : "スキャン待機中"}
+                  {pendingBookProduct && (
+                    <span
+                      className={css({
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "#fb923c",
+                        animation: "pulse 0.5s ease-in-out infinite",
+                      })}
+                    />
+                  )}
+                  {pendingBookProduct
+                    ? `書籍: ${pendingBookProduct.name} - 2段目待機中`
+                    : isProcessing
+                      ? "読み取り中..."
+                      : "スキャン待機中"}
                 </div>
                 <div
                   className={`${productSectionStyles.scanInput} ${!barcodeInput ? productSectionStyles.scanPlaceholder : ""}`}
                 >
-                  {barcodeInput || "バーコードをスキャン / F1で手動入力"}
+                  {barcodeInput ||
+                    (pendingBookProduct
+                      ? "2段目バーコードをスキャンしてください"
+                      : "バーコードをスキャン / F1で手動入力")}
                 </div>
               </div>
               <div className={css({ display: "flex", gap: "8px" })}>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowManualEntry(true)}
-                >
-                  手動入力 (F1)
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowProductSelect(true)}
-                >
-                  商品選択 (F4)
-                </Button>
+                {pendingBookProduct ? (
+                  <Button variant="outlineDanger" onClick={cancelPendingBook}>
+                    キャンセル
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowManualEntry(true)}
+                    >
+                      手動入力 (F1)
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowProductSelect(true)}
+                    >
+                      商品選択 (F4)
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>

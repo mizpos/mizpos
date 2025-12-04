@@ -432,6 +432,12 @@ export function CheckoutModal({ onClose, onComplete, isTrainingMode = false }: C
         try {
           const saleItems = items.map((item) => ({
             product_id: item.product.id,
+            product_name: item.product.name,
+            circle_name: item.product.circleName || null,
+            jan: item.product.jan,
+            jan2: item.product.jan2 || null,
+            isbn: item.product.isbn || null,
+            isdn: item.product.isdn || null,
             quantity: item.quantity,
             unit_price: item.product.price,
           }));
