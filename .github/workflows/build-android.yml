@@ -106,28 +106,20 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
 
-      - name: Set environment variables
-        working-directory: frontend/apps/mizpos-desktop
-        run: |
-          ENV="${{ needs.setup-env.outputs.environment }}"
-          if [[ "$ENV" == "prod" ]]; then
-            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api.mizpos.com" >> $GITHUB_ENV
-            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin.mizpos.com" >> $GITHUB_ENV
-          else
-            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api-dev.mizpos.com" >> $GITHUB_ENV
-            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin-dev.mizpos.com" >> $GITHUB_ENV
-          fi
-          echo "VITE_MIZU_POS_FRONTEND_DOMAIN=${{ needs.setup-env.outputs.cdn-domain }}" >> $GITHUB_ENV
-
       - name: Generate API Types
         working-directory: frontend
         run: pnpm generate-api-types
 
       - name: Build Android APK/AAB
         working-directory: frontend/apps/mizpos-desktop
+        env:
+          VITE_MODE: ${{ needs.setup-env.outputs.environment == 'prod' && 'production' || 'development' }}
         run: |
           npm run tauri android init
-          npm run tauri android build -- --apk true --aab true
+          # Build frontend with appropriate mode (.env.development or .env.production)
+          pnpm vite build --mode $VITE_MODE
+          # Build Android app (skip beforeBuildCommand since we already built frontend)
+          npm run tauri android build -- --apk true --aab true --config '{"build":{"beforeBuildCommand":""}}'
 
       - name: Setup Android keystore
         run: |
