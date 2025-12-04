@@ -140,7 +140,12 @@ function LoginPage() {
 
   useEffect(() => {
     if (session) {
-      navigate({ to: "/pos" });
+      // イベント紐づけ済みならPOS画面へ、なければイベント選択画面へ
+      if (session.eventId) {
+        navigate({ to: "/pos" });
+      } else {
+        navigate({ to: "/select-event" });
+      }
     }
   }, [session, navigate]);
 
@@ -153,10 +158,11 @@ function LoginPage() {
       e.preventDefault();
       const success = await login(staffId, password);
       if (success) {
-        navigate({ to: "/pos" });
+        // ログイン成功後はuseEffectでsessionの変更を検知してナビゲート
+        // （eventIdの有無で遷移先が変わるため）
       }
     },
-    [staffId, password, login, navigate],
+    [staffId, password, login],
   );
 
   const handleStaffIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {

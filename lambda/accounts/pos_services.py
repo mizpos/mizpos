@@ -467,6 +467,32 @@ def refresh_pos_session(session_id: str) -> dict | None:
     return session
 
 
+def set_session_event(session_id: str, event_id: str) -> dict | None:
+    """POSセッションにイベントIDを設定
+
+    イベント紐づけがない従業員がログイン後にイベントを選択する場合に使用
+
+    Args:
+        session_id: セッションID
+        event_id: 設定するイベントID
+
+    Returns:
+        更新されたセッション情報、無効なセッションの場合はNone
+    """
+    session = verify_pos_session(session_id)
+    if not session:
+        return None
+
+    pos_sessions_table.update_item(
+        Key={"session_id": session_id},
+        UpdateExpression="SET event_id = :eid",
+        ExpressionAttributeValues={":eid": event_id},
+    )
+
+    session["event_id"] = event_id
+    return session
+
+
 def invalidate_session(session_id: str) -> bool:
     """セッションを無効化（ログアウト）
 

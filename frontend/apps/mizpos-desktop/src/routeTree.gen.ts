@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SelectEventRouteImport } from './routes/select-event'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelectEventRoute = SelectEventRouteImport.update({
+  id: '/select-event',
+  path: '/select-event',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosRoute = PosRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
+  '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/pos' | '/settings'
+  fullPaths: '/' | '/login' | '/pos' | '/select-event' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/pos' | '/settings'
-  id: '__root__' | '/' | '/login' | '/pos' | '/settings'
+  to: '/' | '/login' | '/pos' | '/select-event' | '/settings'
+  id: '__root__' | '/' | '/login' | '/pos' | '/select-event' | '/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   PosRoute: typeof PosRoute
+  SelectEventRoute: typeof SelectEventRoute
   SettingsRoute: typeof SettingsRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/select-event': {
+      id: '/select-event'
+      path: '/select-event'
+      fullPath: '/select-event'
+      preLoaderRoute: typeof SelectEventRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pos': {
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   PosRoute: PosRoute,
+  SelectEventRoute: SelectEventRoute,
   SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
