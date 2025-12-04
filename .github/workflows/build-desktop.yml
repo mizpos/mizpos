@@ -109,10 +109,12 @@ jobs:
             libssl-dev \
             libgtk-3-dev \
             libayatana-appindicator3-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            libsoup-3.0-dev
 
       - name: Set environment variables
         working-directory: frontend/apps/mizpos-desktop
+        shell: bash
         run: |
           ENV="${{ needs.setup-env.outputs.environment }}"
           if [[ "$ENV" == "prod" ]]; then
