@@ -152,7 +152,7 @@ function SelectEventPage() {
     const fetchEvents = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/stock/events`, {
+        const response = await fetch(`${API_BASE_URL}/accounts/pos/events`, {
           headers: {
             "Content-Type": "application/json",
             "X-POS-Session": session?.sessionId || "",
@@ -172,11 +172,8 @@ function SelectEventPage() {
         }
 
         const data = await response.json();
-        // アクティブなイベントのみフィルタリング
-        const activeEvents = (data.events || []).filter(
-          (e: Event) => e.is_active,
-        );
-        setEvents(activeEvents);
+        // バックエンドで既にアクティブなイベントのみ返される
+        setEvents(data.events || []);
       } catch (err) {
         console.error("イベント取得エラー:", err);
         setError(err instanceof Error ? err.message : "エラーが発生しました");
