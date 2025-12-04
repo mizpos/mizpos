@@ -127,7 +127,7 @@ jobs:
         working-directory: frontend/apps/mizpos-desktop
         run: |
           npm run tauri android init
-          npm run tauri android build -- --apk --aab
+          npm run tauri android build -- --apk true --aab true
 
       - name: Setup Android keystore
         run: |
