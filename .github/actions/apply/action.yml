@@ -17,12 +17,6 @@ inputs:
   WORKFLOW_NAME:
     description: "ワークフローの名前"
     required: true
-  CLOUDFLARE_API_TOKEN:
-    description: "Cloudflare API Token"
-    required: true
-  CLOUDFLARE_ACCOUNT_ID:
-    description: "Cloudflare Account ID"
-    required: true
 
 runs:
   using: "composite"
@@ -30,11 +24,11 @@ runs:
     - name: Terraform Init
       shell: bash
       run: terraform init
-      working-directory: ${{ inputs.WORKING_DIR }}}
+      working-directory: ${{ inputs.WORKING_DIR }}
 
     - name: tflint
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-      uses: reviewdog/action-tflint@master
+      uses: reviewdog/action-tflint@v1
       continue-on-error: true
       with:
         github_token: ${{ inputs.GITHUB_TOKEN }}
@@ -56,7 +50,7 @@ runs:
       if: github.event_name != 'pull_request'
       shell: bash
       run: terraform plan -refresh=true -out=tfplan -no-color -lock=false -parallelism=50
-      working-directory: ${{ inputs.WORKING_DIR }}}
+      working-directory: ${{ inputs.WORKING_DIR }}
 
     - name: Convert terraform plan to json
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
@@ -82,4 +76,4 @@ runs:
       if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: terraform apply -refresh=true -auto-approve -no-color
-      working-directory: ${{ inputs.WORKING_DIR }}}
+      working-directory: ${{ inputs.WORKING_DIR }}
