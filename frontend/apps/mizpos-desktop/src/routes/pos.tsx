@@ -88,6 +88,29 @@ const notificationStyles = {
   warning: css({ background: "#92400e" }),
 };
 
+// トレーニングモードバナーのスタイル
+const trainingBannerStyles = {
+  banner: css({
+    padding: "12px 20px",
+    fontSize: "16px",
+    fontWeight: 700,
+    textAlign: "center",
+    background: "linear-gradient(90deg, #dc2626 0%, #ea580c 50%, #dc2626 100%)",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    animation: "pulse 2s ease-in-out infinite",
+    borderBottom: "3px solid #991b1b",
+  }),
+  icon: css({
+    fontSize: "20px",
+  }),
+};
+
 // 商品リストセクションのスタイル
 const productSectionStyles = {
   container: css({
@@ -297,7 +320,8 @@ function POSPage() {
     getTotalQuantity,
     clear,
   } = useCartStore();
-  const { settings } = useSettingsStore();
+  const { settings, toggleTrainingMode } = useSettingsStore();
+  const isTrainingMode = settings.isTrainingMode ?? false;
 
   const [barcodeInput, setBarcodeInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -515,6 +539,13 @@ function POSPage() {
         <div className={layoutStyles.headerRight}>
           <span className={staffIdStyle}>ID: {session.staffId}</span>
           <Button
+            variant={isTrainingMode ? "danger" : "outline"}
+            size="sm"
+            onClick={toggleTrainingMode}
+          >
+            {isTrainingMode ? "トレーニング中" : "トレーニング"}
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={() => navigate({ to: "/settings" })}
@@ -526,6 +557,15 @@ function POSPage() {
           </Button>
         </div>
       </header>
+
+      {/* トレーニングモードバナー */}
+      {isTrainingMode && (
+        <div className={trainingBannerStyles.banner}>
+          <span className={trainingBannerStyles.icon}>⚠️</span>
+          トレーニングモード - 取引は記録されません
+          <span className={trainingBannerStyles.icon}>⚠️</span>
+        </div>
+      )}
 
       {/* 通知バー */}
       {notification && (
@@ -705,6 +745,7 @@ function POSPage() {
         <CheckoutModal
           onClose={() => setShowCheckout(false)}
           onComplete={handleCheckoutComplete}
+          isTrainingMode={isTrainingMode}
         />
       )}
       {completedTransaction && (

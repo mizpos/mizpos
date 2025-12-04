@@ -8,6 +8,7 @@ interface SettingsState {
   initialize: () => Promise<void>;
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
   updatePrinter: (printer: PrinterConfig | undefined) => Promise<void>;
+  toggleTrainingMode: () => Promise<void>;
 }
 
 const defaultSettings: AppSettings = {
@@ -15,6 +16,7 @@ const defaultSettings: AppSettings = {
   terminalId: "001",
   taxRate: 10,
   printer: undefined,
+  isTrainingMode: false,
 };
 
 let store: Store | null = null;
@@ -59,5 +61,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   updatePrinter: async (printer: PrinterConfig | undefined) => {
     await get().updateSettings({ printer });
+  },
+
+  toggleTrainingMode: async () => {
+    const currentMode = get().settings.isTrainingMode ?? false;
+    await get().updateSettings({ isTrainingMode: !currentMode });
   },
 }));

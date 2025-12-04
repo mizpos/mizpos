@@ -108,6 +108,7 @@ const couponStyles = {
 interface CheckoutModalProps {
   onClose: () => void;
   onComplete: (transaction: Transaction) => void;
+  isTrainingMode?: boolean;
 }
 
 // 合計表示スタイル
@@ -292,7 +293,7 @@ const cashlessDisplayStyles = {
   }),
 };
 
-export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
+export function CheckoutModal({ onClose, onComplete, isTrainingMode = false }: CheckoutModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [receivedAmount, setReceivedAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -419,52 +420,58 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
         payments,
         staffId: session.staffId,
         createdAt: new Date(),
+        isTraining: isTrainingMode,
       };
 
-      // ローカルDBに保存
-      await saveTransaction(transaction);
+      // トレーニングモード時はDBへの保存とAPIへの送信をスキップ
+      if (!isTrainingMode) {
+        // ローカルDBに保存
+        await saveTransaction(transaction);
 
-      // バックエンドに送信
-      try {
-        const saleItems = items.map((item) => ({
-          product_id: item.product.id,
-          quantity: item.quantity,
-          unit_price: item.product.price,
-        }));
+        // バックエンドに送信
+        try {
+          const saleItems = items.map((item) => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+            unit_price: item.product.price,
+          }));
 
-        // クーポン情報を含めたリクエストボディ
-        const saleBody: Record<string, unknown> = {
-          items: saleItems,
-          total_amount: total,
-          payment_method: paymentMethod,
-          event_id: session.eventId,
-          terminal_id: settings.terminalId,
-        };
+          // クーポン情報を含めたリクエストボディ
+          const saleBody: Record<string, unknown> = {
+            items: saleItems,
+            total_amount: total,
+            payment_method: paymentMethod,
+            event_id: session.eventId,
+            terminal_id: settings.terminalId,
+          };
 
-        // クーポンが適用されている場合は追加
-        if (appliedCoupon) {
-          saleBody.coupon_code = appliedCoupon.code;
-          saleBody.subtotal = subtotal;
+          // クーポンが適用されている場合は追加
+          if (appliedCoupon) {
+            saleBody.coupon_code = appliedCoupon.code;
+            saleBody.subtotal = subtotal;
+          }
+
+          const response = await fetch(`${API_BASE_URL}/accounts/pos/sales`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-POS-Session": session.sessionId,
+            },
+            body: JSON.stringify(saleBody),
+          });
+
+          if (!response.ok) {
+            console.error("Failed to send sale to backend:", response.statusText);
+            // バックエンド送信失敗時もローカルには保存済みなので続行
+          } else {
+            console.log("Sale successfully sent to backend");
+          }
+        } catch (apiError) {
+          console.error("Error sending sale to backend:", apiError);
+          // ネットワークエラー等でもローカル保存は成功しているので続行
         }
-
-        const response = await fetch(`${API_BASE_URL}/accounts/pos/sales`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-POS-Session": session.sessionId,
-          },
-          body: JSON.stringify(saleBody),
-        });
-
-        if (!response.ok) {
-          console.error("Failed to send sale to backend:", response.statusText);
-          // バックエンド送信失敗時もローカルには保存済みなので続行
-        } else {
-          console.log("Sale successfully sent to backend");
-        }
-      } catch (apiError) {
-        console.error("Error sending sale to backend:", apiError);
-        // ネットワークエラー等でもローカル保存は成功しているので続行
+      } else {
+        console.log("Training mode: Transaction not saved");
       }
 
       clear();
@@ -488,6 +495,7 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     onComplete,
     settings.terminalId,
     appliedCoupon,
+    isTrainingMode,
   ]);
 
   // Enterキーで会計完了
@@ -508,10 +516,28 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     <Modal
       open
       onClose={onClose}
-      title="会計"
+      title={isTrainingMode ? "会計 (トレーニング)" : "会計"}
       maxWidth="500px"
       disableClose={isProcessing}
     >
+      {/* トレーニングモード警告 */}
+      {isTrainingMode && (
+        <div
+          className={css({
+            padding: "12px 16px",
+            marginBottom: "16px",
+            background: "linear-gradient(90deg, #dc2626 0%, #ea580c 50%, #dc2626 100%)",
+            borderRadius: "8px",
+            textAlign: "center",
+            fontSize: "14px",
+            fontWeight: 700,
+            color: "white",
+            letterSpacing: "0.05em",
+          })}
+        >
+          トレーニングモード - この取引は記録されません
+        </div>
+      )}
       {/* 合計金額 */}
       <div className={totalDisplayStyles.container}>
         <div className={totalDisplayStyles.label}>お会計</div>

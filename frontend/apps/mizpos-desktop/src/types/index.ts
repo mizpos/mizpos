@@ -61,6 +61,7 @@ export interface Transaction {
   payments: Payment[];
   staffId: string;
   createdAt: Date;
+  isTraining?: boolean;
 }
 
 /**
@@ -83,4 +84,5 @@ export interface AppSettings {
   terminalId: string;
   taxRate: number;
   printer?: PrinterConfig;
+  isTrainingMode?: boolean;
 }
