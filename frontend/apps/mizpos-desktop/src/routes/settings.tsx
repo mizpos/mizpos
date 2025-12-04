@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Badge, Button, Card, Input } from "../components/ui";
+import { syncProducts } from "../lib/db";
 import {
   type BluetoothDevice,
   getBluetoothDevices,
@@ -165,6 +166,12 @@ function SettingsPage() {
   const [selectedPrinter, setSelectedPrinter] = useState<
     PrinterConfig | undefined
   >(settings.printer);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{
+    success: boolean;
+    count?: number;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -220,6 +227,22 @@ function SettingsPage() {
   const handleBack = useCallback(() => {
     navigate({ to: "/pos" });
   }, [navigate]);
+
+  const handleSyncProducts = useCallback(async () => {
+    setIsSyncing(true);
+    setSyncResult(null);
+    try {
+      const count = await syncProducts();
+      setSyncResult({ success: true, count });
+    } catch (error) {
+      setSyncResult({
+        success: false,
+        error: error instanceof Error ? error.message : "同期に失敗しました",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
 
   const selectUsbPrinter = useCallback((device: UsbDevice) => {
     setSelectedPrinter({
@@ -300,6 +323,46 @@ function SettingsPage() {
                 />
               </div>
             </div>
+          </Card>
+
+          {/* 商品データ同期 */}
+          <Card padding="lg">
+            <div className={sectionStyles.header}>
+              <h2 className={sectionStyles.title}>商品データ</h2>
+            </div>
+            <div
+              className={css({
+                fontSize: "14px",
+                color: "#94a3b8",
+                marginBottom: "16px",
+              })}
+            >
+              サーバーから最新の商品データを取得します。バーコードスキャンを行う前に必ず同期してください。
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleSyncProducts}
+              disabled={isSyncing}
+              fullWidth
+            >
+              {isSyncing ? "同期中..." : "商品データを同期"}
+            </Button>
+            {syncResult && (
+              <div
+                className={css({
+                  marginTop: "12px",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  background: syncResult.success ? "#14532d" : "#7f1d1d",
+                  color: syncResult.success ? "#86efac" : "#fca5a5",
+                })}
+              >
+                {syncResult.success
+                  ? `${syncResult.count}件の商品を同期しました`
+                  : `エラー: ${syncResult.error}`}
+              </div>
+            )}
           </Card>
 
           {/* プリンター設定 */}
