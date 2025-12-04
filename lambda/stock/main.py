@@ -121,6 +121,14 @@ async def create_product(
         product_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
 
+        # バーコードを生成
+        barcode_info = generate_full_barcode_info(
+            isdn=request.isdn,
+            product_id=product_id,
+            price=int(request.price),
+            c_code="3055",
+        )
+
         product_item = {
             "product_id": product_id,
             "name": request.name,
@@ -135,6 +143,9 @@ async def create_product(
             "is_active": True,
             "created_at": now,
             "updated_at": now,
+            # バーコード情報を保存
+            "jan_barcode_1": barcode_info["jan_barcode_1"],
+            "jan_barcode_2": barcode_info["jan_barcode_2"],
         }
 
         # 新しいフィールドを追加（nullの場合は含めない）
@@ -142,6 +153,8 @@ async def create_product(
             product_item["publisher_id"] = request.publisher_id
         if request.isdn:
             product_item["isdn"] = request.isdn
+        if barcode_info.get("isdn"):
+            product_item["isdn_formatted"] = barcode_info.get("isdn_formatted")
         if request.jan_code:
             product_item["jan_code"] = request.jan_code
         if request.download_url:
