@@ -149,6 +149,10 @@ jobs:
             --ks-pass pass:$ANDROID_KEYSTORE_PASSWORD \
             --ks-key-alias $ANDROID_KEY_ALIAS \
             --key-pass pass:$ANDROID_KEY_PASSWORD \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
             --out $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
             $BUILD_DIR/apk/universal/release/mizpos-$ENV-aligned.apk
 
