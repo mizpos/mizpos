@@ -1,5 +1,4 @@
 import {
-  associateWebAuthnCredential,
   fetchAuthSession,
   getCurrentUser,
   signInWithRedirect,
@@ -25,7 +24,6 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signInWithHostedUI: () => Promise<void>;
-  registerPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 }
@@ -65,10 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const handleRegisterPasskey = async (): Promise<void> => {
-    await associateWebAuthnCredential();
-  };
-
   const handleSignOut = async () => {
     await signOut();
     setUser(null);
@@ -90,7 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         signInWithHostedUI: handleSignInWithHostedUI,
-        registerPasskey: handleRegisterPasskey,
         signOut: handleSignOut,
         getAccessToken,
       }}
