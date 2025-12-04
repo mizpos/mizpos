@@ -22,11 +22,17 @@ class ProductBase(BaseModel):
     shipping_option_id: str | None = Field(
         default=None, description="送料設定ID（紐付けなし = 送料無料）"
     )
+    is_book: bool = Field(
+        default=False, description="書籍フラグ（書籍の場合は2段バーコード）"
+    )
     isdn: str | None = Field(
-        default=None, max_length=50, description="国際標準同人誌番号"
+        default=None, max_length=50, description="ISBN/ISDN（書籍の場合）"
+    )
+    c_code: str | None = Field(
+        default=None, max_length=4, description="Cコード（書籍の場合、4桁）"
     )
     jan_code: str | None = Field(
-        default=None, max_length=13, description="JANコード（流通用バーコード）"
+        default=None, max_length=13, description="JANコード（非書籍の流通用バーコード）"
     )
     download_url: str | None = Field(
         default=None, max_length=1000, description="ダウンロードリンク"
@@ -51,11 +57,17 @@ class UpdateProductRequest(BaseModel):
     shipping_option_id: str | None = Field(
         default=None, description="送料設定ID（紐付けなし = 送料無料）"
     )
+    is_book: bool | None = Field(
+        default=None, description="書籍フラグ（書籍の場合は2段バーコード）"
+    )
     isdn: str | None = Field(
-        default=None, max_length=50, description="国際標準同人誌番号"
+        default=None, max_length=50, description="ISBN/ISDN（書籍の場合）"
+    )
+    c_code: str | None = Field(
+        default=None, max_length=4, description="Cコード（書籍の場合、4桁）"
     )
     jan_code: str | None = Field(
-        default=None, max_length=13, description="JANコード（流通用バーコード）"
+        default=None, max_length=13, description="JANコード（非書籍の流通用バーコード）"
     )
     download_url: str | None = Field(
         default=None, max_length=1000, description="ダウンロードリンク"
@@ -125,7 +137,9 @@ class ProductResponse(BaseModel):
     publisher_id: str | None = None
     variant_type: str
     shipping_option_id: str | None = None
+    is_book: bool = False
     isdn: str | None = None
+    c_code: str | None = None
     jan_code: str | None = None
     download_url: str | None = None
     stock_quantity: int

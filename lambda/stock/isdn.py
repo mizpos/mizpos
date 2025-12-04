@@ -185,43 +185,64 @@ def generate_full_barcode_info(
     product_id: str = "",
     price: int = 0,
     c_code: str = "3055",
+    is_book: bool = True,
+    jan_code: str | None = None,
 ) -> dict:
     """
     完全なバーコード情報を生成
 
     Args:
-        isdn: ISDNが既に付与されている場合はその値（ハイフン区切り）
+        isdn: ISBN/ISDNが既に付与されている場合はその値（ハイフン区切り）
         product_id: 商品ID (ISDN未付与時に使用)
         price: 価格
-        c_code: Cコード
+        c_code: Cコード（書籍の場合のみ使用）
+        is_book: 書籍フラグ
+        jan_code: 非書籍の場合のJANコード
 
     Returns:
         バーコード情報の辞書
     """
-    if isdn:
-        # ISDNが付与されている場合
-        jan_barcode = generate_jan_barcode(isdn)
+    if is_book:
+        # 書籍の場合: 2段バーコード
+        if isdn:
+            # ISBN/ISDNが付与されている場合
+            jan_barcode = generate_jan_barcode(isdn)
+            isdn_formatted = format_isdn_with_price(isdn, c_code, price)
+        else:
+            # ISBN/ISDNがない場合はインハウスコードを生成
+            jan_barcode = generate_instore_barcode(product_id, price)
+            isdn_formatted = None
+
+        # 2段目バーコード: 292 + Cコード4桁 + 価格5桁 + チェックデジット
         secondary_barcode = generate_secondary_barcode(c_code, price)
-        isdn_formatted = format_isdn_with_price(isdn, c_code, price)
 
         return {
             "isdn": isdn,
             "isdn_formatted": isdn_formatted,
             "jan_barcode_1": jan_barcode,
             "jan_barcode_2": secondary_barcode,
-            "full_display": f"{isdn_formatted}\n{jan_barcode} / {secondary_barcode}",
+            "is_book": True,
+            "full_display": (
+                f"{isdn_formatted or 'インストアコード'}\n"
+                f"{jan_barcode} / {secondary_barcode}"
+            ),
         }
     else:
-        # ISDNが付与されていない場合
-        instore_barcode = generate_instore_barcode(product_id, price)
-        secondary_barcode = generate_instore_secondary_barcode(price, c_code)
+        # 非書籍の場合: 単一バーコード
+        if jan_code:
+            # JANコードが指定されている場合はそれを使用
+            jan_barcode = jan_code
+        else:
+            # JANコードがない場合はインハウスコードを生成
+            jan_barcode = generate_instore_barcode(product_id, price)
 
         return {
             "isdn": None,
             "isdn_formatted": None,
-            "jan_barcode_1": instore_barcode,
-            "jan_barcode_2": secondary_barcode,
-            "full_display": f"インストアコード\n{instore_barcode} / {secondary_barcode}",
+            "jan_barcode_1": jan_barcode,
+            "jan_barcode_2": None,  # 非書籍は2段目なし
+            "is_book": False,
+            "full_display": f"JANコード\n{jan_barcode}",
         }
 
 
