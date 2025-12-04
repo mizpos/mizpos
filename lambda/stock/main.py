@@ -643,7 +643,7 @@ async def get_product_barcode(
     c_code: str = Query(default="3055", description="Cコード（4桁）"),
     current_user: dict = Depends(get_current_user),
 ):
-    """商品のバーコード情報を取得"""
+    """商品のバーコード情報を取得（DynamoDBに保存済みの場合はそれを返す）"""
     try:
         # 商品情報を取得
         response = stock_table.get_item(Key={"product_id": product_id})
@@ -653,10 +653,23 @@ async def get_product_barcode(
             raise HTTPException(status_code=404, detail="Product not found")
 
         product_dict = dynamo_to_dict(product)
+
+        # DynamoDBに保存されたバーコードがあればそれを返す
+        if product_dict.get("jan_barcode_1"):
+            return {
+                "product_id": product_id,
+                "product_name": product_dict.get("name", ""),
+                "isdn": product_dict.get("isdn"),
+                "isdn_formatted": product_dict.get("isdn_formatted"),
+                "jan_barcode_1": product_dict.get("jan_barcode_1"),
+                "jan_barcode_2": product_dict.get("jan_barcode_2"),
+                "full_display": f"{product_dict.get('isdn_formatted') or 'インストアコード'}\n{product_dict.get('jan_barcode_1')} / {product_dict.get('jan_barcode_2')}",
+            }
+
+        # バーコードが保存されていない場合は動的に生成
         isdn = product_dict.get("isdn")
         price = int(product_dict.get("price", 0))
 
-        # バーコード情報を生成
         barcode_info = generate_full_barcode_info(
             isdn=isdn,
             product_id=product_id,
