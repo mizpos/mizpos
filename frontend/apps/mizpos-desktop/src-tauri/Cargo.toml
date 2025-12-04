@@ -33,3 +33,12 @@ nusb = "^0.2.1"
 # Android dependencies (Bluetooth printer support)
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.21"
+
+# CI向けプロファイル最適化
+[profile.dev]
+incremental = true
+
+[profile.release]
+lto = "thin"
+codegen-units = 16
+incremental = false
