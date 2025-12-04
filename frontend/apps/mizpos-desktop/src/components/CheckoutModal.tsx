@@ -7,6 +7,8 @@ import { useSettingsStore } from "../stores/settings";
 import type { Payment, PaymentMethod, Transaction } from "../types";
 import { Button, Modal } from "./ui";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 interface CheckoutModalProps {
   onClose: () => void;
   onComplete: (transaction: Transaction) => void;
@@ -257,7 +259,43 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
         createdAt: new Date(),
       };
 
+      // ローカルDBに保存
       await saveTransaction(transaction);
+
+      // バックエンドに送信
+      try {
+        const saleItems = items.map((item) => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: item.product.price,
+        }));
+
+        const response = await fetch(`${API_BASE_URL}/accounts/pos/sales`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-POS-Session": session.sessionId,
+          },
+          body: JSON.stringify({
+            items: saleItems,
+            total_amount: total,
+            payment_method: paymentMethod,
+            event_id: session.eventId,
+            terminal_id: settings.terminalId,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to send sale to backend:", response.statusText);
+          // バックエンド送信失敗時もローカルには保存済みなので続行
+        } else {
+          console.log("Sale successfully sent to backend");
+        }
+      } catch (apiError) {
+        console.error("Error sending sale to backend:", apiError);
+        // ネットワークエラー等でもローカル保存は成功しているので続行
+      }
+
       clear();
       onComplete(transaction);
     } catch (error) {
@@ -277,6 +315,7 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     taxAmount,
     clear,
     onComplete,
+    settings.terminalId,
   ]);
 
   // Enterキーで会計完了
