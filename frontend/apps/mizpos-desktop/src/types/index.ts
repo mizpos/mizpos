@@ -18,7 +18,9 @@ export interface Session {
 export interface Product {
   id: string;
   jan: string;
+  jan2?: string; // 2段目バーコード
   isbn?: string;
+  isdn?: string; // ISDN（ハイフン区切り）
   name: string;
   circleName?: string;
   price: number;

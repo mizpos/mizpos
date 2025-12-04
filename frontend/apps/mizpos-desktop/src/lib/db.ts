@@ -1,6 +1,12 @@
 import Dexie, { type Table } from "dexie";
 import type { Product, Transaction } from "../types";
 import { type ApiProduct, fetchProducts } from "./api";
+import {
+  generateInstoreBarcode,
+  generateJanFromIsdn,
+  generateSecondaryBarcode,
+  generateInstoreSecondaryBarcode,
+} from "./barcode";
 
 /**
  * ローカルキャッシュ用IndexedDB
@@ -15,6 +21,11 @@ class MizPOSDatabase extends Dexie {
       products: "id, jan, isbn, name",
       transactions: "id, staffId, createdAt",
     });
+    // バージョン2: jan2インデックスを追加
+    this.version(2).stores({
+      products: "id, jan, jan2, isbn, name",
+      transactions: "id, staffId, createdAt",
+    });
   }
 }
 
@@ -22,19 +33,43 @@ export const db = new MizPOSDatabase();
 
 /**
  * APIから商品データを同期
+ * 各商品のバーコードも生成して保存する
  */
 export async function syncProducts(): Promise<number> {
   const apiProducts = await fetchProducts();
 
-  const products: Product[] = apiProducts.map((p: ApiProduct) => ({
-    id: p.product_id,
-    jan: p.jan_code || "",
-    isbn: p.isbn,
-    name: p.name,
-    circleName: p.publisher_name,
-    price: p.price,
-    imageUrl: p.image_url,
-  }));
+  // バーコード生成は非同期なので、Promise.allで並列処理
+  const products: Product[] = await Promise.all(
+    apiProducts.map(async (p: ApiProduct) => {
+      let jan: string;
+      let jan2: string | undefined;
+
+      if (p.isdn) {
+        // ISDNがある場合はISDNからバーコードを生成
+        jan = generateJanFromIsdn(p.isdn);
+        jan2 = generateSecondaryBarcode("3055", p.price);
+      } else if (p.jan_code) {
+        // jan_codeが指定されている場合はそれを使用
+        jan = p.jan_code;
+      } else {
+        // どちらもない場合はインストアバーコードを生成
+        jan = await generateInstoreBarcode(p.product_id);
+        jan2 = generateInstoreSecondaryBarcode(p.price);
+      }
+
+      return {
+        id: p.product_id,
+        jan,
+        jan2,
+        isbn: p.isbn,
+        isdn: p.isdn,
+        name: p.name,
+        circleName: p.publisher_name || p.publisher,
+        price: p.price,
+        imageUrl: p.image_url,
+      };
+    }),
+  );
 
   // 全商品をクリアして再挿入
   await db.products.clear();
@@ -44,12 +79,18 @@ export async function syncProducts(): Promise<number> {
 }
 
 /**
- * JANコードで商品を検索
+ * JANコードで商品を検索（1段目または2段目バーコードで検索）
  */
 export async function findProductByJan(
   jan: string,
 ): Promise<Product | undefined> {
-  return db.products.where("jan").equals(jan).first();
+  // まず1段目バーコードで検索
+  let product = await db.products.where("jan").equals(jan).first();
+  if (product) return product;
+
+  // 見つからなければ2段目バーコードで検索
+  product = await db.products.where("jan2").equals(jan).first();
+  return product;
 }
 
 /**

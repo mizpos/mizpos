@@ -6,9 +6,11 @@ export interface ApiProduct {
   price: number;
   jan_code?: string;
   isbn?: string;
+  isdn?: string;
   category?: string;
   publisher_id?: string;
   publisher_name?: string;
+  publisher?: string;
   stock_quantity?: number;
   image_url?: string;
 }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
 import { CheckoutModal } from "../components/CheckoutModal";
 import { ManualProductEntry } from "../components/ManualProductEntry";
+import { ProductSelectModal } from "../components/ProductSelectModal";
 import { ReceiptModal } from "../components/ReceiptModal";
 import { Badge, Button, IconButton } from "../components/ui";
 import { findProductByIsbn, findProductByJan } from "../lib/db";
@@ -301,6 +302,7 @@ function POSPage() {
   const [barcodeInput, setBarcodeInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [showProductSelect, setShowProductSelect] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [completedTransaction, setCompletedTransaction] =
     useState<Transaction | null>(null);
@@ -324,7 +326,7 @@ function POSPage() {
   // 常にバーコード入力にフォーカス
   useEffect(() => {
     const focusInput = () => {
-      if (!showManualEntry && !showCheckout && !completedTransaction) {
+      if (!showManualEntry && !showProductSelect && !showCheckout && !completedTransaction) {
         inputRef.current?.focus();
       }
     };
@@ -335,7 +337,7 @@ function POSPage() {
       clearInterval(interval);
       document.removeEventListener("click", focusInput);
     };
-  }, [showManualEntry, showCheckout, completedTransaction]);
+  }, [showManualEntry, showProductSelect, showCheckout, completedTransaction]);
 
   // 通知を自動で消す
   useEffect(() => {
@@ -349,12 +351,17 @@ function POSPage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // モーダル表示中は無効
-      if (showManualEntry || showCheckout || completedTransaction) return;
+      if (showManualEntry || showProductSelect || showCheckout || completedTransaction) return;
 
       // F1: 手動入力
       if (e.key === "F1") {
         e.preventDefault();
         setShowManualEntry(true);
+      }
+      // F4: 商品選択
+      if (e.key === "F4") {
+        e.preventDefault();
+        setShowProductSelect(true);
       }
       // F2 または Enter（空入力時）: 会計
       if (
@@ -380,6 +387,7 @@ function POSPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     showManualEntry,
+    showProductSelect,
     showCheckout,
     completedTransaction,
     barcodeInput,
@@ -452,6 +460,17 @@ function POSPage() {
     setShowCheckout(false);
     setCompletedTransaction(transaction);
   }, []);
+
+  const handleProductSelect = useCallback(
+    (product: Product) => {
+      addItem(product);
+      setNotification({
+        type: "success",
+        message: `${product.name} を追加しました`,
+      });
+    },
+    [addItem],
+  );
 
   const handleLogout = useCallback(async () => {
     await logout();
@@ -539,12 +558,20 @@ function POSPage() {
                   {barcodeInput || "バーコードをスキャン / F1で手動入力"}
                 </div>
               </div>
-              <Button
-                variant="secondary"
-                onClick={() => setShowManualEntry(true)}
-              >
-                手動入力 (F1)
-              </Button>
+              <div className={css({ display: "flex", gap: "8px" })}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowManualEntry(true)}
+                >
+                  手動入力 (F1)
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowProductSelect(true)}
+                >
+                  商品選択 (F4)
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -658,6 +685,11 @@ function POSPage() {
       {showManualEntry && (
         <ManualProductEntry onClose={() => setShowManualEntry(false)} />
       )}
+      <ProductSelectModal
+        isOpen={showProductSelect}
+        onClose={() => setShowProductSelect(false)}
+        onSelect={handleProductSelect}
+      />
       {showCheckout && (
         <CheckoutModal
           onClose={() => setShowCheckout(false)}
