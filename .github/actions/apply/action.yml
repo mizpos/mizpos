@@ -33,6 +33,7 @@ runs:
       working-directory: ${{ inputs.WORKING_DIR }}
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+
     - name: tflint
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
       uses: reviewdog/action-tflint@v1
