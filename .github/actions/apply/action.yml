@@ -57,7 +57,6 @@ runs:
       shell: bash
       run: terraform plan -refresh=true -out=tfplan -no-color -lock=false -parallelism=50
       working-directory: ${{ inputs.WORKING_DIR }}
-      env:
 
     - name: Convert terraform plan to json
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
