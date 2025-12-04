@@ -1021,7 +1021,6 @@ async def pos_get_events(request: Request):
 
         # イベントテーブルから全イベントを取得
         import boto3
-        from decimal import Decimal
 
         ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
         EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
