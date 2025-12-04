@@ -116,7 +116,9 @@ resource "aws_iam_role_policy" "lambda_accounts" {
           aws_dynamodb_table.stock.arn,
           "${aws_dynamodb_table.stock.arn}/index/*",
           aws_dynamodb_table.coupons.arn,
-          "${aws_dynamodb_table.coupons.arn}/index/*"
+          "${aws_dynamodb_table.coupons.arn}/index/*",
+          aws_dynamodb_table.events.arn,
+          "${aws_dynamodb_table.events.arn}/index/*"
         ]
       },
       {
