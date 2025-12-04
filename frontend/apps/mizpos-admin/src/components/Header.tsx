@@ -1,4 +1,3 @@
-import { IconBell, IconUser } from "@tabler/icons-react";
 import { css } from "styled-system/css";
 
 interface HeaderProps {
@@ -15,7 +14,6 @@ export function Header({ title }: HeaderProps) {
         borderColor: "gray.200",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
         paddingX: { base: "3", sm: "4", md: "6" },
       })}
     >
@@ -31,51 +29,6 @@ export function Header({ title }: HeaderProps) {
       >
         {title}
       </h2>
-
-      <div
-        className={css({
-          display: "flex",
-          alignItems: "center",
-          gap: { base: "2", md: "4" },
-        })}
-      >
-        <button
-          type="button"
-          className={css({
-            padding: { base: "1.5", md: "2" },
-            borderRadius: "full",
-            color: "gray.500",
-            transition: "colors 0.2s",
-            _hover: {
-              backgroundColor: "gray.100",
-              color: "gray.700",
-            },
-          })}
-          aria-label="通知"
-        >
-          <IconBell size={20} />
-        </button>
-
-        <button
-          type="button"
-          className={css({
-            display: "flex",
-            alignItems: "center",
-            gap: "2",
-            padding: { base: "1.5", md: "2" },
-            borderRadius: "full",
-            color: "gray.500",
-            transition: "colors 0.2s",
-            _hover: {
-              backgroundColor: "gray.100",
-              color: "gray.700",
-            },
-          })}
-          aria-label="ユーザー"
-        >
-          <IconUser size={20} />
-        </button>
-      </div>
     </header>
   );
 }

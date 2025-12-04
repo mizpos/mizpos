@@ -1,16 +1,7 @@
-import {
-  IconDeviceFloppy,
-  IconFingerprint,
-  IconLock,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconDeviceFloppy, IconLock } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  deleteWebAuthnCredential,
-  listWebAuthnCredentials,
-  updatePassword,
-} from "aws-amplify/auth";
+import { updatePassword } from "aws-amplify/auth";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
@@ -26,20 +17,6 @@ import {
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
-
-interface BrandSettings {
-  storeName: string;
-  storeDescription: string;
-  contactEmail: string;
-  logoUrl: string;
-}
-
-interface PaymentSettings {
-  enableStripeOnline: boolean;
-  enableStripeTerminal: boolean;
-  enableCash: boolean;
-  stripePublicKey: string;
-}
 
 interface ConsignmentSettings {
   defaultCommissionRate: number;
@@ -69,10 +46,7 @@ async function fetchConfig(configKey: string) {
   return data.config?.value || null;
 }
 
-async function saveConfig(
-  configKey: string,
-  value: BrandSettings | PaymentSettings | ConsignmentSettings,
-) {
+async function saveConfig(configKey: string, value: ConsignmentSettings) {
   const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_GATEWAY_BASE}/sales/config/${configKey}`,
@@ -90,20 +64,7 @@ async function saveConfig(
 
 function SettingsPage() {
   const queryClient = useQueryClient();
-  const { user, registerPasskey } = useAuth();
-  const [brandSettings, setBrandSettings] = useState<BrandSettings>({
-    storeName: "",
-    storeDescription: "",
-    contactEmail: "",
-    logoUrl: "",
-  });
-
-  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
-    enableStripeOnline: true,
-    enableStripeTerminal: true,
-    enableCash: true,
-    stripePublicKey: "",
-  });
+  const { user } = useAuth();
 
   const [consignmentSettings, setConsignmentSettings] =
     useState<ConsignmentSettings>({
@@ -119,46 +80,16 @@ function SettingsPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  // パスキー関連の状態
-  const [passkeyError, setPasskeyError] = useState<string | null>(null);
-  const [passkeySuccess, setPasskeySuccess] = useState(false);
-
-  const [activeTab, setActiveTab] = useState<
-    "brand" | "payment" | "consignment" | "account"
-  >("brand");
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Load settings from backend
-  const { data: loadedBrandSettings, isLoading: isLoadingBrand } = useQuery({
-    queryKey: ["config", "brand_settings"],
-    queryFn: () => fetchConfig("brand_settings"),
-  });
-
-  const { data: loadedPaymentSettings, isLoading: isLoadingPayment } = useQuery(
-    {
-      queryKey: ["config", "payment_settings"],
-      queryFn: () => fetchConfig("payment_settings"),
-    },
+  const [activeTab, setActiveTab] = useState<"consignment" | "account">(
+    "consignment",
   );
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const { data: loadedConsignmentSettings, isLoading: isLoadingConsignment } =
     useQuery({
       queryKey: ["config", "consignment_settings"],
       queryFn: () => fetchConfig("consignment_settings"),
     });
-
-  // Update local state when data is loaded
-  useEffect(() => {
-    if (loadedBrandSettings) {
-      setBrandSettings(loadedBrandSettings as BrandSettings);
-    }
-  }, [loadedBrandSettings]);
-
-  useEffect(() => {
-    if (loadedPaymentSettings) {
-      setPaymentSettings(loadedPaymentSettings as PaymentSettings);
-    }
-  }, [loadedPaymentSettings]);
 
   useEffect(() => {
     if (loadedConsignmentSettings) {
@@ -168,11 +99,7 @@ function SettingsPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      await Promise.all([
-        saveConfig("brand_settings", brandSettings),
-        saveConfig("payment_settings", paymentSettings),
-        saveConfig("consignment_settings", consignmentSettings),
-      ]);
+      await saveConfig("consignment_settings", consignmentSettings);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });
@@ -216,50 +143,6 @@ function SettingsPage() {
     },
   });
 
-  // パスキー一覧取得
-  const {
-    data: passkeys,
-    isLoading: isLoadingPasskeys,
-    refetch: refetchPasskeys,
-  } = useQuery({
-    queryKey: ["passkeys"],
-    queryFn: async () => {
-      const result = await listWebAuthnCredentials();
-      return result.credentials || [];
-    },
-    enabled: activeTab === "account",
-  });
-
-  // パスキー登録
-  const passkeyRegisterMutation = useMutation({
-    mutationFn: async () => {
-      await registerPasskey();
-    },
-    onSuccess: () => {
-      setPasskeySuccess(true);
-      setPasskeyError(null);
-      refetchPasskeys();
-      setTimeout(() => setPasskeySuccess(false), 3000);
-    },
-    onError: (error: Error) => {
-      setPasskeySuccess(false);
-      setPasskeyError(error.message);
-    },
-  });
-
-  // パスキー削除
-  const passkeyDeleteMutation = useMutation({
-    mutationFn: async (credentialId: string) => {
-      await deleteWebAuthnCredential({ credentialId });
-    },
-    onSuccess: () => {
-      refetchPasskeys();
-    },
-    onError: (error: Error) => {
-      setPasskeyError(error.message);
-    },
-  });
-
   const handleSave = () => {
     saveMutation.mutate();
   };
@@ -268,8 +151,6 @@ function SettingsPage() {
     setPasswordError(null);
     passwordMutation.mutate();
   };
-
-  const isLoading = isLoadingBrand || isLoadingPayment || isLoadingConsignment;
 
   const inputClass = css({
     width: "100%",
@@ -302,7 +183,7 @@ function SettingsPage() {
           overflowY: "auto",
         })}
       >
-        {isLoading && (
+        {isLoadingConsignment && (
           <div
             className={css({
               textAlign: "center",
@@ -342,8 +223,6 @@ function SettingsPage() {
           })}
         >
           {[
-            { key: "brand", label: "ブランド設定" },
-            { key: "payment", label: "決済設定" },
             { key: "consignment", label: "委託販売設定" },
             { key: "account", label: "アカウント設定" },
           ].map((tab) => (
@@ -371,239 +250,6 @@ function SettingsPage() {
             </button>
           ))}
         </div>
-
-        {/* Brand Settings */}
-        {activeTab === "brand" && (
-          <div
-            className={css({
-              backgroundColor: "white",
-              padding: "6",
-              borderRadius: "lg",
-              border: "1px solid",
-              borderColor: "gray.200",
-            })}
-          >
-            <h3
-              className={css({
-                fontSize: "lg",
-                fontWeight: "semibold",
-                marginBottom: "4",
-              })}
-            >
-              ブランド設定
-            </h3>
-            <div
-              className={css({
-                display: "flex",
-                flexDirection: "column",
-                gap: "4",
-              })}
-            >
-              <div>
-                <label htmlFor="storeName" className={labelClass}>
-                  ストア名
-                </label>
-                <input
-                  id="storeName"
-                  type="text"
-                  value={brandSettings.storeName}
-                  onChange={(e) =>
-                    setBrandSettings({
-                      ...brandSettings,
-                      storeName: e.target.value,
-                    })
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="storeDescription" className={labelClass}>
-                  ストア説明
-                </label>
-                <textarea
-                  id="storeDescription"
-                  value={brandSettings.storeDescription}
-                  onChange={(e) =>
-                    setBrandSettings({
-                      ...brandSettings,
-                      storeDescription: e.target.value,
-                    })
-                  }
-                  rows={3}
-                  className={`${inputClass} ${css({ resize: "vertical" })}`}
-                />
-              </div>
-              <div>
-                <label htmlFor="contactEmail" className={labelClass}>
-                  連絡先メールアドレス
-                </label>
-                <input
-                  id="contactEmail"
-                  type="email"
-                  value={brandSettings.contactEmail}
-                  onChange={(e) =>
-                    setBrandSettings({
-                      ...brandSettings,
-                      contactEmail: e.target.value,
-                    })
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="logoUrl" className={labelClass}>
-                  ロゴURL
-                </label>
-                <input
-                  id="logoUrl"
-                  type="url"
-                  value={brandSettings.logoUrl}
-                  onChange={(e) =>
-                    setBrandSettings({
-                      ...brandSettings,
-                      logoUrl: e.target.value,
-                    })
-                  }
-                  className={inputClass}
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Payment Settings */}
-        {activeTab === "payment" && (
-          <div
-            className={css({
-              backgroundColor: "white",
-              padding: "6",
-              borderRadius: "lg",
-              border: "1px solid",
-              borderColor: "gray.200",
-            })}
-          >
-            <h3
-              className={css({
-                fontSize: "lg",
-                fontWeight: "semibold",
-                marginBottom: "4",
-              })}
-            >
-              決済設定
-            </h3>
-            <div
-              className={css({
-                display: "flex",
-                flexDirection: "column",
-                gap: "4",
-              })}
-            >
-              <div
-                className={css({
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "3",
-                })}
-              >
-                <label
-                  className={css({
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2",
-                  })}
-                >
-                  <input
-                    type="checkbox"
-                    checked={paymentSettings.enableStripeOnline}
-                    onChange={(e) =>
-                      setPaymentSettings({
-                        ...paymentSettings,
-                        enableStripeOnline: e.target.checked,
-                      })
-                    }
-                    className={css({ width: "4", height: "4" })}
-                  />
-                  <span className={css({ fontSize: "sm", color: "gray.700" })}>
-                    Stripeオンライン決済を有効にする
-                  </span>
-                </label>
-                <label
-                  className={css({
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2",
-                  })}
-                >
-                  <input
-                    type="checkbox"
-                    checked={paymentSettings.enableStripeTerminal}
-                    onChange={(e) =>
-                      setPaymentSettings({
-                        ...paymentSettings,
-                        enableStripeTerminal: e.target.checked,
-                      })
-                    }
-                    className={css({ width: "4", height: "4" })}
-                  />
-                  <span className={css({ fontSize: "sm", color: "gray.700" })}>
-                    Stripe端末決済を有効にする
-                  </span>
-                </label>
-                <label
-                  className={css({
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2",
-                  })}
-                >
-                  <input
-                    type="checkbox"
-                    checked={paymentSettings.enableCash}
-                    onChange={(e) =>
-                      setPaymentSettings({
-                        ...paymentSettings,
-                        enableCash: e.target.checked,
-                      })
-                    }
-                    className={css({ width: "4", height: "4" })}
-                  />
-                  <span className={css({ fontSize: "sm", color: "gray.700" })}>
-                    現金決済を有効にする
-                  </span>
-                </label>
-              </div>
-
-              <div>
-                <label htmlFor="stripePublicKey" className={labelClass}>
-                  Stripe公開キー
-                </label>
-                <input
-                  id="stripePublicKey"
-                  type="text"
-                  value={paymentSettings.stripePublicKey}
-                  onChange={(e) =>
-                    setPaymentSettings({
-                      ...paymentSettings,
-                      stripePublicKey: e.target.value,
-                    })
-                  }
-                  className={inputClass}
-                  placeholder="pk_..."
-                />
-                <p
-                  className={css({
-                    fontSize: "xs",
-                    color: "gray.500",
-                    marginTop: "1",
-                  })}
-                >
-                  秘密キーはAWS Secrets Managerで管理されます
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Consignment Settings */}
         {activeTab === "consignment" && (
@@ -921,186 +567,6 @@ function SettingsPage() {
                 </div>
               </div>
             </div>
-
-            {/* Passkey Management */}
-            <div
-              className={css({
-                marginTop: "8",
-                paddingTop: "6",
-                borderTop: "1px solid",
-                borderColor: "gray.200",
-              })}
-            >
-              <h4
-                className={css({
-                  fontSize: "md",
-                  fontWeight: "semibold",
-                  marginBottom: "2",
-                })}
-              >
-                パスキー管理
-              </h4>
-              <p
-                className={css({
-                  fontSize: "sm",
-                  color: "gray.600",
-                  marginBottom: "4",
-                })}
-              >
-                パスキーを使用すると、パスワードなしで安全にログインできます
-              </p>
-
-              {passkeyError && (
-                <div
-                  className={css({
-                    backgroundColor: "red.50",
-                    border: "1px solid",
-                    borderColor: "red.200",
-                    borderRadius: "md",
-                    padding: "3",
-                    marginBottom: "4",
-                    color: "red.700",
-                    fontSize: "sm",
-                  })}
-                >
-                  {passkeyError}
-                </div>
-              )}
-
-              {passkeySuccess && (
-                <div
-                  className={css({
-                    backgroundColor: "green.50",
-                    border: "1px solid",
-                    borderColor: "green.200",
-                    borderRadius: "md",
-                    padding: "3",
-                    marginBottom: "4",
-                    color: "green.700",
-                    fontSize: "sm",
-                  })}
-                >
-                  パスキーを登録しました
-                </div>
-              )}
-
-              {/* Passkey List */}
-              {isLoadingPasskeys ? (
-                <div
-                  className={css({
-                    textAlign: "center",
-                    padding: "4",
-                    color: "gray.500",
-                  })}
-                >
-                  読み込み中...
-                </div>
-              ) : passkeys && passkeys.length > 0 ? (
-                <div className={css({ marginBottom: "4" })}>
-                  <h5
-                    className={css({
-                      fontSize: "sm",
-                      fontWeight: "semibold",
-                      marginBottom: "2",
-                    })}
-                  >
-                    登録済みパスキー
-                  </h5>
-                  <div
-                    className={css({
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "2",
-                    })}
-                  >
-                    {passkeys.map((passkey) => (
-                      <div
-                        key={passkey.credentialId}
-                        className={css({
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "3",
-                          backgroundColor: "gray.50",
-                          borderRadius: "md",
-                          border: "1px solid",
-                          borderColor: "gray.200",
-                        })}
-                      >
-                        <div>
-                          <p
-                            className={css({
-                              fontSize: "sm",
-                              fontWeight: "medium",
-                            })}
-                          >
-                            {passkey.friendlyCredentialName || "パスキー"}
-                          </p>
-                          <p
-                            className={css({
-                              fontSize: "xs",
-                              color: "gray.500",
-                            })}
-                          >
-                            登録日:{" "}
-                            {passkey.createdAt
-                              ? new Date(passkey.createdAt).toLocaleDateString(
-                                  "ja-JP",
-                                )
-                              : "不明"}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (
-                              passkey.credentialId &&
-                              confirm("このパスキーを削除しますか？")
-                            ) {
-                              passkeyDeleteMutation.mutate(
-                                passkey.credentialId,
-                              );
-                            }
-                          }}
-                          disabled={passkeyDeleteMutation.isPending}
-                          className={css({
-                            padding: "2",
-                            color: "red.600",
-                            _hover: { color: "red.800" },
-                            _disabled: {
-                              color: "gray.400",
-                              cursor: "not-allowed",
-                            },
-                          })}
-                        >
-                          <IconTrash size={18} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p
-                  className={css({
-                    fontSize: "sm",
-                    color: "gray.500",
-                    marginBottom: "4",
-                  })}
-                >
-                  登録済みのパスキーはありません
-                </p>
-              )}
-
-              <Button
-                onClick={() => passkeyRegisterMutation.mutate()}
-                disabled={passkeyRegisterMutation.isPending}
-              >
-                <IconFingerprint size={18} />
-                {passkeyRegisterMutation.isPending
-                  ? "登録中..."
-                  : "新しいパスキーを登録"}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -1115,7 +581,7 @@ function SettingsPage() {
           >
             <Button
               onClick={handleSave}
-              disabled={saveMutation.isPending || isLoading}
+              disabled={saveMutation.isPending || isLoadingConsignment}
             >
               <IconDeviceFloppy size={18} />
               {saveMutation.isPending ? "保存中..." : "設定を保存"}
