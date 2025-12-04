@@ -431,5 +431,89 @@ def delete_event(event_id: str) -> bool:
         return False
 
 
+def get_event_products(event_id: str) -> list[str]:
+    """イベントに紐づく商品IDリストを取得
+
+    Args:
+        event_id: イベントID
+
+    Returns:
+        商品IDのリスト
+    """
+    event = get_event(event_id)
+    if not event:
+        return []
+    return event.get("product_ids", [])
+
+
+def set_event_products(event_id: str, product_ids: list[str]) -> dict | None:
+    """イベントに紐づく商品リストを設定
+
+    Args:
+        event_id: イベントID
+        product_ids: 商品IDのリスト
+
+    Returns:
+        更新されたイベント（失敗時はNone）
+    """
+    now = datetime.now(timezone.utc).isoformat()
+
+    try:
+        response = events_table.update_item(
+            Key={"event_id": event_id},
+            UpdateExpression="SET product_ids = :pids, updated_at = :updated_at",
+            ExpressionAttributeValues={
+                ":pids": product_ids,
+                ":updated_at": now,
+            },
+            ReturnValues="ALL_NEW",
+        )
+        return dynamo_to_dict(response["Attributes"])
+    except ClientError:
+        return None
+
+
+def add_event_product(event_id: str, product_id: str) -> dict | None:
+    """イベントに商品を追加
+
+    Args:
+        event_id: イベントID
+        product_id: 追加する商品ID
+
+    Returns:
+        更新されたイベント（失敗時はNone）
+    """
+    event = get_event(event_id)
+    if not event:
+        return None
+
+    product_ids = event.get("product_ids", [])
+    if product_id not in product_ids:
+        product_ids.append(product_id)
+
+    return set_event_products(event_id, product_ids)
+
+
+def remove_event_product(event_id: str, product_id: str) -> dict | None:
+    """イベントから商品を削除
+
+    Args:
+        event_id: イベントID
+        product_id: 削除する商品ID
+
+    Returns:
+        更新されたイベント（失敗時はNone）
+    """
+    event = get_event(event_id)
+    if not event:
+        return None
+
+    product_ids = event.get("product_ids", [])
+    if product_id in product_ids:
+        product_ids.remove(product_id)
+
+    return set_event_products(event_id, product_ids)
+
+
 # エクスポート
 DynamoDBClientError = ClientError

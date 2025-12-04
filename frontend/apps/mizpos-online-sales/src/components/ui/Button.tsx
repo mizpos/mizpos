@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
-import { css, cva } from "styled-system/css";
+import { cva } from "styled-system/css";
 
 const buttonStyles = cva({
   base: {

@@ -1,4 +1,10 @@
-import { IconEdit, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import {
+  IconBook,
+  IconEdit,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -25,9 +31,18 @@ interface Event {
   end_date: string | null;
   location: string;
   publisher_id: string | null;
+  product_ids: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface Product {
+  product_id: string;
+  name: string;
+  price: number;
+  category: string;
+  is_active: boolean;
 }
 
 interface Publisher {
@@ -59,6 +74,8 @@ function EventsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editEvent, setEditEvent] = useState<Event | null>(null);
   const [formData, setFormData] = useState<CreateEventForm>(initialFormState);
+  const [productLinkEvent, setProductLinkEvent] = useState<Event | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   // イベント一覧を取得
   const { data: events = [], isLoading } = useQuery({
@@ -85,6 +102,20 @@ function EventsPage() {
       if (!response.ok) throw new Error("Failed to fetch publishers");
       const data = await response.json();
       return (data.publishers || []) as Publisher[];
+    },
+  });
+
+  // 商品一覧を取得（紐づけ用）
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_GATEWAY_BASE}/stock/products`, {
+        headers,
+      });
+      if (!response.ok) throw new Error("Failed to fetch products");
+      const data = await response.json();
+      return (data.products || []) as Product[];
     },
   });
 
@@ -155,6 +186,33 @@ function EventsPage() {
     },
   });
 
+  // 商品紐づけを更新
+  const updateProductsMutation = useMutation({
+    mutationFn: async ({
+      eventId,
+      productIds,
+    }: {
+      eventId: string;
+      productIds: string[];
+    }) => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(
+        `${API_GATEWAY_BASE}/stock/events/${eventId}/products`,
+        {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ product_ids: productIds }),
+        },
+      );
+      if (!response.ok) throw new Error("Failed to update event products");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      setProductLinkEvent(null);
+    },
+  });
+
   const filteredEvents = events.filter(
     (event) =>
       event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -194,10 +252,37 @@ function EventsPage() {
       render: (item: Event) => getPublisherName(item.publisher_id),
     },
     {
+      key: "product_count",
+      header: "商品数",
+      render: (item: Event) => (
+        <span
+          className={css({
+            padding: "1 2",
+            backgroundColor: "gray.100",
+            borderRadius: "md",
+            fontSize: "sm",
+          })}
+        >
+          {item.product_ids?.length || 0}
+        </span>
+      ),
+    },
+    {
       key: "actions",
       header: "操作",
       render: (item: Event) => (
         <div className={css({ display: "flex", gap: "1" })}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setProductLinkEvent(item);
+              setSelectedProductIds(item.product_ids || []);
+            }}
+            title="商品紐づけ"
+          >
+            <IconBook size={16} />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -680,6 +765,203 @@ function EventsPage() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Product Link Modal */}
+      <Modal
+        isOpen={!!productLinkEvent}
+        onClose={() => setProductLinkEvent(null)}
+        title={`商品紐づけ: ${productLinkEvent?.name || ""}`}
+      >
+        {productLinkEvent && (
+          <div
+            className={css({
+              display: "flex",
+              flexDirection: "column",
+              gap: "4",
+            })}
+          >
+            <p className={css({ fontSize: "sm", color: "gray.600" })}>
+              このイベントで頒布する商品を選択してください。
+              <br />
+              選択した商品はPOS端末でこのイベント時に表示されます。
+            </p>
+
+            <div
+              className={css({
+                maxHeight: "400px",
+                overflowY: "auto",
+                border: "1px solid",
+                borderColor: "gray.200",
+                borderRadius: "md",
+              })}
+            >
+              {products.length === 0 ? (
+                <p
+                  className={css({
+                    padding: "4",
+                    textAlign: "center",
+                    color: "gray.500",
+                  })}
+                >
+                  商品がありません
+                </p>
+              ) : (
+                products
+                  .filter((p) => p.is_active)
+                  .map((product) => {
+                    const isSelected = selectedProductIds.includes(
+                      product.product_id,
+                    );
+                    return (
+                      <label
+                        key={product.product_id}
+                        className={css({
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "3",
+                          borderBottom: "1px solid",
+                          borderColor: "gray.100",
+                          cursor: "pointer",
+                          _hover: {
+                            backgroundColor: "gray.50",
+                          },
+                          _last: {
+                            borderBottom: "none",
+                          },
+                        })}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setSelectedProductIds(
+                                selectedProductIds.filter(
+                                  (id) => id !== product.product_id,
+                                ),
+                              );
+                            } else {
+                              setSelectedProductIds([
+                                ...selectedProductIds,
+                                product.product_id,
+                              ]);
+                            }
+                          }}
+                          className={css({
+                            width: "4",
+                            height: "4",
+                            marginRight: "3",
+                          })}
+                        />
+                        <div className={css({ flex: "1" })}>
+                          <div
+                            className={css({
+                              fontWeight: "medium",
+                              fontSize: "sm",
+                            })}
+                          >
+                            {product.name}
+                          </div>
+                          <div
+                            className={css({
+                              fontSize: "xs",
+                              color: "gray.500",
+                            })}
+                          >
+                            {product.category} / ¥
+                            {product.price.toLocaleString()}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })
+              )}
+            </div>
+
+            <div
+              className={css({
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingY: "2",
+                borderTop: "1px solid",
+                borderColor: "gray.200",
+              })}
+            >
+              <span className={css({ fontSize: "sm", color: "gray.600" })}>
+                選択中: {selectedProductIds.length}件
+              </span>
+              <div className={css({ display: "flex", gap: "2" })}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    setSelectedProductIds(
+                      products
+                        .filter((p) => p.is_active)
+                        .map((p) => p.product_id),
+                    )
+                  }
+                >
+                  すべて選択
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setSelectedProductIds([])}
+                >
+                  選択解除
+                </Button>
+              </div>
+            </div>
+
+            {updateProductsMutation.error && (
+              <div
+                className={css({
+                  backgroundColor: "red.50",
+                  border: "1px solid",
+                  borderColor: "red.200",
+                  color: "red.700",
+                  padding: "3",
+                  borderRadius: "md",
+                  fontSize: "sm",
+                })}
+              >
+                {updateProductsMutation.error instanceof Error
+                  ? updateProductsMutation.error.message
+                  : "更新に失敗しました"}
+              </div>
+            )}
+
+            <div
+              className={css({
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "2",
+              })}
+            >
+              <Button
+                variant="secondary"
+                onClick={() => setProductLinkEvent(null)}
+                type="button"
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={() =>
+                  updateProductsMutation.mutate({
+                    eventId: productLinkEvent.event_id,
+                    productIds: selectedProductIds,
+                  })
+                }
+                disabled={updateProductsMutation.isPending}
+              >
+                {updateProductsMutation.isPending ? "保存中..." : "保存"}
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
     </>
