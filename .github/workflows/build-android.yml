@@ -142,25 +142,25 @@ jobs:
           ENV="${{ needs.setup-env.outputs.environment }}"
 
           # APK signing: zipalign first, then apksigner (APK Signature Scheme v2)
-          zipalign -v 4 $BUILD_DIR/apk/arm64/release/app-arm64-release-unsigned.apk \
-            $BUILD_DIR/apk/arm64/release/mizpos-$ENV-aligned.apk
+          zipalign -v 4 $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
+            $BUILD_DIR/apk/universal/release/mizpos-$ENV-aligned.apk
 
           apksigner sign --ks $ANDROID_KEYSTORE_PATH \
             --ks-pass pass:$ANDROID_KEYSTORE_PASSWORD \
             --ks-key-alias $ANDROID_KEY_ALIAS \
             --key-pass pass:$ANDROID_KEY_PASSWORD \
-            --out $BUILD_DIR/apk/arm64/release/mizpos-$ENV.apk \
-            $BUILD_DIR/apk/arm64/release/mizpos-$ENV-aligned.apk
+            --out $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
+            $BUILD_DIR/apk/universal/release/mizpos-$ENV-aligned.apk
 
           # Verify APK signature
-          apksigner verify --verbose $BUILD_DIR/apk/arm64/release/mizpos-$ENV.apk
+          apksigner verify --verbose $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk
 
           # Sign AAB with jarsigner (AAB uses JAR signing)
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore $ANDROID_KEYSTORE_PATH \
             -storepass $ANDROID_KEYSTORE_PASSWORD \
             -keypass $ANDROID_KEY_PASSWORD \
-            $BUILD_DIR/bundle/arm64Release/app-arm64-release.aab \
+            $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
             $ANDROID_KEY_ALIAS
 
       - name: Upload to CDN
@@ -172,17 +172,17 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
           # Upload APK with timestamp for history
-          aws s3 cp $BUILD_DIR/apk/arm64/release/mizpos-$ENV.apk \
+          aws s3 cp $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
             "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.apk"
           # Upload APK as latest
-          aws s3 cp $BUILD_DIR/apk/arm64/release/mizpos-$ENV.apk \
+          aws s3 cp $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
             "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.apk"
 
           # Upload AAB (for Play Store)
           if [[ "$ENV" == "prod" ]]; then
-            aws s3 cp $BUILD_DIR/bundle/arm64Release/app-arm64-release.aab \
+            aws s3 cp $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
               "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.aab"
-            aws s3 cp $BUILD_DIR/bundle/arm64Release/app-arm64-release.aab \
+            aws s3 cp $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
               "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.aab"
           fi
 
