@@ -15,7 +15,6 @@ from botocore.exceptions import ClientError
 
 from coupon_services import (
     calculate_discount,
-    get_coupon_by_code,
     increment_usage_count,
     validate_coupon,
 )
