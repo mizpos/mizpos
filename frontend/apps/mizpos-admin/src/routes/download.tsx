@@ -1,20 +1,14 @@
 import {
-  IconApple,
   IconBrandAndroid,
   IconBrandDebian,
   IconBrandWindows,
   IconDownload,
-  IconExternalLink,
   IconInfoCircle,
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { css } from "styled-system/css";
 import { Card, PageContainer } from "../components/ui";
-import {
-  CDN_URLS,
-  DESKTOP_APP_VERSION,
-  getEnvironment,
-} from "../lib/constants";
+import { DESKTOP_APP_VERSION, getEnvironment } from "../lib/constants";
 
 export const Route = createFileRoute("/download")({
   component: DownloadPage,
@@ -35,7 +29,7 @@ interface DownloadItem {
 
 function DownloadPage() {
   const env = getEnvironment();
-  const cdnUrl = CDN_URLS[env];
+  const cdnUrl = import.meta.env.VITE_CDN_DOMAIN;
   const version = DESKTOP_APP_VERSION;
 
   const downloads: DownloadItem[] = [
@@ -46,12 +40,8 @@ function DownloadPage() {
       files: [
         {
           name: "インストーラー (MSI)",
-          filename: `mizpos-desktop-${version}.msi`,
+          filename: "mizpos-latest.msi",
           recommended: true,
-        },
-        {
-          name: "ポータブル版 (EXE)",
-          filename: `mizpos-desktop-${version}.exe`,
         },
       ],
       instructions: [
@@ -67,12 +57,12 @@ function DownloadPage() {
       files: [
         {
           name: "AppImage (全ディストリ対応)",
-          filename: `mizpos-desktop-${version}.AppImage`,
+          filename: "mizpos-latest.AppImage",
           recommended: true,
         },
         {
           name: "Debian パッケージ (.deb)",
-          filename: `mizpos-desktop-${version}.deb`,
+          filename: "mizpos-latest.deb",
         },
       ],
       instructions: [
@@ -163,8 +153,7 @@ function DownloadPage() {
                 })}
               >
                 POSレジ端末用のデスクトップアプリケーションです。
-                バーコードスキャン、オフライン対応、Stripe
-                Terminal連携などの機能があります。
+                バーコードスキャン、オフライン対応などの機能があります。
               </p>
               <div
                 className={css({
@@ -342,43 +331,6 @@ function DownloadPage() {
             </Card>
           ))}
         </div>
-
-        {/* macOS notice */}
-        <Card variant="outlined">
-          <div
-            className={css({
-              display: "flex",
-              alignItems: "center",
-              gap: "3",
-            })}
-          >
-            <IconApple size={24} className={css({ color: "gray.400" })} />
-            <div>
-              <p className={css({ fontSize: "sm", color: "gray.600" })}>
-                <strong>macOS版について:</strong>{" "}
-                macOS版は現在準備中です。開発者の方はソースコードからビルドしてください。
-              </p>
-              <a
-                href="https://github.com/mizphses/mizpos"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={css({
-                  fontSize: "sm",
-                  color: "primary.600",
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "1",
-                  marginTop: "1",
-                  _hover: { textDecoration: "underline" },
-                })}
-              >
-                GitHubリポジトリ
-                <IconExternalLink size={14} />
-              </a>
-            </div>
-          </div>
-        </Card>
       </div>
     </PageContainer>
   );

@@ -82,20 +82,18 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3
         with:
-          api-level: 33
-          build-tools: 33.0.2
-          ndk-version: 25.2.9519653
+          packages: "build-tools;35.0.0 platform-tools platforms;android-35 ndk;25.2.9519653"
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          targets: aarch64-linux-android
 
       - name: Install Rust Android targets
         run: |
-          rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+          rustup target add aarch64-linux-android
 
       - name: Install cargo-ndk
         uses: taiki-e/install-action@v2
@@ -114,8 +112,8 @@ jobs:
           npm run tauri android init
           # Build frontend with appropriate mode (.env.development or .env.production)
           pnpm vite build --mode $VITE_MODE
-          # Build Android app (skip beforeBuildCommand since we already built frontend)
-          npm run tauri android build -- --apk true --aab true --config '{"build":{"beforeBuildCommand":""}}'
+          # Build Android app for ARM64 only (skip beforeBuildCommand since we already built frontend)
+          npm run tauri android build -- --target aarch64 --apk true --aab true --config '{"build":{"beforeBuildCommand":""}}'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -138,23 +136,30 @@ jobs:
       - name: Sign APK/AAB
         run: |
           # Add Android build-tools to PATH
-          export PATH="$ANDROID_HOME/build-tools/33.0.2:$PATH"
+          export PATH="$ANDROID_HOME/build-tools/35.0.0:$PATH"
 
           BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
+          ENV="${{ needs.setup-env.outputs.environment }}"
 
-          # Sign APK
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore $ANDROID_KEYSTORE_PATH \
-            -storepass $ANDROID_KEYSTORE_PASSWORD \
-            -keypass $ANDROID_KEY_PASSWORD \
-            $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
-            $ANDROID_KEY_ALIAS
-
-          # Align APK
+          # APK signing: zipalign first, then apksigner (APK Signature Scheme v2)
           zipalign -v 4 $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
-            $BUILD_DIR/apk/universal/release/mizpos-${{ needs.setup-env.outputs.environment }}.apk
+            $BUILD_DIR/apk/universal/release/mizpos-$ENV-aligned.apk
 
-          # Sign AAB
+          apksigner sign --ks $ANDROID_KEYSTORE_PATH \
+            --ks-pass pass:$ANDROID_KEYSTORE_PASSWORD \
+            --ks-key-alias $ANDROID_KEY_ALIAS \
+            --key-pass pass:$ANDROID_KEY_PASSWORD \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
+            $BUILD_DIR/apk/universal/release/mizpos-$ENV-aligned.apk
+
+          # Verify APK signature
+          apksigner verify --verbose $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk
+
+          # Sign AAB with jarsigner (AAB uses JAR signing)
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore $ANDROID_KEYSTORE_PATH \
             -storepass $ANDROID_KEYSTORE_PASSWORD \
@@ -168,15 +173,21 @@ jobs:
           CDN_BUCKET: ${{ needs.setup-env.outputs.cdn-bucket }}
         run: |
           BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-          # Upload APK
+          # Upload APK with timestamp for history
           aws s3 cp $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
-            s3://$CDN_BUCKET/android/$ENV/mizpos-latest.apk
+            "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.apk"
+          # Upload APK as latest
+          aws s3 cp $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
+            "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.apk"
 
           # Upload AAB (for Play Store)
           if [[ "$ENV" == "prod" ]]; then
             aws s3 cp $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
-              s3://$CDN_BUCKET/android/$ENV/mizpos-latest.aab
+              "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.aab"
+            aws s3 cp $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
+              "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.aab"
           fi
 
       - name: Create deployment summary

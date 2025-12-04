@@ -40,6 +40,51 @@ resource "aws_s3_bucket_cors_configuration" "cdn_assets" {
   }
 }
 
+# Lifecycle configuration for app builds (delete non-latest files after 30 days)
+# Note: "latest" files are tagged with keep=true and excluded from expiration.
+# Timestamped files are not tagged and will be deleted after 30 days.
+resource "aws_s3_bucket_lifecycle_configuration" "cdn_assets" {
+  bucket = aws_s3_bucket.cdn_assets.id
+
+  # Rule for Android builds - delete timestamped files after 30 days (files without keep=true tag)
+  rule {
+    id     = "expire-old-android-builds"
+    status = "Enabled"
+
+    filter {
+      and {
+        prefix = "android/"
+        tags = {
+          keep = "false"
+        }
+      }
+    }
+
+    expiration {
+      days = 30
+    }
+  }
+
+  # Rule for Desktop builds - delete timestamped files after 30 days (files without keep=true tag)
+  rule {
+    id     = "expire-old-desktop-builds"
+    status = "Enabled"
+
+    filter {
+      and {
+        prefix = "desktop/"
+        tags = {
+          keep = "false"
+        }
+      }
+    }
+
+    expiration {
+      days = 30
+    }
+  }
+}
+
 # CloudFront Origin Access Control
 resource "aws_cloudfront_origin_access_control" "cdn_assets" {
   name                              = "${var.environment}-${var.project_name}-cdn-oac"
