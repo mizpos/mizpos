@@ -24,13 +24,20 @@ runs:
         targets: ${{ inputs.targets }}
         components: ${{ inputs.components }}
 
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.6
+
+    - name: Configure sccache
+      shell: bash
+      run: |
+        echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+        echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
     - name: Setup Rust cache
       uses: swatinem/rust-cache@v2
       with:
+        workspaces: "frontend/apps/mizpos-desktop/src-tauri -> target"
         key: ${{ runner.os }}-rust-${{ inputs.rust-version }}
         shared-key: "rust-cache"
-        cache-directories: |
-          ~/.cargo/registry/index
-          ~/.cargo/registry/cache
-          ~/.cargo/git/db
-          target/
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+        cache-on-failure: true
