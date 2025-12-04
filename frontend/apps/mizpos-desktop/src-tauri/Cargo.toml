@@ -42,3 +42,10 @@ incremental = true
 lto = "thin"
 codegen-units = 16
 incremental = false
+
+# Security patches for RUSTSEC-2024-0429 (glib VariantStrIter unsoundness)
+# Note: This patch uses the gtk-rs-core fix until Tauri upgrades to gtk4-rs
+# Tracking: https://github.com/tauri-apps/tauri/issues/12564
+[patch.crates-io.glib]
+git = "https://github.com/gtk-rs/gtk-rs-core"
+branch = "0.18"

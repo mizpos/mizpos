@@ -153,7 +153,7 @@ jobs:
           if [[ "${{ matrix.os_name }}" == "windows" ]]; then
             cd $BUNDLE_DIR/msi
             for file in *.msi; do
-              aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/ --acl public-read
+              aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/
             done
           else
             cd $BUNDLE_DIR
@@ -161,7 +161,7 @@ jobs:
             if [ -d "appimage" ]; then
               cd appimage
               for file in *.AppImage; do
-                aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/ --acl public-read
+                aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/
               done
               cd ..
             fi
@@ -169,7 +169,7 @@ jobs:
             if [ -d "deb" ]; then
               cd deb
               for file in *.deb; do
-                aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/ --acl public-read
+                aws s3 cp "$file" s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/
               done
             fi
           fi
