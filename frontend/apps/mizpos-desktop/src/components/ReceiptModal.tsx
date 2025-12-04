@@ -152,6 +152,8 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
   const [printError, setPrintError] = useState<string | null>(null);
   const { settings } = useSettingsStore();
 
+  const isTraining = transaction.isTraining ?? false;
+
   // ESCキーで閉じる
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -226,24 +228,30 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
     } finally {
       setIsPrinting(false);
     }
-  }, [settings, transaction, onClose]);
+  }, [settings, transaction, onClose, isTraining]);
 
   const cashPayment = transaction.payments.find((p) => p.method === "cash");
   const change = cashPayment ? cashPayment.amount - transaction.total : 0;
-
-  const isTraining = transaction.isTraining ?? false;
 
   return (
     <div className={overlayStyles}>
       <div className={modalStyles}>
         {/* 成功ヘッダー */}
-        <div className={isTraining ? headerStyles.containerTraining : headerStyles.container}>
-          <div className={headerStyles.iconWrapper}>{isTraining ? "📝" : "✓"}</div>
+        <div
+          className={
+            isTraining ? headerStyles.containerTraining : headerStyles.container
+          }
+        >
+          <div className={headerStyles.iconWrapper}>
+            {isTraining ? "📝" : "✓"}
+          </div>
           <h2 className={headerStyles.title}>
             {isTraining ? "トレーニング完了" : "会計完了"}
           </h2>
           <p className={headerStyles.subtitle}>
-            {isTraining ? "この取引は記録されていません" : "ありがとうございました"}
+            {isTraining
+              ? "この取引は記録されていません"
+              : "ありがとうございました"}
           </p>
         </div>
 

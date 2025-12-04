@@ -503,7 +503,10 @@ function ProductsPage() {
                     borderRadius: "md",
                   })}
                 >
-                  <BarcodeDisplay value={barcodeInfo.jan_barcode_1} label="JANコード" />
+                  <BarcodeDisplay
+                    value={barcodeInfo.jan_barcode_1}
+                    label="JANコード"
+                  />
                 </div>
                 <div
                   className={css({
@@ -840,7 +843,7 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
 
       {/* 書籍フラグ */}
       <div className={css({ gridColumn: "span 2" })}>
-        <label className={labelClass}>商品種別</label>
+        <span className={labelClass}>商品種別</span>
         <div
           className={css({
             display: "flex",
@@ -860,7 +863,9 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
               type="radio"
               name="is_book"
               checked={(data as CreateProductForm).is_book === true}
-              onChange={() => onChange({ ...data, is_book: true } as CreateProductForm)}
+              onChange={() =>
+                onChange({ ...data, is_book: true } as CreateProductForm)
+              }
             />
             <span>書籍（2段バーコード）</span>
           </label>
@@ -876,7 +881,9 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
               type="radio"
               name="is_book"
               checked={(data as CreateProductForm).is_book === false}
-              onChange={() => onChange({ ...data, is_book: false } as CreateProductForm)}
+              onChange={() =>
+                onChange({ ...data, is_book: false } as CreateProductForm)
+              }
             />
             <span>非書籍（単一バーコード）</span>
           </label>
@@ -967,7 +974,11 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
               placeholder="978-4-xxx-xxxxx-x / 278-4-xxx-xxxxx-x"
             />
             <p
-              className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
+              className={css({
+                fontSize: "xs",
+                color: "gray.500",
+                marginTop: "1",
+              })}
             >
               空欄の場合はインハウスコードを生成します
             </p>
@@ -987,7 +998,11 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
               maxLength={4}
             />
             <p
-              className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
+              className={css({
+                fontSize: "xs",
+                color: "gray.500",
+                marginTop: "1",
+              })}
             >
               4桁のCコード（例: 3055=専門・教養書）
             </p>
@@ -1011,7 +1026,11 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
             maxLength={13}
           />
           <p
-            className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
+            className={css({
+              fontSize: "xs",
+              color: "gray.500",
+              marginTop: "1",
+            })}
           >
             空欄の場合はインハウスコードを生成します
           </p>
@@ -1055,7 +1074,10 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
             type="checkbox"
             checked={(data as CreateProductForm).is_online ?? true}
             onChange={(e) =>
-              onChange({ ...data, is_online: e.target.checked } as CreateProductForm)
+              onChange({
+                ...data,
+                is_online: e.target.checked,
+              } as CreateProductForm)
             }
             className={css({
               width: "4",
@@ -1068,7 +1090,12 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
           </span>
         </label>
         <p
-          className={css({ fontSize: "xs", color: "gray.500", marginTop: "1", marginLeft: "6" })}
+          className={css({
+            fontSize: "xs",
+            color: "gray.500",
+            marginTop: "1",
+            marginLeft: "6",
+          })}
         >
           チェックを外すと通販サイトに表示されません（イベント限定商品など）
         </p>

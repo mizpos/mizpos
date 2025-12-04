@@ -293,7 +293,11 @@ const cashlessDisplayStyles = {
   }),
 };
 
-export function CheckoutModal({ onClose, onComplete, isTrainingMode = false }: CheckoutModalProps) {
+export function CheckoutModal({
+  onClose,
+  onComplete,
+  isTrainingMode = false,
+}: CheckoutModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [receivedAmount, setReceivedAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -469,7 +473,10 @@ export function CheckoutModal({ onClose, onComplete, isTrainingMode = false }: C
           });
 
           if (!response.ok) {
-            console.error("Failed to send sale to backend:", response.statusText);
+            console.error(
+              "Failed to send sale to backend:",
+              response.statusText,
+            );
             // バックエンド送信失敗時もローカルには保存済みなので続行
           } else {
             console.log("Sale successfully sent to backend");
@@ -534,7 +541,8 @@ export function CheckoutModal({ onClose, onComplete, isTrainingMode = false }: C
           className={css({
             padding: "12px 16px",
             marginBottom: "16px",
-            background: "linear-gradient(90deg, #dc2626 0%, #ea580c 50%, #dc2626 100%)",
+            background:
+              "linear-gradient(90deg, #dc2626 0%, #ea580c 50%, #dc2626 100%)",
             borderRadius: "8px",
             textAlign: "center",
             fontSize: "14px",

@@ -340,7 +340,9 @@ function POSPage() {
     message: string;
   } | null>(null);
   // 書籍2段階スキャン: 1段目スキャン後の商品を一時保存
-  const [pendingBookProduct, setPendingBookProduct] = useState<Product | null>(null);
+  const [pendingBookProduct, setPendingBookProduct] = useState<Product | null>(
+    null,
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
 

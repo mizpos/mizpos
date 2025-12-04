@@ -45,7 +45,8 @@ class MizPOSDatabase extends Dexie {
     this.version(4).stores({
       products: "id, jan, jan2, isbn, isBook, name, deletedAt",
       transactions: "id, staffId, createdAt",
-      salesSummary: "id, jan, isbn, circleName, [jan+circleName], [isbn+circleName]",
+      salesSummary:
+        "id, jan, isbn, circleName, [jan+circleName], [isbn+circleName]",
     });
   }
 }
@@ -135,9 +136,7 @@ export async function getTransactions(limit = 100): Promise<Transaction[]> {
  * 全商品を取得（論理削除されたものを除外）
  */
 export async function getAllProducts(): Promise<Product[]> {
-  return db.products
-    .filter((product) => !product.deletedAt)
-    .toArray();
+  return db.products.filter((product) => !product.deletedAt).toArray();
 }
 
 /**
@@ -171,7 +170,9 @@ function generateSalesSummaryId(jan: string, circleName: string): string {
 /**
  * 販売サマリーを更新（取引完了時に呼び出す）
  */
-export async function updateSalesSummary(transaction: Transaction): Promise<void> {
+export async function updateSalesSummary(
+  transaction: Transaction,
+): Promise<void> {
   // トレーニングモードの取引はサマリーに含めない
   if (transaction.isTraining) return;
 
@@ -216,13 +217,17 @@ export async function getSalesSummary(): Promise<SalesSummary[]> {
 /**
  * 版元（サークル名）別の販売サマリーを取得
  */
-export async function getSalesSummaryByCircle(circleName: string): Promise<SalesSummary[]> {
+export async function getSalesSummaryByCircle(
+  circleName: string,
+): Promise<SalesSummary[]> {
   return db.salesSummary.where("circleName").equals(circleName).toArray();
 }
 
 /**
  * JANコード別の販売サマリーを取得
  */
-export async function getSalesSummaryByJan(jan: string): Promise<SalesSummary[]> {
+export async function getSalesSummaryByJan(
+  jan: string,
+): Promise<SalesSummary[]> {
   return db.salesSummary.where("jan").equals(jan).toArray();
 }
