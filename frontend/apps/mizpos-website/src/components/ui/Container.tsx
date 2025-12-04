@@ -22,7 +22,7 @@ export function Container({
   const baseStyles = css({
     maxWidth: containerSizes[size],
     marginX: "auto",
-    paddingX: { base: "1rem", md: "2rem" },
+    paddingX: { base: "1.5rem", md: "2.5rem", lg: "3rem" },
     width: "100%",
   });
 

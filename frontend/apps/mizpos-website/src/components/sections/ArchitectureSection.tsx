@@ -3,8 +3,10 @@ import {
   IconBrandAws,
   IconBrandPython,
   IconBrandReact,
+  IconBrandRust,
   IconBrandTypescript,
   IconDatabase,
+  IconLambda,
   IconLock,
   IconServer,
 } from "@tabler/icons-react";
@@ -36,13 +38,13 @@ const technologies: TechItem[] = [
   {
     name: "Tauri",
     description: "軽量・高速なクロスプラットフォームデスクトップアプリ",
-    icon: <IconServer size={24} />,
+    icon: <IconBrandRust size={24} />,
     category: "frontend",
   },
   {
     name: "AWS Lambda",
     description: "サーバーレスで従量課金、スケーラブルなAPI",
-    icon: <IconBrandAws size={24} />,
+    icon: <IconLambda size={24} />,
     category: "backend",
   },
   {
