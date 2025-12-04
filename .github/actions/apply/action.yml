@@ -31,9 +31,6 @@ runs:
       shell: bash
       run: terraform init
       working-directory: ${{ inputs.WORKING_DIR }}
-      env:
-        TF_VAR_cloudflare_api_token: ${{ inputs.CLOUDFLARE_API_TOKEN }}
-        TF_VAR_cloudflare_account_id: ${{ inputs.CLOUDFLARE_ACCOUNT_ID }}
 
     - name: tflint
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
@@ -54,8 +51,6 @@ runs:
       working-directory: ${{ inputs.WORKING_DIR }}
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-        TF_VAR_cloudflare_api_token: ${{ inputs.CLOUDFLARE_API_TOKEN }}
-        TF_VAR_cloudflare_account_id: ${{ inputs.CLOUDFLARE_ACCOUNT_ID }}
 
     - name: Terraform Plan (not Pull Request)
       if: github.event_name != 'pull_request'
@@ -63,8 +58,6 @@ runs:
       run: terraform plan -refresh=true -out=tfplan -no-color -lock=false -parallelism=50
       working-directory: ${{ inputs.WORKING_DIR }}
       env:
-        TF_VAR_cloudflare_api_token: ${{ inputs.CLOUDFLARE_API_TOKEN }}
-        TF_VAR_cloudflare_account_id: ${{ inputs.CLOUDFLARE_ACCOUNT_ID }}
 
     - name: Convert terraform plan to json
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
@@ -85,14 +78,9 @@ runs:
       working-directory: ${{ inputs.WORKING_DIR }}
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-        TF_VAR_cloudflare_api_token: ${{ inputs.CLOUDFLARE_API_TOKEN }}
-        TF_VAR_cloudflare_account_id: ${{ inputs.CLOUDFLARE_ACCOUNT_ID }}
 
     - name: Terraform Apply (workflow_dispatch)
       if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: terraform apply -refresh=true -auto-approve -no-color
       working-directory: ${{ inputs.WORKING_DIR }}
-      env:
-        TF_VAR_cloudflare_api_token: ${{ inputs.CLOUDFLARE_API_TOKEN }}
-        TF_VAR_cloudflare_account_id: ${{ inputs.CLOUDFLARE_ACCOUNT_ID }}
