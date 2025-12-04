@@ -1002,6 +1002,48 @@ async def pos_verify_session(session_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@router.get("/pos/events", response_model=dict)
+async def pos_get_events(request: Request):
+    """POS端末からイベント一覧を取得
+
+    X-POS-Session ヘッダーでセッションIDを指定
+    アクティブなイベントのみ返却
+    """
+    session_id = request.headers.get("X-POS-Session")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing POS session")
+
+    try:
+        # セッション検証
+        session = verify_pos_session(session_id)
+        if not session:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # イベントテーブルから全イベントを取得
+        import boto3
+
+        ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
+        EVENTS_TABLE = os.environ.get("EVENTS_TABLE", f"{ENVIRONMENT}-mizpos-events")
+
+        dynamodb = boto3.resource("dynamodb")
+        events_table = dynamodb.Table(EVENTS_TABLE)
+
+        response = events_table.scan()
+        items = response.get("Items", [])
+
+        # アクティブなイベントのみフィルタリング
+        active_events = [
+            dynamo_to_dict(item) for item in items if item.get("is_active", False)
+        ]
+
+        return {"events": active_events}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching events for POS: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @router.post("/pos/auth/set-event", response_model=dict)
 async def pos_set_event(request: Request, body: PosSetEventRequest):
     """POSセッションにイベントを設定
