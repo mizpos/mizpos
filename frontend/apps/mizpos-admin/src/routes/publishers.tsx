@@ -262,73 +262,72 @@ function PublishersPage() {
 
   return (
     <PageContainer title="サークル/出版社管理">
-        <div
-          className={css({
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "6",
-          })}
-        >
-          <div className={css({ position: "relative", width: "320px" })}>
-            <IconSearch
-              size={18}
-              className={css({
-                position: "absolute",
-                left: "3",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "gray.400",
-              })}
-            />
-            <input
-              type="text"
-              placeholder="名前・メールで検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={css({
-                width: "100%",
-                paddingLeft: "10",
-                paddingRight: "4",
-                paddingY: "2",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: "gray.300",
-                fontSize: "sm",
-                _focus: {
-                  outline: "none",
-                  borderColor: "primary.500",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                },
-              })}
-            />
-          </div>
-
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <IconPlus size={18} />
-            サークル追加
-          </Button>
+      <div
+        className={css({
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "6",
+        })}
+      >
+        <div className={css({ position: "relative", width: "320px" })}>
+          <IconSearch
+            size={18}
+            className={css({
+              position: "absolute",
+              left: "3",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "gray.400",
+            })}
+          />
+          <input
+            type="text"
+            placeholder="名前・メールで検索..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={css({
+              width: "100%",
+              paddingLeft: "10",
+              paddingRight: "4",
+              paddingY: "2",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.300",
+              fontSize: "sm",
+              _focus: {
+                outline: "none",
+                borderColor: "primary.500",
+                boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+              },
+            })}
+          />
         </div>
 
-        {isLoading ? (
-          <div
-            className={css({
-              textAlign: "center",
-              padding: "8",
-              color: "gray.500",
-            })}
-          >
-            読み込み中...
-          </div>
-        ) : (
-          <Table
-            columns={columns}
-            data={filteredPublishers}
-            keyExtractor={(item) => item.publisher_id}
-            emptyMessage="サークル/出版社が見つかりません"
-          />
-        )}
+        <Button onClick={() => setIsCreateModalOpen(true)}>
+          <IconPlus size={18} />
+          サークル追加
+        </Button>
       </div>
+
+      {isLoading ? (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
+          })}
+        >
+          読み込み中...
+        </div>
+      ) : (
+        <Table
+          columns={columns}
+          data={filteredPublishers}
+          keyExtractor={(item) => item.publisher_id}
+          emptyMessage="サークル/出版社が見つかりません"
+        />
+      )}
 
       {/* Create Modal */}
       <Modal

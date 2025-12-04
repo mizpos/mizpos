@@ -20,6 +20,7 @@ import { Route as PosEmployeesRouteImport } from './routes/pos-employees'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as CouponsRouteImport } from './routes/coupons'
 import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as CallbackRouteImport } from './routes/callback'
@@ -80,6 +81,11 @@ const EventsRoute = EventsRouteImport.update({
   path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CouponsRoute = CouponsRouteImport.update({
   id: '/coupons',
   path: '/coupons',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
   '/coupons': typeof CouponsRoute
+  '/download': typeof DownloadRoute
   '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
   '/coupons': typeof CouponsRoute
+  '/download': typeof DownloadRoute
   '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/callback': typeof CallbackRoute
   '/change-password': typeof ChangePasswordRoute
   '/coupons': typeof CouponsRoute
+  '/download': typeof DownloadRoute
   '/events': typeof EventsRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/change-password'
     | '/coupons'
+    | '/download'
     | '/events'
     | '/login'
     | '/logout'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/change-password'
     | '/coupons'
+    | '/download'
     | '/events'
     | '/login'
     | '/logout'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/change-password'
     | '/coupons'
+    | '/download'
     | '/events'
     | '/login'
     | '/logout'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   CallbackRoute: typeof CallbackRoute
   ChangePasswordRoute: typeof ChangePasswordRoute
   CouponsRoute: typeof CouponsRoute
+  DownloadRoute: typeof DownloadRoute
   EventsRoute: typeof EventsRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
@@ -304,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/coupons': {
       id: '/coupons'
       path: '/coupons'
@@ -340,6 +360,7 @@ const rootRouteChildren: RootRouteChildren = {
   CallbackRoute: CallbackRoute,
   ChangePasswordRoute: ChangePasswordRoute,
   CouponsRoute: CouponsRoute,
+  DownloadRoute: DownloadRoute,
   EventsRoute: EventsRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,

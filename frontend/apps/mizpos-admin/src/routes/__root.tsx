@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { css } from "styled-system/css";
-import { Sidebar } from "../components/Sidebar";
+import { Layout } from "../components/Layout";
 import { useAuth } from "../lib/auth";
 
 interface RouterContext {
@@ -32,12 +32,12 @@ function RootLayout() {
     }
   }, [isAuthenticated, isLoading, isLoginPage, navigate]);
 
-  // ログインページは特別なレイアウト
+  // Login page has its own layout
   if (isLoginPage) {
     return <Outlet />;
   }
 
-  // ローディング中
+  // Loading state
   if (isLoading) {
     return (
       <div
@@ -49,35 +49,41 @@ function RootLayout() {
           backgroundColor: "gray.50",
         })}
       >
-        <p className={css({ color: "gray.500" })}>読み込み中...</p>
+        <div
+          className={css({
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4",
+          })}
+        >
+          <div
+            className={css({
+              width: "10",
+              height: "10",
+              border: "3px solid",
+              borderColor: "gray.200",
+              borderTopColor: "primary.500",
+              borderRadius: "full",
+              animation: "spin 1s linear infinite",
+            })}
+          />
+          <p className={css({ color: "gray.500", fontSize: "sm" })}>
+            読み込み中...
+          </p>
+        </div>
       </div>
     );
   }
 
-  // 未認証
+  // Not authenticated
   if (!isAuthenticated) {
     return null;
   }
 
   return (
-    <div
-      className={css({
-        display: "flex",
-        minHeight: "100vh",
-        backgroundColor: "gray.50",
-      })}
-    >
-      <Sidebar />
-      <main
-        className={css({
-          flex: "1",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        })}
-      >
-        <Outlet />
-      </main>
-    </div>
+    <Layout>
+      <Outlet />
+    </Layout>
   );
 }

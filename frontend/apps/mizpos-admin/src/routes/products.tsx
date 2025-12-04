@@ -12,10 +12,10 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 import { TwoTierBarcode } from "../components/BarcodeDisplay";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { ImageUploadField } from "../components/ImageUploadField";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients, getAuthHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -263,14 +263,7 @@ function ProductsPage() {
 
   return (
     <>
-      <Header title="商品管理" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+      <PageContainer title="商品管理">
         <div
           className={css({
             display: "flex",
@@ -342,7 +335,7 @@ function ProductsPage() {
             emptyMessage="商品が見つかりません"
           />
         )}
-      </div>
+      </PageContainer>
 
       {/* Create Modal */}
       <Modal
