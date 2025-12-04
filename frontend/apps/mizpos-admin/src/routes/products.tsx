@@ -43,6 +43,7 @@ interface Product {
   c_code?: string;
   jan_code?: string;
   download_url?: string;
+  is_online: boolean;
   stock_quantity: number;
   is_active: boolean;
 }
@@ -54,6 +55,7 @@ type CreateProductForm = StockComponents["schemas"]["CreateProductRequest"] & {
   c_code?: string;
   jan_code?: string;
   download_url?: string;
+  is_online: boolean;
 };
 
 interface BarcodeInfo {
@@ -92,6 +94,7 @@ function ProductsPage() {
     c_code: "",
     jan_code: "",
     download_url: "",
+    is_online: true,
     stock_quantity: 0,
     operator_id: user?.userId || "",
   };
@@ -175,6 +178,26 @@ function ProductsPage() {
       key: "stock_quantity",
       header: "在庫数",
       render: (item: Product) => item.stock_quantity,
+    },
+    {
+      key: "is_online",
+      header: "通販",
+      render: (item: Product) => (
+        <span
+          className={css({
+            display: "inline-flex",
+            paddingX: "2",
+            paddingY: "0.5",
+            borderRadius: "full",
+            fontSize: "xs",
+            fontWeight: "medium",
+            backgroundColor: item.is_online ? "blue.100" : "gray.100",
+            color: item.is_online ? "blue.800" : "gray.500",
+          })}
+        >
+          {item.is_online ? "掲載" : "非掲載"}
+        </span>
+      ),
     },
     {
       key: "is_active",
@@ -1016,6 +1039,39 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
           uploadType="book_cover"
           label="商品画像"
         />
+      </div>
+
+      {/* オンライン掲載フラグ */}
+      <div className={css({ gridColumn: "span 2" })}>
+        <label
+          className={css({
+            display: "flex",
+            alignItems: "center",
+            gap: "2",
+            cursor: "pointer",
+          })}
+        >
+          <input
+            type="checkbox"
+            checked={(data as CreateProductForm).is_online ?? true}
+            onChange={(e) =>
+              onChange({ ...data, is_online: e.target.checked } as CreateProductForm)
+            }
+            className={css({
+              width: "4",
+              height: "4",
+              cursor: "pointer",
+            })}
+          />
+          <span className={labelClass} style={{ marginBottom: 0 }}>
+            オンライン（通販サイト）に掲載する
+          </span>
+        </label>
+        <p
+          className={css({ fontSize: "xs", color: "gray.500", marginTop: "1", marginLeft: "6" })}
+        >
+          チェックを外すと通販サイトに表示されません（イベント限定商品など）
+        </p>
       </div>
     </div>
   );
