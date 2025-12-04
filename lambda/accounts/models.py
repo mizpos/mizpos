@@ -290,7 +290,9 @@ class PosSaleRequest(BaseModel):
     payment_method: str = Field(..., pattern="^(cash|card|other)$")
     event_id: str | None = None
     terminal_id: str | None = None
-    coupon_code: str | None = Field(default=None, description="クーポンコード（オプション）")
+    coupon_code: str | None = Field(
+        default=None, description="クーポンコード（オプション）"
+    )
     subtotal: int | None = Field(default=None, ge=0, description="クーポン割引前の小計")
 
 
