@@ -74,7 +74,7 @@ runs:
       if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch'
       shell: bash
       run: tfcmt -config ${{ inputs.TFCMT_CONFIG }} -var Pusher:${{ inputs.GITHUB_ACTOR }} -var WorkingDir:${{ inputs.WORKING_DIR }} -var target:${{ inputs.WORKFLOW_NAME }} apply -- terraform apply -refresh=true -auto-approve -no-color
-      working-directory: ${{ inputs.WORKING_DIR }}}
+      working-directory: ${{ inputs.WORKING_DIR }}
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
 
