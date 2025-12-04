@@ -10,9 +10,9 @@ export function HeroSection() {
       className={css({
         position: "relative",
         overflow: "hidden",
-        paddingTop: { base: "8rem", md: "10rem" },
-        paddingBottom: { base: "4rem", md: "6rem" },
-        bg: "linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #ecfeff 100%)",
+        pt: { base: "120px", md: "160px" },
+        pb: { base: "64px", md: "96px" },
+        background: "linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #ecfeff 100%)",
       })}
     >
       {/* Background decoration */}
@@ -23,7 +23,7 @@ export function HeroSection() {
           right: "-10%",
           width: "600px",
           height: "600px",
-          borderRadius: "full",
+          borderRadius: "9999px",
           background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.1))",
           filter: "blur(80px)",
           pointerEvents: "none",
@@ -36,7 +36,7 @@ export function HeroSection() {
           left: "-5%",
           width: "400px",
           height: "400px",
-          borderRadius: "full",
+          borderRadius: "9999px",
           background: "linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(99, 102, 241, 0.1))",
           filter: "blur(60px)",
           pointerEvents: "none",
@@ -55,7 +55,7 @@ export function HeroSection() {
           })}
         >
           {/* Badge */}
-          <Badge variant="outline" className={css({ marginBottom: "1.5rem" })}>
+          <Badge variant="outline" className={css({ mb: "24px" })}>
             <IconCloud size={14} />
             100% Serverless & Open Source
           </Badge>
@@ -63,12 +63,12 @@ export function HeroSection() {
           {/* Headline */}
           <h1
             className={css({
-              fontSize: { base: "2.5rem", md: "3.5rem", lg: "4rem" },
+              fontSize: { base: "40px", md: "56px", lg: "64px" },
               fontWeight: "800",
               lineHeight: "1.1",
               color: "gray.900",
               maxWidth: "900px",
-              marginBottom: "1.5rem",
+              mb: "24px",
             })}
           >
             同人イベントのための
@@ -87,10 +87,10 @@ export function HeroSection() {
           {/* Subheadline */}
           <p
             className={css({
-              fontSize: { base: "1.125rem", md: "1.25rem" },
+              fontSize: { base: "18px", md: "20px" },
               color: "gray.600",
               maxWidth: "640px",
-              marginBottom: "2.5rem",
+              mb: "40px",
               lineHeight: "1.7",
             })}
           >
@@ -104,8 +104,8 @@ export function HeroSection() {
             className={css({
               display: "flex",
               flexDirection: { base: "column", sm: "row" },
-              gap: "1rem",
-              marginBottom: "4rem",
+              gap: "16px",
+              mb: "64px",
             })}
           >
             <Button size="lg" as="a" href="#getting-started">
@@ -124,9 +124,9 @@ export function HeroSection() {
               position: "relative",
               width: "100%",
               maxWidth: "1000px",
-              borderRadius: "1rem",
+              borderRadius: "16px",
               overflow: "hidden",
-              shadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               border: "1px solid",
               borderColor: "gray.200",
             })}
@@ -135,28 +135,28 @@ export function HeroSection() {
             <div
               className={css({
                 bg: "gray.100",
-                paddingX: "1rem",
-                paddingY: "0.75rem",
+                px: "16px",
+                py: "12px",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem",
+                gap: "8px",
                 borderBottom: "1px solid",
                 borderColor: "gray.200",
               })}
             >
-              <div className={css({ display: "flex", gap: "0.5rem" })}>
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#ff5f57" })} />
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#febc2e" })} />
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#28c840" })} />
+              <div className={css({ display: "flex", gap: "8px" })}>
+                <div className={css({ width: "12px", height: "12px", borderRadius: "9999px", bg: "#ff5f57" })} />
+                <div className={css({ width: "12px", height: "12px", borderRadius: "9999px", bg: "#febc2e" })} />
+                <div className={css({ width: "12px", height: "12px", borderRadius: "9999px", bg: "#28c840" })} />
               </div>
               <div
                 className={css({
                   flex: 1,
                   bg: "white",
-                  borderRadius: "0.25rem",
-                  paddingX: "0.75rem",
-                  paddingY: "0.25rem",
-                  fontSize: "0.75rem",
+                  borderRadius: "4px",
+                  px: "12px",
+                  py: "4px",
+                  fontSize: "12px",
                   color: "gray.500",
                   textAlign: "center",
                 })}
@@ -180,10 +180,10 @@ export function HeroSection() {
           <div
             className={css({
               display: "grid",
-              gridTemplateColumns: { base: "1fr 1fr", md: "repeat(4, 1fr)" },
-              gap: { base: "1.5rem", md: "3rem" },
-              marginTop: "4rem",
-              paddingTop: "2rem",
+              gridTemplateColumns: { base: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+              gap: { base: "24px", md: "48px" },
+              mt: "64px",
+              pt: "32px",
               borderTop: "1px solid",
               borderColor: "gray.200",
               width: "100%",
@@ -191,20 +191,20 @@ export function HeroSection() {
             })}
           >
             <div className={css({ textAlign: "center" })}>
-              <IconCloud size={24} className={css({ color: "primary.500", marginX: "auto", marginBottom: "0.5rem" })} />
-              <div className={css({ fontSize: "0.875rem", color: "gray.600" })}>Serverless</div>
+              <IconCloud size={24} className={css({ color: "primary.500", mx: "auto", mb: "8px" })} />
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>Serverless</div>
             </div>
             <div className={css({ textAlign: "center" })}>
-              <IconDevices size={24} className={css({ color: "secondary.500", marginX: "auto", marginBottom: "0.5rem" })} />
-              <div className={css({ fontSize: "0.875rem", color: "gray.600" })}>Cross-platform</div>
+              <IconDevices size={24} className={css({ color: "secondary.500", mx: "auto", mb: "8px" })} />
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>Cross-platform</div>
             </div>
             <div className={css({ textAlign: "center" })}>
-              <div className={css({ fontSize: "1.5rem", fontWeight: "700", color: "gray.900" })}>MIT</div>
-              <div className={css({ fontSize: "0.875rem", color: "gray.600" })}>License</div>
+              <div className={css({ fontSize: "24px", fontWeight: "700", color: "gray.900" })}>MIT</div>
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>License</div>
             </div>
             <div className={css({ textAlign: "center" })}>
-              <div className={css({ fontSize: "1.5rem", fontWeight: "700", color: "gray.900" })}>$0</div>
-              <div className={css({ fontSize: "0.875rem", color: "gray.600" })}>License Fee</div>
+              <div className={css({ fontSize: "24px", fontWeight: "700", color: "gray.900" })}>$0</div>
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>License Fee</div>
             </div>
           </div>
         </div>
