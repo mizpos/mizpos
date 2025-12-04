@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { getAllProducts } from "../lib/db";
 import type { Product } from "../types";
-import { Button, Modal, Input } from "./ui";
+import { Button, Input, Modal } from "./ui";
 
 interface ProductSelectModalProps {
   isOpen: boolean;
@@ -120,12 +120,7 @@ export function ProductSelectModal({
   );
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      title="商品を選択"
-      maxWidth="600px"
-    >
+    <Modal open={isOpen} onClose={onClose} title="商品を選択" maxWidth="600px">
       <div className={styles.searchContainer}>
         <Input
           placeholder="商品名・サークル名で検索..."
@@ -144,17 +139,11 @@ export function ProductSelectModal({
           </div>
         ) : (
           filteredProducts.map((product) => (
-            <div
+            <button
+              type="button"
               key={product.id}
               className={styles.productItem}
               onClick={() => handleSelect(product)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  handleSelect(product);
-                }
-              }}
-              role="button"
-              tabIndex={0}
             >
               {product.imageUrl ? (
                 <img
@@ -174,7 +163,7 @@ export function ProductSelectModal({
               <div className={styles.productPrice}>
                 ¥{product.price.toLocaleString()}
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

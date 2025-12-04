@@ -1,18 +1,18 @@
+import {
+  IconArrowRight,
+  IconBrandGithub,
+  IconCheck,
+  IconCopy,
+  IconRocket,
+  IconSettings,
+  IconTerminal2,
+} from "@tabler/icons-react";
+import { useState } from "react";
 import { css } from "../../../styled-system/css";
-import { Container } from "../ui/Container";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Card, CardContent } from "../ui/Card";
-import {
-  IconBrandGithub,
-  IconTerminal2,
-  IconRocket,
-  IconSettings,
-  IconArrowRight,
-  IconCopy,
-  IconCheck,
-} from "@tabler/icons-react";
-import { useState } from "react";
+import { Container } from "../ui/Container";
 
 interface Step {
   number: string;
@@ -131,13 +131,17 @@ export function GettingStartedSection() {
         <div
           className={css({
             display: "grid",
-            gridTemplateColumns: { base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" },
+            gridTemplateColumns: {
+              base: "1fr",
+              md: "repeat(2, 1fr)",
+              lg: "repeat(4, 1fr)",
+            },
             gap: { base: "1.5rem", md: "2rem" },
             marginBottom: { base: "3rem", md: "4rem" },
           })}
         >
-          {steps.map((step, index) => (
-            <div key={index} className={css({ position: "relative" })}>
+          {steps.map((step, stepIndex) => (
+            <div key={step.number} className={css({ position: "relative" })}>
               <Card gradient>
                 <CardContent>
                   <div
@@ -158,7 +162,9 @@ export function GettingStartedSection() {
                     >
                       {step.number}
                     </span>
-                    <div className={css({ color: "primary.500" })}>{step.icon}</div>
+                    <div className={css({ color: "primary.500" })}>
+                      {step.icon}
+                    </div>
                   </div>
                   <h3
                     className={css({
@@ -182,7 +188,7 @@ export function GettingStartedSection() {
                 </CardContent>
               </Card>
               {/* Arrow between steps (desktop only) */}
-              {index < steps.length - 1 && (
+              {stepIndex < steps.length - 1 && (
                 <div
                   className={css({
                     display: { base: "none", lg: "flex" },
@@ -223,33 +229,102 @@ export function GettingStartedSection() {
               justifyContent: "space-between",
             })}
           >
-            <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
+            <div
+              className={css({
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              })}
+            >
               <div className={css({ display: "flex", gap: "0.5rem" })}>
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#ff5f57" })} />
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#febc2e" })} />
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#28c840" })} />
+                <div
+                  className={css({
+                    width: "0.75rem",
+                    height: "0.75rem",
+                    borderRadius: "full",
+                    bg: "#ff5f57",
+                  })}
+                />
+                <div
+                  className={css({
+                    width: "0.75rem",
+                    height: "0.75rem",
+                    borderRadius: "full",
+                    bg: "#febc2e",
+                  })}
+                />
+                <div
+                  className={css({
+                    width: "0.75rem",
+                    height: "0.75rem",
+                    borderRadius: "full",
+                    bg: "#28c840",
+                  })}
+                />
               </div>
-              <span className={css({ color: "gray.400", fontSize: "0.75rem", marginLeft: "0.5rem" })}>Terminal</span>
+              <span
+                className={css({
+                  color: "gray.400",
+                  fontSize: "0.75rem",
+                  marginLeft: "0.5rem",
+                })}
+              >
+                Terminal
+              </span>
             </div>
           </div>
           {/* Code content */}
           <div className={css({ padding: "1.5rem" })}>
-            <div className={css({ display: "flex", flexDirection: "column", gap: "1rem", fontFamily: "mono" })}>
-              <div className={css({ display: "flex", alignItems: "center", justifyContent: "space-between" })}>
-                <code className={css({ color: "gray.300", fontSize: "0.875rem" })}>
-                  <span className={css({ color: "gray.500" })}>$</span> git clone https://github.com/mizphses/mizpos.git
+            <div
+              className={css({
+                display: "flex",
+                flexDirection: "column",
+                gap: "1rem",
+                fontFamily: "mono",
+              })}
+            >
+              <div
+                className={css({
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                })}
+              >
+                <code
+                  className={css({ color: "gray.300", fontSize: "0.875rem" })}
+                >
+                  <span className={css({ color: "gray.500" })}>$</span> git
+                  clone https://github.com/mizphses/mizpos.git
                 </code>
                 <CopyButton text="git clone https://github.com/mizphses/mizpos.git" />
               </div>
-              <div className={css({ display: "flex", alignItems: "center", justifyContent: "space-between" })}>
-                <code className={css({ color: "gray.300", fontSize: "0.875rem" })}>
-                  <span className={css({ color: "gray.500" })}>$</span> cd mizpos
+              <div
+                className={css({
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                })}
+              >
+                <code
+                  className={css({ color: "gray.300", fontSize: "0.875rem" })}
+                >
+                  <span className={css({ color: "gray.500" })}>$</span> cd
+                  mizpos
                 </code>
                 <CopyButton text="cd mizpos" />
               </div>
-              <div className={css({ display: "flex", alignItems: "center", justifyContent: "space-between" })}>
-                <code className={css({ color: "gray.300", fontSize: "0.875rem" })}>
-                  <span className={css({ color: "gray.500" })}>$</span> make deploy-dev
+              <div
+                className={css({
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                })}
+              >
+                <code
+                  className={css({ color: "gray.300", fontSize: "0.875rem" })}
+                >
+                  <span className={css({ color: "gray.500" })}>$</span> make
+                  deploy-dev
                 </code>
                 <CopyButton text="make deploy-dev" />
               </div>
@@ -275,7 +350,12 @@ export function GettingStartedSection() {
               <IconBrandGithub size={20} />
               View on GitHub
             </Button>
-            <Button variant="secondary" size="lg" as="a" href="https://github.com/mizphses/mizpos#readme">
+            <Button
+              variant="secondary"
+              size="lg"
+              as="a"
+              href="https://github.com/mizphses/mizpos#readme"
+            >
               Read Documentation
               <IconArrowRight size={18} />
             </Button>

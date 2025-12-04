@@ -114,7 +114,7 @@ interface TwoTierBarcodeProps {
 export function TwoTierBarcode({
   barcode1,
   barcode2,
-  isdn,
+  isdn: _isdn,
   isdnFormatted,
   productName,
   onDownload,

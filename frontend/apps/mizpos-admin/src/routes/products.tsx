@@ -474,7 +474,7 @@ function ProductsPage() {
               >
                 {barcodeInfo.isdn && (
                   <div>
-                    <label
+                    <span
                       className={css({
                         display: "block",
                         fontSize: "xs",
@@ -484,7 +484,7 @@ function ProductsPage() {
                       })}
                     >
                       ISDN
-                    </label>
+                    </span>
                     <div
                       className={css({
                         fontFamily: "mono",
@@ -498,7 +498,7 @@ function ProductsPage() {
 
                 {barcodeInfo.isdn_formatted && (
                   <div>
-                    <label
+                    <span
                       className={css({
                         display: "block",
                         fontSize: "xs",
@@ -508,7 +508,7 @@ function ProductsPage() {
                       })}
                     >
                       ISDN（Cコード・価格付き）
-                    </label>
+                    </span>
                     <div
                       className={css({
                         fontFamily: "mono",
@@ -521,7 +521,7 @@ function ProductsPage() {
                 )}
 
                 <div>
-                  <label
+                  <span
                     className={css({
                       display: "block",
                       fontSize: "xs",
@@ -530,8 +530,9 @@ function ProductsPage() {
                       marginBottom: "1",
                     })}
                   >
-                    1段目バーコード（{barcodeInfo.isdn ? "ISBN/ISDN" : "インストア"}）
-                  </label>
+                    1段目バーコード（
+                    {barcodeInfo.isdn ? "ISBN/ISDN" : "インストア"}）
+                  </span>
                   <div
                     className={css({
                       fontFamily: "mono",
@@ -544,7 +545,7 @@ function ProductsPage() {
                 </div>
 
                 <div>
-                  <label
+                  <span
                     className={css({
                       display: "block",
                       fontSize: "xs",
@@ -554,7 +555,7 @@ function ProductsPage() {
                     })}
                   >
                     2段目バーコード（分類・価格）
-                  </label>
+                  </span>
                   <div
                     className={css({
                       fontFamily: "mono",
@@ -567,7 +568,7 @@ function ProductsPage() {
                 </div>
 
                 <div>
-                  <label
+                  <span
                     className={css({
                       display: "block",
                       fontSize: "xs",
@@ -577,7 +578,7 @@ function ProductsPage() {
                     })}
                   >
                     全体表示
-                  </label>
+                  </span>
                   <pre
                     className={css({
                       padding: "2",

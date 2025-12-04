@@ -1,17 +1,17 @@
-import { css } from "../../../styled-system/css";
-import { Container } from "../ui/Container";
-import { Badge } from "../ui/Badge";
-import { Card, CardContent } from "../ui/Card";
 import {
-  IconBrandReact,
+  IconApi,
   IconBrandAws,
-  IconBrandTypescript,
   IconBrandPython,
+  IconBrandReact,
+  IconBrandTypescript,
   IconDatabase,
   IconLock,
-  IconApi,
   IconServer,
 } from "@tabler/icons-react";
+import { css } from "../../../styled-system/css";
+import { Badge } from "../ui/Badge";
+import { Card, CardContent } from "../ui/Card";
+import { Container } from "../ui/Container";
 
 interface TechItem {
   name: string;
@@ -166,7 +166,13 @@ export function ArchitectureSection() {
               >
                 Client Layer
               </h3>
-              <div className={css({ display: "flex", flexDirection: "column", gap: "0.75rem" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                })}
+              >
                 <div
                   className={css({
                     bg: "gray.800",
@@ -177,8 +183,15 @@ export function ArchitectureSection() {
                     gap: "0.75rem",
                   })}
                 >
-                  <IconServer size={18} className={css({ color: "primary.400" })} />
-                  <span className={css({ color: "gray.200", fontSize: "0.875rem" })}>Desktop App (Tauri)</span>
+                  <IconServer
+                    size={18}
+                    className={css({ color: "primary.400" })}
+                  />
+                  <span
+                    className={css({ color: "gray.200", fontSize: "0.875rem" })}
+                  >
+                    Desktop App (Tauri)
+                  </span>
                 </div>
                 <div
                   className={css({
@@ -190,8 +203,15 @@ export function ArchitectureSection() {
                     gap: "0.75rem",
                   })}
                 >
-                  <IconBrandReact size={18} className={css({ color: "primary.400" })} />
-                  <span className={css({ color: "gray.200", fontSize: "0.875rem" })}>Admin Web (React)</span>
+                  <IconBrandReact
+                    size={18}
+                    className={css({ color: "primary.400" })}
+                  />
+                  <span
+                    className={css({ color: "gray.200", fontSize: "0.875rem" })}
+                  >
+                    Admin Web (React)
+                  </span>
                 </div>
               </div>
             </div>
@@ -218,7 +238,13 @@ export function ArchitectureSection() {
               >
                 API Layer
               </h3>
-              <div className={css({ display: "flex", flexDirection: "column", gap: "0.75rem" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                })}
+              >
                 <div
                   className={css({
                     bg: "gray.800",
@@ -229,8 +255,15 @@ export function ArchitectureSection() {
                     gap: "0.75rem",
                   })}
                 >
-                  <IconApi size={18} className={css({ color: "secondary.400" })} />
-                  <span className={css({ color: "gray.200", fontSize: "0.875rem" })}>API Gateway</span>
+                  <IconApi
+                    size={18}
+                    className={css({ color: "secondary.400" })}
+                  />
+                  <span
+                    className={css({ color: "gray.200", fontSize: "0.875rem" })}
+                  >
+                    API Gateway
+                  </span>
                 </div>
                 <div
                   className={css({
@@ -242,8 +275,15 @@ export function ArchitectureSection() {
                     gap: "0.75rem",
                   })}
                 >
-                  <IconBrandAws size={18} className={css({ color: "secondary.400" })} />
-                  <span className={css({ color: "gray.200", fontSize: "0.875rem" })}>Lambda (Python)</span>
+                  <IconBrandAws
+                    size={18}
+                    className={css({ color: "secondary.400" })}
+                  />
+                  <span
+                    className={css({ color: "gray.200", fontSize: "0.875rem" })}
+                  >
+                    Lambda (Python)
+                  </span>
                 </div>
               </div>
             </div>
@@ -270,7 +310,13 @@ export function ArchitectureSection() {
               >
                 Data Layer
               </h3>
-              <div className={css({ display: "flex", flexDirection: "column", gap: "0.75rem" })}>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                })}
+              >
                 <div
                   className={css({
                     bg: "gray.800",
@@ -281,8 +327,15 @@ export function ArchitectureSection() {
                     gap: "0.75rem",
                   })}
                 >
-                  <IconDatabase size={18} className={css({ color: "accent.400" })} />
-                  <span className={css({ color: "gray.200", fontSize: "0.875rem" })}>DynamoDB</span>
+                  <IconDatabase
+                    size={18}
+                    className={css({ color: "accent.400" })}
+                  />
+                  <span
+                    className={css({ color: "gray.200", fontSize: "0.875rem" })}
+                  >
+                    DynamoDB
+                  </span>
                 </div>
                 <div
                   className={css({
@@ -294,8 +347,15 @@ export function ArchitectureSection() {
                     gap: "0.75rem",
                   })}
                 >
-                  <IconLock size={18} className={css({ color: "accent.400" })} />
-                  <span className={css({ color: "gray.200", fontSize: "0.875rem" })}>Cognito</span>
+                  <IconLock
+                    size={18}
+                    className={css({ color: "accent.400" })}
+                  />
+                  <span
+                    className={css({ color: "gray.200", fontSize: "0.875rem" })}
+                  >
+                    Cognito
+                  </span>
                 </div>
               </div>
             </div>
@@ -314,14 +374,16 @@ export function ArchitectureSection() {
               className={css({
                 width: "120px",
                 height: "2px",
-                background: "linear-gradient(90deg, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5))",
+                background:
+                  "linear-gradient(90deg, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5))",
               })}
             />
             <div
               className={css({
                 width: "120px",
                 height: "2px",
-                background: "linear-gradient(90deg, rgba(6, 182, 212, 0.5), rgba(249, 115, 22, 0.5))",
+                background:
+                  "linear-gradient(90deg, rgba(6, 182, 212, 0.5), rgba(249, 115, 22, 0.5))",
               })}
             />
           </div>
@@ -331,14 +393,18 @@ export function ArchitectureSection() {
         <div
           className={css({
             display: "grid",
-            gridTemplateColumns: { base: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" },
+            gridTemplateColumns: {
+              base: "1fr",
+              sm: "repeat(2, 1fr)",
+              lg: "repeat(3, 1fr)",
+            },
             gap: "1.5rem",
           })}
         >
-          {technologies.map((tech, index) => {
+          {technologies.map((tech) => {
             const category = categoryLabels[tech.category];
             return (
-              <Card key={index} hover>
+              <Card key={tech.name} hover>
                 <CardContent>
                   <div
                     className={css({
