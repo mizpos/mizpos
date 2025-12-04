@@ -265,9 +265,9 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
       // バックエンドに送信
       try {
         const saleItems = items.map((item) => ({
-          product_id: item.id,
+          product_id: item.product.id,
           quantity: item.quantity,
-          unit_price: item.price,
+          unit_price: item.product.price,
         }));
 
         const response = await fetch(`${API_BASE_URL}/accounts/pos/sales`, {
