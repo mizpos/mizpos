@@ -20,6 +20,12 @@
     "openapi-fetch": "^0.15.0",
     "openapi-typescript": "^7.10.1"
   },
+  "pnpm": {
+    "overrides": {
+      "mdast-util-to-hast": ">=13.2.1",
+      "esbuild": ">=0.25.0"
+    }
+  },
   "volta": {
     "node": "24.11.1",
     "pnpm": "10.22.0"
