@@ -139,20 +139,23 @@ jobs:
           export PATH="$ANDROID_HOME/build-tools/33.0.2:$PATH"
 
           BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
+          ENV="${{ needs.setup-env.outputs.environment }}"
 
-          # Sign APK
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore $ANDROID_KEYSTORE_PATH \
-            -storepass $ANDROID_KEYSTORE_PASSWORD \
-            -keypass $ANDROID_KEY_PASSWORD \
-            $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
-            $ANDROID_KEY_ALIAS
-
-          # Align APK
+          # APK signing: zipalign first, then apksigner (APK Signature Scheme v2)
           zipalign -v 4 $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
-            $BUILD_DIR/apk/universal/release/mizpos-${{ needs.setup-env.outputs.environment }}.apk
+            $BUILD_DIR/apk/universal/release/mizpos-$ENV-aligned.apk
 
-          # Sign AAB
+          apksigner sign --ks $ANDROID_KEYSTORE_PATH \
+            --ks-pass pass:$ANDROID_KEYSTORE_PASSWORD \
+            --ks-key-alias $ANDROID_KEY_ALIAS \
+            --key-pass pass:$ANDROID_KEY_PASSWORD \
+            --out $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
+            $BUILD_DIR/apk/universal/release/mizpos-$ENV-aligned.apk
+
+          # Verify APK signature
+          apksigner verify --verbose $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk
+
+          # Sign AAB with jarsigner (AAB uses JAR signing)
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore $ANDROID_KEYSTORE_PATH \
             -storepass $ANDROID_KEYSTORE_PASSWORD \
