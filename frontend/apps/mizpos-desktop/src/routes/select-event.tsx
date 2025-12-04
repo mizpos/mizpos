@@ -155,11 +155,20 @@ function SelectEventPage() {
         const response = await fetch(`${API_BASE_URL}/stock/events`, {
           headers: {
             "Content-Type": "application/json",
+            "X-POS-Session": session?.sessionId || "",
           },
         });
 
         if (!response.ok) {
-          throw new Error("イベント一覧の取得に失敗しました");
+          const errorText = await response.text();
+          console.error("イベント一覧取得エラー:", {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          });
+          throw new Error(
+            `イベント一覧の取得に失敗しました (${response.status})`,
+          );
         }
 
         const data = await response.json();
@@ -169,6 +178,7 @@ function SelectEventPage() {
         );
         setEvents(activeEvents);
       } catch (err) {
+        console.error("イベント取得エラー:", err);
         setError(err instanceof Error ? err.message : "エラーが発生しました");
       } finally {
         setIsLoading(false);
