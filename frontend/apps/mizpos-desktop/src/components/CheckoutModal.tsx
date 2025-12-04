@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
-import { saveTransaction } from "../lib/db";
+import { saveTransaction, updateSalesSummary } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 import { type AppliedCoupon, useCartStore } from "../stores/cart";
 import { useSettingsStore } from "../stores/settings";
@@ -427,6 +427,8 @@ export function CheckoutModal({ onClose, onComplete, isTrainingMode = false }: C
       if (!isTrainingMode) {
         // ローカルDBに保存
         await saveTransaction(transaction);
+        // 販売サマリーを更新
+        await updateSalesSummary(transaction);
 
         // バックエンドに送信
         try {

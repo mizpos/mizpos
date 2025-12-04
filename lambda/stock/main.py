@@ -149,6 +149,7 @@ async def create_product(
             "publisher": request.publisher,
             "variant_type": request.variant_type.value,
             "is_book": request.is_book,
+            "is_online": request.is_online,
             "is_active": True,
             "created_at": now,
             "updated_at": now,

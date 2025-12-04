@@ -82,26 +82,32 @@ export async function syncProducts(): Promise<number> {
 
 /**
  * JANコードで商品を検索（1段目または2段目バーコードで検索）
+ * 論理削除された商品は除外
  */
 export async function findProductByJan(
   jan: string,
 ): Promise<Product | undefined> {
   // まず1段目バーコードで検索
   let product = await db.products.where("jan").equals(jan).first();
-  if (product) return product;
+  if (product && !product.deletedAt) return product;
 
   // 見つからなければ2段目バーコードで検索
   product = await db.products.where("jan2").equals(jan).first();
-  return product;
+  if (product && !product.deletedAt) return product;
+
+  return undefined;
 }
 
 /**
  * ISBNで商品を検索
+ * 論理削除された商品は除外
  */
 export async function findProductByIsbn(
   isbn: string,
 ): Promise<Product | undefined> {
-  return db.products.where("isbn").equals(isbn).first();
+  const product = await db.products.where("isbn").equals(isbn).first();
+  if (product && !product.deletedAt) return product;
+  return undefined;
 }
 
 /**
@@ -126,8 +132,97 @@ export async function getTransactions(limit = 100): Promise<Transaction[]> {
 }
 
 /**
- * 全商品を取得
+ * 全商品を取得（論理削除されたものを除外）
  */
 export async function getAllProducts(): Promise<Product[]> {
+  return db.products
+    .filter((product) => !product.deletedAt)
+    .toArray();
+}
+
+/**
+ * 全商品を取得（論理削除されたものを含む）
+ */
+export async function getAllProductsIncludingDeleted(): Promise<Product[]> {
   return db.products.toArray();
+}
+
+/**
+ * 商品を論理削除
+ */
+export async function softDeleteProduct(productId: string): Promise<void> {
+  await db.products.update(productId, { deletedAt: new Date() });
+}
+
+/**
+ * 論理削除された商品を復元
+ */
+export async function restoreProduct(productId: string): Promise<void> {
+  await db.products.update(productId, { deletedAt: undefined });
+}
+
+/**
+ * 販売サマリーIDを生成
+ */
+function generateSalesSummaryId(jan: string, circleName: string): string {
+  return `${jan}_${circleName}`.replace(/\s+/g, "_");
+}
+
+/**
+ * 販売サマリーを更新（取引完了時に呼び出す）
+ */
+export async function updateSalesSummary(transaction: Transaction): Promise<void> {
+  // トレーニングモードの取引はサマリーに含めない
+  if (transaction.isTraining) return;
+
+  for (const item of transaction.items) {
+    const { product, quantity } = item;
+    const jan = product.jan || "";
+    const circleName = product.circleName || "不明";
+    const id = generateSalesSummaryId(jan, circleName);
+
+    const existing = await db.salesSummary.get(id);
+
+    if (existing) {
+      // 既存レコードを更新
+      await db.salesSummary.update(id, {
+        totalQuantity: existing.totalQuantity + quantity,
+        totalAmount: existing.totalAmount + product.price * quantity,
+        lastSoldAt: transaction.createdAt,
+      });
+    } else {
+      // 新規レコードを作成
+      await db.salesSummary.put({
+        id,
+        jan,
+        isbn: product.isbn,
+        productName: product.name,
+        circleName,
+        totalQuantity: quantity,
+        totalAmount: product.price * quantity,
+        lastSoldAt: transaction.createdAt,
+      });
+    }
+  }
+}
+
+/**
+ * 販売サマリーを取得
+ */
+export async function getSalesSummary(): Promise<SalesSummary[]> {
+  return db.salesSummary.toArray();
+}
+
+/**
+ * 版元（サークル名）別の販売サマリーを取得
+ */
+export async function getSalesSummaryByCircle(circleName: string): Promise<SalesSummary[]> {
+  return db.salesSummary.where("circleName").equals(circleName).toArray();
+}
+
+/**
+ * JANコード別の販売サマリーを取得
+ */
+export async function getSalesSummaryByJan(jan: string): Promise<SalesSummary[]> {
+  return db.salesSummary.where("jan").equals(jan).toArray();
 }

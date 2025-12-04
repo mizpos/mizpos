@@ -37,6 +37,9 @@ class ProductBase(BaseModel):
     download_url: str | None = Field(
         default=None, max_length=1000, description="ダウンロードリンク"
     )
+    is_online: bool = Field(
+        default=True, description="オンライン掲載フラグ（通販サイトに表示するか）"
+    )
 
 
 class CreateProductRequest(ProductBase):
@@ -71,6 +74,9 @@ class UpdateProductRequest(BaseModel):
     )
     download_url: str | None = Field(
         default=None, max_length=1000, description="ダウンロードリンク"
+    )
+    is_online: bool | None = Field(
+        default=None, description="オンライン掲載フラグ（通販サイトに表示するか）"
     )
     is_active: bool | None = None
 
@@ -142,6 +148,7 @@ class ProductResponse(BaseModel):
     c_code: str | None = None
     jan_code: str | None = None
     download_url: str | None = None
+    is_online: bool = True
     stock_quantity: int
     is_active: bool
     created_at: str

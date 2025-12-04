@@ -62,7 +62,7 @@ runs:
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
       shell: bash
       run: terraform show -json tfplan > tfplan.json
-      working-directory: ${{ inputs.WORKING_DIR }}
+      working-directory: ${{ inputs.WORKING_DIR }
 
     - name: Upload Generated Config as Artifact
       uses: actions/upload-artifact@v4
