@@ -38,7 +38,6 @@ jobs:
       cdn-bucket: ${{ steps.set-env.outputs.cdn-bucket }}
       cdn-distribution-id: ${{ steps.set-env.outputs.cdn-distribution-id }}
       cdn-domain: ${{ steps.set-env.outputs.cdn-domain }}
-      aws-role-arn: ${{ steps.set-env.outputs.aws-role-arn }}
     steps:
       - id: set-env
         run: |
@@ -50,20 +49,18 @@ jobs:
           else
             ENV="dev"
           fi
-          
+
           echo "environment=$ENV" >> $GITHUB_OUTPUT
-          
+
           # Set environment-specific values
           if [[ "$ENV" == "prod" ]]; then
             echo "cdn-bucket=prod-mizpos-cdn-assets" >> $GITHUB_OUTPUT
             echo "cdn-distribution-id=E3K8Z7XI6AMQJ5" >> $GITHUB_OUTPUT
             echo "cdn-domain=https://d2xppn5ml53jqk.cloudfront.net" >> $GITHUB_OUTPUT
-            echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_OUTPUT
           else
             echo "cdn-bucket=dev-mizpos-cdn-assets" >> $GITHUB_OUTPUT
             echo "cdn-distribution-id=E195S6TD7VY00" >> $GITHUB_OUTPUT
             echo "cdn-domain=https://d1o5hbbhoeegz0.cloudfront.net" >> $GITHUB_OUTPUT
-            echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_DEV }}" >> $GITHUB_OUTPUT
           fi
 
   build:
@@ -141,7 +138,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ needs.setup-env.outputs.aws-role-arn }}
+          role-to-assume: ${{ needs.setup-env.outputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Prepare and Upload to CDN
