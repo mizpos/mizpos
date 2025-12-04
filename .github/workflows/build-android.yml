@@ -171,23 +171,19 @@ jobs:
           BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-          # Upload APK with timestamp for history (tagged for auto-deletion after 30 days)
+          # Upload APK with timestamp for history
           aws s3 cp $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
-            "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.apk" \
-            --tagging "keep=false"
-          # Upload APK as latest (tagged to keep)
+            "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.apk"
+          # Upload APK as latest
           aws s3 cp $BUILD_DIR/apk/universal/release/mizpos-$ENV.apk \
-            "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.apk" \
-            --tagging "keep=true"
+            "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.apk"
 
           # Upload AAB (for Play Store)
           if [[ "$ENV" == "prod" ]]; then
             aws s3 cp $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
-              "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.aab" \
-              --tagging "keep=false"
+              "s3://$CDN_BUCKET/android/$ENV/mizpos-${TIMESTAMP}.aab"
             aws s3 cp $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
-              "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.aab" \
-              --tagging "keep=true"
+              "s3://$CDN_BUCKET/android/$ENV/mizpos-latest.aab"
           fi
 
       - name: Create deployment summary
