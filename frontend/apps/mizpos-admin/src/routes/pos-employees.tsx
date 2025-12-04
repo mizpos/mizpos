@@ -17,9 +17,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthHeaders } from "../lib/api";
 
 export const Route = createFileRoute("/pos-employees")({
@@ -449,15 +449,7 @@ function PosEmployeesPage() {
   });
 
   return (
-    <>
-      <Header title="POS従業員管理" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+    <PageContainer title="POS従業員管理">
         {/* Info Box */}
         <div
           className={css({
@@ -1054,6 +1046,6 @@ function PosEmployeesPage() {
           </form>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }

@@ -10,9 +10,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthHeaders } from "../lib/api";
 
 export const Route = createFileRoute("/events")({
@@ -356,15 +356,7 @@ function EventsPage() {
   });
 
   return (
-    <>
-      <Header title="イベント管理" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+    <PageContainer title="イベント管理">
         <div
           className={css({
             display: "flex",
@@ -964,6 +956,6 @@ function EventsPage() {
           </div>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }

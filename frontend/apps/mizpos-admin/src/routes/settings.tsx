@@ -5,7 +5,7 @@ import { updatePassword } from "aws-amplify/auth";
 import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
+import { PageContainer } from "../components/ui";
 import { getAuthHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import {
@@ -174,15 +174,7 @@ function SettingsPage() {
   });
 
   return (
-    <>
-      <Header title="設定" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+    <PageContainer title="設定">
         {isLoadingConsignment && (
           <div
             className={css({
@@ -588,7 +580,6 @@ function SettingsPage() {
             </Button>
           </div>
         )}
-      </div>
-    </>
+    </PageContainer>
   );
 }

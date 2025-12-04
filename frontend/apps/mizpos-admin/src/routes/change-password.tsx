@@ -5,7 +5,7 @@ import { updatePassword } from "aws-amplify/auth";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
+import { PageContainer } from "../components/ui";
 import { useAuth } from "../lib/auth";
 
 export const Route = createFileRoute("/change-password")({
@@ -81,13 +81,9 @@ function ChangePasswordPage() {
   });
 
   return (
-    <>
-      <Header title="パスワード変更" />
+    <PageContainer title="パスワード変更">
       <div
         className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
           display: "flex",
           justifyContent: "center",
         })}
@@ -252,6 +248,6 @@ function ChangePasswordPage() {
           </div>
         </div>
       </div>
-    </>
+    </PageContainer>
   );
 }

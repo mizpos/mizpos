@@ -11,10 +11,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { RoleManagement } from "../components/RoleManagement";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/users")({
@@ -235,15 +235,7 @@ function UsersPage() {
   });
 
   return (
-    <>
-      <Header title="ユーザー管理" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+    <PageContainer title="ユーザー管理">
         {/* Info Box */}
         <div
           className={css({
@@ -661,6 +653,6 @@ function UsersPage() {
           </div>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }

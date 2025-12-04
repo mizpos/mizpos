@@ -11,9 +11,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthHeaders } from "../lib/api";
 
 const API_GATEWAY_BASE =
@@ -377,15 +377,7 @@ function CouponsPage() {
   };
 
   return (
-    <>
-      <Header title="クーポン管理" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+    <PageContainer title="クーポン管理">
         <div
           className={css({
             display: "flex",
@@ -583,7 +575,7 @@ function CouponsPage() {
           </form>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }
 

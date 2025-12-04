@@ -4,9 +4,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { STOCK_LOW_THRESHOLD } from "../lib/constants";
@@ -149,15 +149,7 @@ function StockPage() {
   ];
 
   return (
-    <>
-      <Header title="在庫管理" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+    <PageContainer title="在庫管理">
         <div
           className={css({
             display: "flex",
@@ -405,6 +397,6 @@ function StockPage() {
           </form>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }
