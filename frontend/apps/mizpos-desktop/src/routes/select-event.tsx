@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
 import { useAuthStore } from "../stores/auth";
+import { useSettingsStore } from "../stores/settings";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -130,6 +131,7 @@ const listStyles = {
 
 function SelectEventPage() {
   const { session, logout, setEventId } = useAuthStore();
+  const { updateSettings } = useSettingsStore();
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -208,8 +210,16 @@ function SelectEventPage() {
         throw new Error("イベントの設定に失敗しました");
       }
 
+      // 選択したイベントの名前を取得
+      const selectedEvent = events.find((e) => e.event_id === selectedEventId);
+
       // ローカルストアを更新
       await setEventId(selectedEventId);
+
+      // イベント名を設定に同期（レシート印刷用）
+      if (selectedEvent) {
+        await updateSettings({ eventName: selectedEvent.name });
+      }
 
       // POS画面へ遷移
       navigate({ to: "/pos" });
