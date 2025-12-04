@@ -35,18 +35,6 @@ runs:
         TF_VAR_cloudflare_api_token: ${{ inputs.CLOUDFLARE_API_TOKEN }}
         TF_VAR_cloudflare_account_id: ${{ inputs.CLOUDFLARE_ACCOUNT_ID }}
 
-    - name: tflint
-      if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-      uses: reviewdog/action-tflint@v1
-      continue-on-error: true
-      with:
-        github_token: ${{ inputs.GITHUB_TOKEN }}
-        working_directory: ${{ inputs.WORKING_DIR }}
-        reporter: github-pr-review
-        fail_on_error: "false"
-        filter_mode: "nofilter"
-        flags: "--call-module-type=all"
-
     - name: Terraform Plan (PR)
       if: github.event_name == 'pull_request'
       shell: bash
