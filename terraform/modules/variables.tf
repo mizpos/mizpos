@@ -51,10 +51,6 @@ variable "frontend_apps" {
     {
       name      = "mizpos-online-sales"
       subdomain = "sales"
-    },
-    {
-      name      = "mizpos-website"
-      subdomain = "" # ルートドメイン（pos-stg.miz.cab）
     }
   ]
 }
