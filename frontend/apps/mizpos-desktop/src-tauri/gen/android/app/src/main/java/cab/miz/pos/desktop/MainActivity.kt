@@ -234,14 +234,14 @@ class MainActivity : TauriActivity() {
                         val price = item.getString("price")
                         val qty = item.optInt("quantity", 1)
                         printer.printLine("$name x$qty")
-                        printer.printLine("  ¥$price")
+                        printer.printLine("  \\$price")
                     }
                     printer.printSeparator(paperWidth)
                 }
 
                 // Total
                 if (data.has("total")) {
-                    printer.printBold("合計: ¥${data.getString("total")}")
+                    printer.printBold("合計: \\${data.getString("total")}")
                     printer.printLine("")
                 }
 
