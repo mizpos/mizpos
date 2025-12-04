@@ -84,7 +84,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: "build-tools;33.0.2 platform-tools platforms;android-33 ndk;25.2.9519653"
+          packages: "build-tools;35.0.0 platform-tools platforms;android-35 ndk;25.2.9519653"
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -136,7 +136,7 @@ jobs:
       - name: Sign APK/AAB
         run: |
           # Add Android build-tools to PATH
-          export PATH="$ANDROID_HOME/build-tools/33.0.2:$PATH"
+          export PATH="$ANDROID_HOME/build-tools/35.0.0:$PATH"
 
           BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
           ENV="${{ needs.setup-env.outputs.environment }}"
