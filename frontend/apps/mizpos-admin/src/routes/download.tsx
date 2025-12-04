@@ -1,20 +1,14 @@
 import {
-  IconApple,
   IconBrandAndroid,
   IconBrandDebian,
   IconBrandWindows,
   IconDownload,
-  IconExternalLink,
   IconInfoCircle,
 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { css } from "styled-system/css";
 import { Card, PageContainer } from "../components/ui";
-import {
-  CDN_URLS,
-  DESKTOP_APP_VERSION,
-  getEnvironment,
-} from "../lib/constants";
+import { DESKTOP_APP_VERSION, getEnvironment } from "../lib/constants";
 
 export const Route = createFileRoute("/download")({
   component: DownloadPage,
