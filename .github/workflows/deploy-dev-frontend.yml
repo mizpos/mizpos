@@ -15,7 +15,6 @@ on:
         options:
           - mizpos-admin
           - mizpos-online-sales
-          - mizpos-website
 
 env:
   AWS_REGION: ap-northeast-1
@@ -39,7 +38,6 @@ jobs:
         app:
           - mizpos-admin
           - mizpos-online-sales
-          - mizpos-website
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +58,6 @@ jobs:
         run: pnpm --filter @mizpos/api build
 
       - name: Generate Styled System
-        if: matrix.app != 'mizpos-website'
         working-directory: frontend
         run: pnpm generate-styled-system
 
@@ -68,15 +65,9 @@ jobs:
         working-directory: frontend
         run: pnpm check-types
 
-      - name: Build Application (with Panda)
-        if: matrix.app != 'mizpos-website'
+      - name: Build Application
         working-directory: frontend/apps/${{ matrix.app }}
         run: pnpm panda codegen && pnpm vite build --mode development && pnpm tsc
-
-      - name: Build Application (without Panda)
-        if: matrix.app == 'mizpos-website'
-        working-directory: frontend/apps/${{ matrix.app }}
-        run: pnpm vite build && pnpm tsc || true
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
@@ -94,7 +85,6 @@ jobs:
         app:
           - mizpos-admin
           - mizpos-online-sales
-          - mizpos-website
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Download Build Artifact
@@ -181,7 +171,7 @@ jobs:
               repo: context.repo.repo,
               body: `## Frontend Build Successful ✅
 
-              **Apps**: mizpos-admin, mizpos-online-sales, mizpos-website
+              **Apps**: mizpos-admin, mizpos-online-sales
 
               All frontend applications have been built successfully. Once merged to main, they will be automatically deployed to their respective CloudFront distributions.
 

@@ -137,6 +137,9 @@ jobs:
 
       - name: Sign APK/AAB
         run: |
+          # Add Android build-tools to PATH
+          export PATH="$ANDROID_HOME/build-tools/33.0.2:$PATH"
+
           BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
 
           # Sign APK
