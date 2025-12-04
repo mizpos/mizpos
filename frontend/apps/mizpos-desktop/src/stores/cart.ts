@@ -1,13 +1,28 @@
 import { create } from "zustand";
 import type { CartItem, Product } from "../types";
 
+/**
+ * 適用されたクーポン情報
+ */
+export interface AppliedCoupon {
+  code: string;
+  name: string;
+  discountType: "fixed" | "percentage";
+  discountValue: number;
+  discountAmount: number; // 計算済みの割引額
+}
+
 interface CartState {
   items: CartItem[];
+  appliedCoupon: AppliedCoupon | null;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  applyCoupon: (coupon: AppliedCoupon) => void;
+  removeCoupon: () => void;
   clear: () => void;
   getSubtotal: () => number;
+  getDiscountAmount: () => number;
   getTaxAmount: (taxRate: number) => number;
   getTotal: (taxRate: number) => number;
   getTotalQuantity: () => number;
@@ -15,6 +30,7 @@ interface CartState {
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
+  appliedCoupon: null,
 
   addItem: (product: Product, quantity = 1) => {
     set((state) => {
@@ -54,8 +70,16 @@ export const useCartStore = create<CartState>((set, get) => ({
     }));
   },
 
+  applyCoupon: (coupon: AppliedCoupon) => {
+    set({ appliedCoupon: coupon });
+  },
+
+  removeCoupon: () => {
+    set({ appliedCoupon: null });
+  },
+
   clear: () => {
-    set({ items: [] });
+    set({ items: [], appliedCoupon: null });
   },
 
   getSubtotal: () => {
@@ -66,15 +90,23 @@ export const useCartStore = create<CartState>((set, get) => ({
     );
   },
 
+  getDiscountAmount: () => {
+    const { appliedCoupon } = get();
+    return appliedCoupon?.discountAmount ?? 0;
+  },
+
   getTaxAmount: (taxRate: number) => {
     const subtotal = get().getSubtotal();
-    return Math.floor(subtotal * (taxRate / 100));
+    const discount = get().getDiscountAmount();
+    // 割引後の金額に対して税額を計算
+    return Math.floor((subtotal - discount) * (taxRate / 100));
   },
 
   getTotal: (taxRate: number) => {
     const subtotal = get().getSubtotal();
+    const discount = get().getDiscountAmount();
     const tax = get().getTaxAmount(taxRate);
-    return subtotal + tax;
+    return subtotal - discount + tax;
   },
 
   getTotalQuantity: () => {
