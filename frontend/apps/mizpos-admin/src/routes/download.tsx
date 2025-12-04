@@ -46,12 +46,8 @@ function DownloadPage() {
       files: [
         {
           name: "インストーラー (MSI)",
-          filename: `windows-${version}.msi`,
+          filename: "mizpos-latest.msi",
           recommended: true,
-        },
-        {
-          name: "ポータブル版 (EXE)",
-          filename: `windows-${version}.exe`,
         },
       ],
       instructions: [
@@ -67,12 +63,12 @@ function DownloadPage() {
       files: [
         {
           name: "AppImage (全ディストリ対応)",
-          filename: `mizpos-desktop-${version}.AppImage`,
+          filename: "mizpos-latest.AppImage",
           recommended: true,
         },
         {
           name: "Debian パッケージ (.deb)",
-          filename: `linux-${version}.deb`,
+          filename: "mizpos-latest.deb",
         },
       ],
       instructions: [
@@ -88,7 +84,7 @@ function DownloadPage() {
       files: [
         {
           name: "APK ファイル",
-          filename: "android-latest.apk",
+          filename: "mizpos-latest.apk",
           recommended: true,
         },
       ],
