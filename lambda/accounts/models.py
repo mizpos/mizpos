@@ -286,10 +286,14 @@ class PosSaleRequest(BaseModel):
     """POS販売リクエスト"""
 
     items: list[PosSaleItemRequest]
-    total_amount: int = Field(..., ge=0)
+    total_amount: int = Field(..., ge=0, description="合計金額（クーポン割引後）")
     payment_method: str = Field(..., pattern="^(cash|card|other)$")
     event_id: str | None = None
     terminal_id: str | None = None
+    coupon_code: str | None = Field(
+        default=None, description="クーポンコード（オプション）"
+    )
+    subtotal: int | None = Field(default=None, ge=0, description="クーポン割引前の小計")
 
 
 # ==========================================

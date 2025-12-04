@@ -24,6 +24,7 @@
     "@tanstack/router-plugin": "^1.132.0",
     "aws-amplify": "^6.15.8",
     "jsbarcode": "^3.12.1",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

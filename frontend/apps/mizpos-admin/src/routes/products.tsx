@@ -10,12 +10,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
-import { TwoTierBarcode } from "../components/BarcodeDisplay";
+import { BarcodeDisplay, TwoTierBarcode } from "../components/BarcodeDisplay";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { ImageUploadField } from "../components/ImageUploadField";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients, getAuthHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -38,26 +38,35 @@ interface Product {
   publisher: string;
   publisher_id?: string;
   variant_type: "physical" | "digital" | "both";
+  is_book: boolean;
   isdn?: string;
+  c_code?: string;
+  jan_code?: string;
   download_url?: string;
+  is_online: boolean;
   stock_quantity: number;
   is_active: boolean;
 }
 
 type CreateProductForm = StockComponents["schemas"]["CreateProductRequest"] & {
   publisher_id?: string;
+  is_book: boolean;
   isdn?: string;
+  c_code?: string;
   jan_code?: string;
   download_url?: string;
+  is_online: boolean;
 };
 
 interface BarcodeInfo {
   product_id: string;
   product_name: string;
+  is_book: boolean;
   isdn: string | null;
   isdn_formatted: string | null;
+  c_code: string | null;
   jan_barcode_1: string;
-  jan_barcode_2: string;
+  jan_barcode_2: string | null;
   full_display: string;
 }
 
@@ -80,9 +89,12 @@ function ProductsPage() {
     publisher: "",
     publisher_id: "",
     variant_type: "physical",
+    is_book: true,
     isdn: "",
+    c_code: "",
     jan_code: "",
     download_url: "",
+    is_online: true,
     stock_quantity: 0,
     operator_id: user?.userId || "",
   };
@@ -166,6 +178,26 @@ function ProductsPage() {
       key: "stock_quantity",
       header: "在庫数",
       render: (item: Product) => item.stock_quantity,
+    },
+    {
+      key: "is_online",
+      header: "通販",
+      render: (item: Product) => (
+        <span
+          className={css({
+            display: "inline-flex",
+            paddingX: "2",
+            paddingY: "0.5",
+            borderRadius: "full",
+            fontSize: "xs",
+            fontWeight: "medium",
+            backgroundColor: item.is_online ? "blue.100" : "gray.100",
+            color: item.is_online ? "blue.800" : "gray.500",
+          })}
+        >
+          {item.is_online ? "掲載" : "非掲載"}
+        </span>
+      ),
     },
     {
       key: "is_active",
@@ -263,14 +295,7 @@ function ProductsPage() {
 
   return (
     <>
-      <Header title="商品管理" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+      <PageContainer title="商品管理">
         <div
           className={css({
             display: "flex",
@@ -342,7 +367,7 @@ function ProductsPage() {
             emptyMessage="商品が見つかりません"
           />
         )}
-      </div>
+      </PageContainer>
 
       {/* Create Modal */}
       <Modal
@@ -435,14 +460,65 @@ function ProductsPage() {
               gap: "4",
             })}
           >
-            {/* 書籍JANコード（2段バーコード）の画像表示 */}
-            <TwoTierBarcode
-              barcode1={barcodeInfo.jan_barcode_1}
-              barcode2={barcodeInfo.jan_barcode_2}
-              isdn={barcodeInfo.isdn}
-              isdnFormatted={barcodeInfo.isdn_formatted}
-              productName={barcodeInfo.product_name}
-            />
+            {/* 書籍の場合: 2段バーコード */}
+            {barcodeInfo.is_book && barcodeInfo.jan_barcode_2 ? (
+              <TwoTierBarcode
+                barcode1={barcodeInfo.jan_barcode_1}
+                barcode2={barcodeInfo.jan_barcode_2}
+                isdn={barcodeInfo.isdn}
+                isdnFormatted={barcodeInfo.isdn_formatted}
+                productName={barcodeInfo.product_name}
+              />
+            ) : (
+              /* 非書籍の場合: 単一バーコード */
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4",
+                  padding: "4",
+                  backgroundColor: "white",
+                  borderRadius: "lg",
+                  border: "1px solid",
+                  borderColor: "gray.200",
+                })}
+              >
+                <div
+                  className={css({
+                    textAlign: "center",
+                    fontWeight: "bold",
+                    fontSize: "md",
+                    color: "gray.800",
+                  })}
+                >
+                  {barcodeInfo.product_name}
+                </div>
+                <div
+                  className={css({
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    padding: "4",
+                    backgroundColor: "gray.50",
+                    borderRadius: "md",
+                  })}
+                >
+                  <BarcodeDisplay
+                    value={barcodeInfo.jan_barcode_1}
+                    label="JANコード"
+                  />
+                </div>
+                <div
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    textAlign: "center",
+                  })}
+                >
+                  <p>JANコード: {barcodeInfo.jan_barcode_1}</p>
+                </div>
+              </div>
+            )}
 
             {/* 詳細情報 */}
             <details
@@ -765,6 +841,60 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
         </div>
       )}
 
+      {/* 書籍フラグ */}
+      <div className={css({ gridColumn: "span 2" })}>
+        <span className={labelClass}>商品種別</span>
+        <div
+          className={css({
+            display: "flex",
+            gap: "4",
+            marginTop: "2",
+          })}
+        >
+          <label
+            className={css({
+              display: "flex",
+              alignItems: "center",
+              gap: "2",
+              cursor: "pointer",
+            })}
+          >
+            <input
+              type="radio"
+              name="is_book"
+              checked={(data as CreateProductForm).is_book === true}
+              onChange={() =>
+                onChange({ ...data, is_book: true } as CreateProductForm)
+              }
+            />
+            <span>書籍（2段バーコード）</span>
+          </label>
+          <label
+            className={css({
+              display: "flex",
+              alignItems: "center",
+              gap: "2",
+              cursor: "pointer",
+            })}
+          >
+            <input
+              type="radio"
+              name="is_book"
+              checked={(data as CreateProductForm).is_book === false}
+              onChange={() =>
+                onChange({ ...data, is_book: false } as CreateProductForm)
+              }
+            />
+            <span>非書籍（単一バーコード）</span>
+          </label>
+        </div>
+        <p
+          className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
+        >
+          書籍の場合はISBN/ISDN + Cコード + 価格で2段バーコードを生成します
+        </p>
+      </div>
+
       <div className={css({ gridColumn: "span 2" })}>
         <label htmlFor="description" className={labelClass}>
           説明
@@ -828,39 +958,84 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
         </p>
       </div>
 
-      <div>
-        <label htmlFor="isdn" className={labelClass}>
-          ISDN (国際標準同人誌番号)
-        </label>
-        <input
-          id="isdn"
-          type="text"
-          value={(data as CreateProductForm).isdn || ""}
-          onChange={(e) => onChange({ ...data, isdn: e.target.value })}
-          className={inputClass}
-          placeholder="278-4-xxx-xxxxx-x"
-        />
-      </div>
+      {/* 書籍の場合: ISBN/ISDN と Cコード */}
+      {(data as CreateProductForm).is_book && (
+        <>
+          <div>
+            <label htmlFor="isdn" className={labelClass}>
+              ISBN/ISDN
+            </label>
+            <input
+              id="isdn"
+              type="text"
+              value={(data as CreateProductForm).isdn || ""}
+              onChange={(e) => onChange({ ...data, isdn: e.target.value })}
+              className={inputClass}
+              placeholder="978-4-xxx-xxxxx-x / 278-4-xxx-xxxxx-x"
+            />
+            <p
+              className={css({
+                fontSize: "xs",
+                color: "gray.500",
+                marginTop: "1",
+              })}
+            >
+              空欄の場合はインハウスコードを生成します
+            </p>
+          </div>
 
-      <div>
-        <label htmlFor="jan_code" className={labelClass}>
-          JANコード (流通用バーコード)
-        </label>
-        <input
-          id="jan_code"
-          type="text"
-          value={(data as CreateProductForm).jan_code || ""}
-          onChange={(e) => onChange({ ...data, jan_code: e.target.value })}
-          className={inputClass}
-          placeholder="4912345678901"
-          maxLength={13}
-        />
-        <p
-          className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
-        >
-          流通書籍やグッズのJANコード（13桁）
-        </p>
-      </div>
+          <div>
+            <label htmlFor="c_code" className={labelClass}>
+              Cコード
+            </label>
+            <input
+              id="c_code"
+              type="text"
+              value={(data as CreateProductForm).c_code || ""}
+              onChange={(e) => onChange({ ...data, c_code: e.target.value })}
+              className={inputClass}
+              placeholder="3055"
+              maxLength={4}
+            />
+            <p
+              className={css({
+                fontSize: "xs",
+                color: "gray.500",
+                marginTop: "1",
+              })}
+            >
+              4桁のCコード（例: 3055=専門・教養書）
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* 非書籍の場合: JANコード */}
+      {!(data as CreateProductForm).is_book && (
+        <div className={css({ gridColumn: "span 2" })}>
+          <label htmlFor="jan_code" className={labelClass}>
+            JANコード
+          </label>
+          <input
+            id="jan_code"
+            type="text"
+            value={(data as CreateProductForm).jan_code || ""}
+            onChange={(e) => onChange({ ...data, jan_code: e.target.value })}
+            className={inputClass}
+            placeholder="4912345678901"
+            maxLength={13}
+          />
+          <p
+            className={css({
+              fontSize: "xs",
+              color: "gray.500",
+              marginTop: "1",
+            })}
+          >
+            空欄の場合はインハウスコードを生成します
+          </p>
+        </div>
+      )}
 
       <div>
         <label htmlFor="download_url" className={labelClass}>
@@ -883,6 +1058,47 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
           uploadType="book_cover"
           label="商品画像"
         />
+      </div>
+
+      {/* オンライン掲載フラグ */}
+      <div className={css({ gridColumn: "span 2" })}>
+        <label
+          className={css({
+            display: "flex",
+            alignItems: "center",
+            gap: "2",
+            cursor: "pointer",
+          })}
+        >
+          <input
+            type="checkbox"
+            checked={(data as CreateProductForm).is_online ?? true}
+            onChange={(e) =>
+              onChange({
+                ...data,
+                is_online: e.target.checked,
+              } as CreateProductForm)
+            }
+            className={css({
+              width: "4",
+              height: "4",
+              cursor: "pointer",
+            })}
+          />
+          <span className={labelClass} style={{ marginBottom: 0 }}>
+            オンライン（通販サイト）に掲載する
+          </span>
+        </label>
+        <p
+          className={css({
+            fontSize: "xs",
+            color: "gray.500",
+            marginTop: "1",
+            marginLeft: "6",
+          })}
+        >
+          チェックを外すと通販サイトに表示されません（イベント限定商品など）
+        </p>
       </div>
     </div>
   );

@@ -106,6 +106,7 @@ export function ManualProductEntry({ onClose }: ManualProductEntryProps) {
         jan: "",
         name: name.trim(),
         price: Number.parseInt(price, 10),
+        isBook: false, // 手動入力は非書籍扱い
       };
 
       addItem(product);

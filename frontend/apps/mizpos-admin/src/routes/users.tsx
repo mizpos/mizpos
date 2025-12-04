@@ -11,10 +11,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { RoleManagement } from "../components/RoleManagement";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/users")({
@@ -235,160 +235,151 @@ function UsersPage() {
   });
 
   return (
-    <>
-      <Header title="ユーザー管理" />
+    <PageContainer title="ユーザー管理">
+      {/* Info Box */}
       <div
         className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
+          backgroundColor: "blue.50",
+          border: "1px solid",
+          borderColor: "blue.200",
+          borderRadius: "md",
+          padding: "4",
+          marginBottom: "6",
         })}
       >
-        {/* Info Box */}
+        <p className={css({ fontSize: "sm", color: "blue.800" })}>
+          ユーザー認証はAWS
+          Cognitoで管理されています。ユーザーを作成すると、Cognitoにもアカウントが作成されます。
+        </p>
+      </div>
+
+      {error && (
         <div
           className={css({
-            backgroundColor: "blue.50",
+            backgroundColor: "red.50",
             border: "1px solid",
-            borderColor: "blue.200",
+            borderColor: "red.200",
+            color: "red.700",
+            padding: "3",
             borderRadius: "md",
-            padding: "4",
-            marginBottom: "6",
+            marginBottom: "4",
+            fontSize: "sm",
           })}
         >
-          <p className={css({ fontSize: "sm", color: "blue.800" })}>
-            ユーザー認証はAWS
-            Cognitoで管理されています。ユーザーを作成すると、Cognitoにもアカウントが作成されます。
-          </p>
+          ユーザー情報の取得に失敗しました:{" "}
+          {error instanceof Error ? error.message : "不明なエラー"}
         </div>
+      )}
 
-        {error && (
-          <div
-            className={css({
-              backgroundColor: "red.50",
-              border: "1px solid",
-              borderColor: "red.200",
-              color: "red.700",
-              padding: "3",
-              borderRadius: "md",
-              marginBottom: "4",
-              fontSize: "sm",
-            })}
-          >
-            ユーザー情報の取得に失敗しました:{" "}
-            {error instanceof Error ? error.message : "不明なエラー"}
-          </div>
-        )}
-
+      <div
+        className={css({
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "6",
+        })}
+      >
         <div
           className={css({
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "6",
+            position: "relative",
+            width: "320px",
           })}
         >
-          <div
+          <IconSearch
+            size={18}
             className={css({
-              position: "relative",
-              width: "320px",
+              position: "absolute",
+              left: "3",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "gray.400",
             })}
-          >
-            <IconSearch
-              size={18}
-              className={css({
-                position: "absolute",
-                left: "3",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "gray.400",
-              })}
-            />
-            <input
-              type="text"
-              placeholder="名前・メールで検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={css({
-                width: "100%",
-                paddingLeft: "10",
-                paddingRight: "4",
-                paddingY: "2",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: "gray.300",
-                fontSize: "sm",
-                _focus: {
-                  outline: "none",
-                  borderColor: "primary.500",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                },
-              })}
-            />
-          </div>
-
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <IconPlus size={18} />
-            ユーザー追加
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div
-            className={css({
-              textAlign: "center",
-              padding: "8",
-              color: "gray.500",
-            })}
-          >
-            読み込み中...
-          </div>
-        ) : (
-          <Table
-            columns={columns}
-            data={filteredUsers}
-            keyExtractor={(item) => item.user_id}
-            emptyMessage="ユーザーが見つかりません"
           />
-        )}
+          <input
+            type="text"
+            placeholder="名前・メールで検索..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={css({
+              width: "100%",
+              paddingLeft: "10",
+              paddingRight: "4",
+              paddingY: "2",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.300",
+              fontSize: "sm",
+              _focus: {
+                outline: "none",
+                borderColor: "primary.500",
+                boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+              },
+            })}
+          />
+        </div>
 
-        {/* Password Policy Info */}
+        <Button onClick={() => setIsCreateModalOpen(true)}>
+          <IconPlus size={18} />
+          ユーザー追加
+        </Button>
+      </div>
+
+      {isLoading ? (
         <div
           className={css({
-            marginTop: "6",
-            backgroundColor: "white",
-            padding: "6",
-            borderRadius: "lg",
-            border: "1px solid",
-            borderColor: "gray.200",
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
           })}
         >
-          <h3
-            className={css({
-              fontSize: "lg",
-              fontWeight: "semibold",
-              marginBottom: "4",
-            })}
-          >
-            パスワードポリシー
-          </h3>
-          <ul
-            className={css({
-              listStyle: "disc",
-              paddingLeft: "6",
-              fontSize: "sm",
-              color: "gray.600",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1",
-            })}
-          >
-            <li>最小8文字</li>
-            <li>大文字を含む</li>
-            <li>小文字を含む</li>
-            <li>数字を含む</li>
-            <li>特殊文字を含む</li>
-          </ul>
+          読み込み中...
         </div>
+      ) : (
+        <Table
+          columns={columns}
+          data={filteredUsers}
+          keyExtractor={(item) => item.user_id}
+          emptyMessage="ユーザーが見つかりません"
+        />
+      )}
+
+      {/* Password Policy Info */}
+      <div
+        className={css({
+          marginTop: "6",
+          backgroundColor: "white",
+          padding: "6",
+          borderRadius: "lg",
+          border: "1px solid",
+          borderColor: "gray.200",
+        })}
+      >
+        <h3
+          className={css({
+            fontSize: "lg",
+            fontWeight: "semibold",
+            marginBottom: "4",
+          })}
+        >
+          パスワードポリシー
+        </h3>
+        <ul
+          className={css({
+            listStyle: "disc",
+            paddingLeft: "6",
+            fontSize: "sm",
+            color: "gray.600",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1",
+          })}
+        >
+          <li>最小8文字</li>
+          <li>大文字を含む</li>
+          <li>小文字を含む</li>
+          <li>数字を含む</li>
+          <li>特殊文字を含む</li>
+        </ul>
       </div>
 
       {/* Create Modal */}
@@ -661,6 +652,6 @@ function UsersPage() {
           </div>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }

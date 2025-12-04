@@ -22,6 +22,11 @@ const headerStyles = {
     padding: "44px 24px",
     textAlign: "center",
   }),
+  containerTraining: css({
+    background: "linear-gradient(135deg, #dc2626 0%, #ea580c 100%)",
+    padding: "44px 24px",
+    textAlign: "center",
+  }),
   iconWrapper: css({
     width: "80px",
     height: "80px",
@@ -147,6 +152,8 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
   const [printError, setPrintError] = useState<string | null>(null);
   const { settings } = useSettingsStore();
 
+  const isTraining = transaction.isTraining ?? false;
+
   // ESCキーで閉じる
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -184,7 +191,9 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
       }
 
       const receiptData: FullReceiptData = {
-        event_name: settings.eventName,
+        event_name: isTraining
+          ? `【トレーニング】${settings.eventName}`
+          : settings.eventName,
         staff_id: transaction.staffId,
         items: transaction.items.map((item) => ({
           circle_name: item.product.circleName || "",
@@ -200,7 +209,9 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
         })),
         tax_rate: transaction.taxRate,
         tax_amount: transaction.taxAmount,
-        receipt_number: transaction.id,
+        receipt_number: isTraining
+          ? `TRAINING-${transaction.id}`
+          : transaction.id,
       };
 
       const printResult = await printer.printFullReceipt(receiptData);
@@ -217,7 +228,7 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
     } finally {
       setIsPrinting(false);
     }
-  }, [settings, transaction, onClose]);
+  }, [settings, transaction, onClose, isTraining]);
 
   const cashPayment = transaction.payments.find((p) => p.method === "cash");
   const change = cashPayment ? cashPayment.amount - transaction.total : 0;
@@ -226,10 +237,22 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
     <div className={overlayStyles}>
       <div className={modalStyles}>
         {/* 成功ヘッダー */}
-        <div className={headerStyles.container}>
-          <div className={headerStyles.iconWrapper}>✓</div>
-          <h2 className={headerStyles.title}>会計完了</h2>
-          <p className={headerStyles.subtitle}>ありがとうございました</p>
+        <div
+          className={
+            isTraining ? headerStyles.containerTraining : headerStyles.container
+          }
+        >
+          <div className={headerStyles.iconWrapper}>
+            {isTraining ? "📝" : "✓"}
+          </div>
+          <h2 className={headerStyles.title}>
+            {isTraining ? "トレーニング完了" : "会計完了"}
+          </h2>
+          <p className={headerStyles.subtitle}>
+            {isTraining
+              ? "この取引は記録されていません"
+              : "ありがとうございました"}
+          </p>
         </div>
 
         {/* レシート内容 */}

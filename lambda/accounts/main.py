@@ -1087,10 +1087,12 @@ async def create_pos_sale(request: Request, sale_request: PosSaleRequest):
             payment_method=sale_request.payment_method,
             event_id=sale_request.event_id,
             terminal_id=sale_request.terminal_id,
+            coupon_code=sale_request.coupon_code,
+            subtotal=sale_request.subtotal,
         )
         return result
     except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error recording POS sale: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { css } from "styled-system/css";
-import { Header } from "../components/Header";
+import { Card, PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 import { STOCK_LOW_THRESHOLD } from "../lib/constants";
 
@@ -243,107 +243,89 @@ function DashboardPage() {
   const isLoading = salesLoading || productsLoading;
 
   return (
-    <>
-      <Header title="ダッシュボード" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
-        {isLoading ? (
+    <PageContainer title="ダッシュボード">
+      {isLoading ? (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
+          })}
+        >
+          読み込み中...
+        </div>
+      ) : (
+        <>
           <div
             className={css({
-              textAlign: "center",
-              padding: "8",
-              color: "gray.500",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gap: "6",
+              marginBottom: "6",
             })}
           >
-            読み込み中...
+            <StatCard
+              title="本日の売上"
+              value={`¥${stats.todayRevenue.toLocaleString()}`}
+              change={
+                stats.revenueChange
+                  ? `${Number(stats.revenueChange) >= 0 ? "+" : ""}${stats.revenueChange}% 前日比`
+                  : undefined
+              }
+              icon={<IconCash size={24} color="white" />}
+              color="var(--colors-primary-500)"
+            />
+            <StatCard
+              title="注文数"
+              value={`${stats.todayOrderCount}`}
+              change={
+                stats.orderChange
+                  ? `${Number(stats.orderChange) >= 0 ? "+" : ""}${stats.orderChange}% 前日比`
+                  : undefined
+              }
+              icon={<IconShoppingCart size={24} color="white" />}
+              color="var(--colors-success)"
+            />
+            <StatCard
+              title="在庫アラート"
+              value={`${stats.lowStockCount}件`}
+              icon={<IconBox size={24} color="white" />}
+              color="var(--colors-warning)"
+            />
+            <StatCard
+              title="月間成長率"
+              value={
+                stats.monthlyGrowth
+                  ? `${Number(stats.monthlyGrowth) >= 0 ? "+" : ""}${stats.monthlyGrowth}%`
+                  : "N/A"
+              }
+              icon={<IconTrendingUp size={24} color="white" />}
+              color="var(--colors-primary-600)"
+            />
           </div>
-        ) : (
-          <>
-            <div
-              className={css({
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                gap: "6",
-                marginBottom: "6",
-              })}
-            >
-              <StatCard
-                title="本日の売上"
-                value={`¥${stats.todayRevenue.toLocaleString()}`}
-                change={
-                  stats.revenueChange
-                    ? `${Number(stats.revenueChange) >= 0 ? "+" : ""}${stats.revenueChange}% 前日比`
-                    : undefined
-                }
-                icon={<IconCash size={24} color="white" />}
-                color="var(--colors-primary-500)"
-              />
-              <StatCard
-                title="注文数"
-                value={`${stats.todayOrderCount}`}
-                change={
-                  stats.orderChange
-                    ? `${Number(stats.orderChange) >= 0 ? "+" : ""}${stats.orderChange}% 前日比`
-                    : undefined
-                }
-                icon={<IconShoppingCart size={24} color="white" />}
-                color="var(--colors-success)"
-              />
-              <StatCard
-                title="在庫アラート"
-                value={`${stats.lowStockCount}件`}
-                icon={<IconBox size={24} color="white" />}
-                color="var(--colors-warning)"
-              />
-              <StatCard
-                title="月間成長率"
-                value={
-                  stats.monthlyGrowth
-                    ? `${Number(stats.monthlyGrowth) >= 0 ? "+" : ""}${stats.monthlyGrowth}%`
-                    : "N/A"
-                }
-                icon={<IconTrendingUp size={24} color="white" />}
-                color="var(--colors-primary-600)"
-              />
-            </div>
 
-            <div
+          <Card>
+            <h3
               className={css({
-                backgroundColor: "white",
-                borderRadius: "lg",
-                padding: "6",
-                boxShadow: "sm",
-                border: "1px solid",
-                borderColor: "gray.200",
+                fontSize: "lg",
+                fontWeight: "semibold",
+                marginBottom: "4",
+                color: "gray.900",
               })}
             >
-              <h3
-                className={css({
-                  fontSize: "lg",
-                  fontWeight: "semibold",
-                  marginBottom: "4",
-                  color: "gray.900",
-                })}
-              >
-                最近の活動
-              </h3>
-              <p
-                className={css({
-                  color: "gray.500",
-                  fontSize: "sm",
-                })}
-              >
-                データを読み込み中...
-              </p>
-            </div>
-          </>
-        )}
-      </div>
-    </>
+              最近の活動
+            </h3>
+            <p
+              className={css({
+                color: "gray.500",
+                fontSize: "sm",
+              })}
+            >
+              データを読み込み中...
+            </p>
+          </Card>
+        </>
+      )}
+    </PageContainer>
   );
 }

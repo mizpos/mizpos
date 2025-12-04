@@ -4,9 +4,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { STOCK_LOW_THRESHOLD } from "../lib/constants";
@@ -149,87 +149,78 @@ function StockPage() {
   ];
 
   return (
-    <>
-      <Header title="在庫管理" />
+    <PageContainer title="在庫管理">
       <div
         className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "6",
         })}
       >
         <div
           className={css({
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "6",
+            position: "relative",
+            width: "320px",
           })}
         >
-          <div
+          <IconSearch
+            size={18}
             className={css({
-              position: "relative",
-              width: "320px",
+              position: "absolute",
+              left: "3",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "gray.400",
             })}
-          >
-            <IconSearch
-              size={18}
-              className={css({
-                position: "absolute",
-                left: "3",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "gray.400",
-              })}
-            />
-            <input
-              type="text"
-              placeholder="商品名・カテゴリで検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={css({
-                width: "100%",
-                paddingLeft: "10",
-                paddingRight: "4",
-                paddingY: "2",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: "gray.300",
-                fontSize: "sm",
-                _focus: {
-                  outline: "none",
-                  borderColor: "primary.500",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                },
-              })}
-            />
-          </div>
-
-          <Button>
-            <IconPlus size={18} />
-            商品追加
-          </Button>
+          />
+          <input
+            type="text"
+            placeholder="商品名・カテゴリで検索..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={css({
+              width: "100%",
+              paddingLeft: "10",
+              paddingRight: "4",
+              paddingY: "2",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.300",
+              fontSize: "sm",
+              _focus: {
+                outline: "none",
+                borderColor: "primary.500",
+                boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+              },
+            })}
+          />
         </div>
 
-        {isLoading ? (
-          <div
-            className={css({
-              textAlign: "center",
-              padding: "8",
-              color: "gray.500",
-            })}
-          >
-            読み込み中...
-          </div>
-        ) : (
-          <Table
-            columns={columns}
-            data={filteredProducts}
-            keyExtractor={(item) => item.product_id}
-            emptyMessage="商品が見つかりません"
-          />
-        )}
+        <Button>
+          <IconPlus size={18} />
+          商品追加
+        </Button>
       </div>
+
+      {isLoading ? (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
+          })}
+        >
+          読み込み中...
+        </div>
+      ) : (
+        <Table
+          columns={columns}
+          data={filteredProducts}
+          keyExtractor={(item) => item.product_id}
+          emptyMessage="商品が見つかりません"
+        />
+      )}
 
       <Modal
         isOpen={!!adjustmentModal}
@@ -405,6 +396,6 @@ function StockPage() {
           </form>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }

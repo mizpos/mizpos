@@ -1,10 +1,10 @@
 import { IconDownload, IconFilter } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 import { ONE_MONTH_MS, ONE_WEEK_MS } from "../lib/constants";
 
@@ -131,6 +131,24 @@ function ReportsPage() {
   const completedSales = salesData.filter(
     (s) => s.status === "completed" && filterByDateRange(s.created_at),
   );
+
+  // 商品IDから商品名を取得するマップ
+  const productNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const product of productsData) {
+      map[product.product_id] = product.name;
+    }
+    return map;
+  }, [productsData]);
+
+  // 商品名を取得するヘルパー関数
+  const getProductName = (item: SaleItem): string => {
+    return (
+      item.product_name ||
+      productNameMap[item.product_id] ||
+      `商品ID: ${item.product_id.slice(0, 8)}...`
+    );
+  };
 
   // 委託元リストを取得（重複なし）
   const publishersList = Array.from(
@@ -259,7 +277,7 @@ function ReportsPage() {
       sale.items.forEach((item) => {
         if (!productSales[item.product_id]) {
           productSales[item.product_id] = {
-            name: item.product_name,
+            name: getProductName(item),
             quantity: 0,
             revenue: 0,
           };
@@ -798,14 +816,7 @@ function ReportsPage() {
           }
         `}
       </style>
-      <Header title="レポート" />
-      <div
-        className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
-        })}
-      >
+      <PageContainer title="レポート">
         {/* Print Header */}
         <div className="print-only" style={{ marginBottom: "24px" }}>
           <h1
@@ -993,7 +1004,7 @@ function ReportsPage() {
             {reportType === "card_brands" && renderCardBrandsReport()}
           </>
         )}
-      </div>
+      </PageContainer>
     </>
   );
 }

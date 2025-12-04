@@ -17,7 +17,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
 import { getAuthHeaders } from "../lib/api";
@@ -449,122 +448,113 @@ function PosEmployeesPage() {
   });
 
   return (
-    <>
-      <Header title="POS従業員管理" />
+    <div title="POS従業員管理">
+      {/* Info Box */}
       <div
         className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
+          backgroundColor: "blue.50",
+          border: "1px solid",
+          borderColor: "blue.200",
+          borderRadius: "md",
+          padding: "4",
+          marginBottom: "6",
         })}
       >
-        {/* Info Box */}
-        <div
-          className={css({
-            backgroundColor: "blue.50",
-            border: "1px solid",
-            borderColor: "blue.200",
-            borderRadius: "md",
-            padding: "4",
-            marginBottom: "6",
-          })}
-        >
-          <p className={css({ fontSize: "sm", color: "blue.800" })}>
-            POS端末（mizpos-desktop）でログインする従業員を管理します。
-            従業員番号（7桁）とPIN（3桁以上の数字）でログインできます。
-          </p>
-        </div>
-
-        {error && (
-          <div
-            className={css({
-              backgroundColor: "red.50",
-              border: "1px solid",
-              borderColor: "red.200",
-              color: "red.700",
-              padding: "3",
-              borderRadius: "md",
-              marginBottom: "4",
-              fontSize: "sm",
-            })}
-          >
-            従業員情報の取得に失敗しました:{" "}
-            {error instanceof Error ? error.message : "不明なエラー"}
-          </div>
-        )}
-
-        <div
-          className={css({
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "6",
-          })}
-        >
-          <div
-            className={css({
-              position: "relative",
-              width: "320px",
-            })}
-          >
-            <IconSearch
-              size={18}
-              className={css({
-                position: "absolute",
-                left: "3",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "gray.400",
-              })}
-            />
-            <input
-              type="text"
-              placeholder="名前・従業員番号で検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={css({
-                width: "100%",
-                paddingLeft: "10",
-                paddingRight: "4",
-                paddingY: "2",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: "gray.300",
-                fontSize: "sm",
-                _focus: {
-                  outline: "none",
-                  borderColor: "primary.500",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                },
-              })}
-            />
-          </div>
-
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <IconPlus size={18} />
-            従業員追加
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div
-            className={css({
-              textAlign: "center",
-              padding: "8",
-              color: "gray.500",
-            })}
-          >
-            読み込み中...
-          </div>
-        ) : (
-          <Table
-            columns={columns}
-            data={filteredEmployees}
-            keyExtractor={(item) => item.employee_number}
-            emptyMessage="POS従業員が登録されていません"
-          />
-        )}
+        <p className={css({ fontSize: "sm", color: "blue.800" })}>
+          POS端末（mizpos-desktop）でログインする従業員を管理します。
+          従業員番号（7桁）とPIN（3桁以上の数字）でログインできます。
+        </p>
       </div>
+
+      {error && (
+        <div
+          className={css({
+            backgroundColor: "red.50",
+            border: "1px solid",
+            borderColor: "red.200",
+            color: "red.700",
+            padding: "3",
+            borderRadius: "md",
+            marginBottom: "4",
+            fontSize: "sm",
+          })}
+        >
+          従業員情報の取得に失敗しました:{" "}
+          {error instanceof Error ? error.message : "不明なエラー"}
+        </div>
+      )}
+
+      <div
+        className={css({
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "6",
+        })}
+      >
+        <div
+          className={css({
+            position: "relative",
+            width: "320px",
+          })}
+        >
+          <IconSearch
+            size={18}
+            className={css({
+              position: "absolute",
+              left: "3",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "gray.400",
+            })}
+          />
+          <input
+            type="text"
+            placeholder="名前・従業員番号で検索..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={css({
+              width: "100%",
+              paddingLeft: "10",
+              paddingRight: "4",
+              paddingY: "2",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.300",
+              fontSize: "sm",
+              _focus: {
+                outline: "none",
+                borderColor: "primary.500",
+                boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+              },
+            })}
+          />
+        </div>
+
+        <Button onClick={() => setIsCreateModalOpen(true)}>
+          <IconPlus size={18} />
+          従業員追加
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
+          })}
+        >
+          読み込み中...
+        </div>
+      ) : (
+        <Table
+          columns={columns}
+          data={filteredEmployees}
+          keyExtractor={(item) => item.employee_number}
+          emptyMessage="POS従業員が登録されていません"
+        />
+      )}
 
       {/* Create Modal */}
       <Modal
@@ -1054,6 +1044,6 @@ function PosEmployeesPage() {
           </form>
         )}
       </Modal>
-    </>
+    </div>
   );
 }

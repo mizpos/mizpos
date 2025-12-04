@@ -127,12 +127,14 @@ async def create_product(
         product_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
 
-        # バーコードを生成
+        # バーコードを生成（書籍/非書籍で分岐）
         barcode_info = generate_full_barcode_info(
             isdn=request.isdn,
             product_id=product_id,
             price=int(request.price),
-            c_code="3055",
+            c_code=request.c_code or "3055",
+            is_book=request.is_book,
+            jan_code=request.jan_code,
         )
 
         product_item = {
@@ -146,21 +148,28 @@ async def create_product(
             "author": request.author,
             "publisher": request.publisher,
             "variant_type": request.variant_type.value,
+            "is_book": request.is_book,
+            "is_online": request.is_online,
             "is_active": True,
             "created_at": now,
             "updated_at": now,
             # バーコード情報を保存
             "jan_barcode_1": barcode_info["jan_barcode_1"],
-            "jan_barcode_2": barcode_info["jan_barcode_2"],
         }
+
+        # 2段目バーコードは書籍の場合のみ保存
+        if barcode_info.get("jan_barcode_2"):
+            product_item["jan_barcode_2"] = barcode_info["jan_barcode_2"]
 
         # 新しいフィールドを追加（nullの場合は含めない）
         if request.publisher_id:
             product_item["publisher_id"] = request.publisher_id
         if request.isdn:
             product_item["isdn"] = request.isdn
-        if barcode_info.get("isdn"):
-            product_item["isdn_formatted"] = barcode_info.get("isdn_formatted")
+        if barcode_info.get("isdn_formatted"):
+            product_item["isdn_formatted"] = barcode_info["isdn_formatted"]
+        if request.c_code:
+            product_item["c_code"] = request.c_code
         if request.jan_code:
             product_item["jan_code"] = request.jan_code
         if request.download_url:
@@ -728,28 +737,43 @@ async def get_product_barcode(
             raise HTTPException(status_code=404, detail="Product not found")
 
         product_dict = dynamo_to_dict(product)
+        is_book = product_dict.get("is_book", True)  # デフォルトは書籍（後方互換性）
 
         # DynamoDBに保存されたバーコードがあればそれを返す
         if product_dict.get("jan_barcode_1"):
+            if is_book:
+                full_display = (
+                    f"{product_dict.get('isdn_formatted') or 'インストアコード'}\n"
+                    f"{product_dict.get('jan_barcode_1')} / {product_dict.get('jan_barcode_2')}"
+                )
+            else:
+                full_display = f"JANコード\n{product_dict.get('jan_barcode_1')}"
+
             return {
                 "product_id": product_id,
                 "product_name": product_dict.get("name", ""),
+                "is_book": is_book,
                 "isdn": product_dict.get("isdn"),
                 "isdn_formatted": product_dict.get("isdn_formatted"),
+                "c_code": product_dict.get("c_code"),
                 "jan_barcode_1": product_dict.get("jan_barcode_1"),
                 "jan_barcode_2": product_dict.get("jan_barcode_2"),
-                "full_display": f"{product_dict.get('isdn_formatted') or 'インストアコード'}\n{product_dict.get('jan_barcode_1')} / {product_dict.get('jan_barcode_2')}",
+                "full_display": full_display,
             }
 
         # バーコードが保存されていない場合は動的に生成
         isdn = product_dict.get("isdn")
         price = int(product_dict.get("price", 0))
+        stored_c_code = product_dict.get("c_code") or c_code
+        jan_code = product_dict.get("jan_code")
 
         barcode_info = generate_full_barcode_info(
             isdn=isdn,
             product_id=product_id,
             price=price,
-            c_code=c_code,
+            c_code=stored_c_code,
+            is_book=is_book,
+            jan_code=jan_code,
         )
 
         return {

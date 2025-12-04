@@ -1,17 +1,114 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
-import { saveTransaction } from "../lib/db";
+import { saveTransaction, updateSalesSummary } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
-import { useCartStore } from "../stores/cart";
+import { type AppliedCoupon, useCartStore } from "../stores/cart";
 import { useSettingsStore } from "../stores/settings";
 import type { Payment, PaymentMethod, Transaction } from "../types";
 import { Button, Modal } from "./ui";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// クーポン入力スタイル
+const couponStyles = {
+  container: css({
+    marginBottom: "24px",
+    padding: "16px",
+    background: "#1e293b",
+    borderRadius: "12px",
+  }),
+  label: css({
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#94a3b8",
+    marginBottom: "10px",
+  }),
+  inputRow: css({
+    display: "flex",
+    gap: "8px",
+  }),
+  input: css({
+    flex: 1,
+    padding: "12px 14px",
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#f8fafc",
+    background: "#0f172a",
+    border: "2px solid #334155",
+    borderRadius: "8px",
+    outline: "none",
+    textTransform: "uppercase",
+    transition: "border-color 0.15s ease",
+    _focus: {
+      borderColor: "#3b82f6",
+    },
+    _placeholder: { color: "#475569" },
+  }),
+  applyButton: css({
+    padding: "12px 20px",
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#f8fafc",
+    background: "#6366f1",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "background 0.15s ease",
+    _hover: { background: "#4f46e5" },
+    _disabled: {
+      background: "#334155",
+      cursor: "not-allowed",
+    },
+  }),
+  applied: css({
+    marginTop: "12px",
+    padding: "12px 14px",
+    background: "#14532d",
+    borderRadius: "8px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }),
+  appliedInfo: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  }),
+  appliedCode: css({
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#86efac",
+  }),
+  appliedDiscount: css({
+    fontSize: "13px",
+    color: "#4ade80",
+  }),
+  removeButton: css({
+    padding: "6px 12px",
+    fontSize: "12px",
+    fontWeight: 500,
+    color: "#fecaca",
+    background: "transparent",
+    border: "1px solid #7f1d1d",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+    _hover: {
+      background: "#7f1d1d",
+      color: "#f8fafc",
+    },
+  }),
+  error: css({
+    marginTop: "8px",
+    fontSize: "13px",
+    color: "#f87171",
+  }),
+};
+
 interface CheckoutModalProps {
   onClose: () => void;
   onComplete: (transaction: Transaction) => void;
+  isTrainingMode?: boolean;
 }
 
 // 合計表示スタイル
@@ -196,17 +293,35 @@ const cashlessDisplayStyles = {
   }),
 };
 
-export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
+export function CheckoutModal({
+  onClose,
+  onComplete,
+  isTrainingMode = false,
+}: CheckoutModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [receivedAmount, setReceivedAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const { items, getSubtotal, getTaxAmount, getTotal, clear } = useCartStore();
+  const [couponCode, setCouponCode] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const {
+    items,
+    appliedCoupon,
+    getSubtotal,
+    getDiscountAmount,
+    getTaxAmount,
+    getTotal,
+    applyCoupon,
+    removeCoupon,
+    clear,
+  } = useCartStore();
   const { settings } = useSettingsStore();
   const { session } = useAuthStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const taxRate = settings.taxRate;
   const subtotal = getSubtotal();
+  const discountAmount = getDiscountAmount();
   const taxAmount = getTaxAmount(taxRate);
   const total = getTotal(taxRate);
   const received = receivedAmount ? Number.parseInt(receivedAmount, 10) : 0;
@@ -233,6 +348,58 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     setReceivedAmount(String(amount));
   }, []);
 
+  // クーポン適用
+  const handleApplyCoupon = useCallback(async () => {
+    if (!couponCode.trim() || !session) return;
+
+    setIsApplyingCoupon(true);
+    setCouponError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/accounts/coupons/apply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-POS-Session": session.sessionId,
+        },
+        body: JSON.stringify({
+          code: couponCode.toUpperCase(),
+          subtotal: subtotal,
+          publisher_id: session.publisherId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setCouponError(error.detail || "クーポンの適用に失敗しました");
+        return;
+      }
+
+      const data = await response.json();
+      const appliedCouponData: AppliedCoupon = {
+        code: data.code,
+        name: data.name,
+        discountType: data.discount_type,
+        discountValue: data.discount_value,
+        discountAmount: data.discount_amount,
+      };
+
+      applyCoupon(appliedCouponData);
+      setCouponCode("");
+    } catch (error) {
+      console.error("Error applying coupon:", error);
+      setCouponError("クーポンの適用に失敗しました");
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  }, [couponCode, session, subtotal, applyCoupon]);
+
+  // クーポン削除
+  const handleRemoveCoupon = useCallback(() => {
+    removeCoupon();
+    setCouponError(null);
+  }, [removeCoupon]);
+
   const handleComplete = useCallback(async () => {
     if (!session) return;
     if (paymentMethod === "cash" && change < 0) return;
@@ -257,43 +424,69 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
         payments,
         staffId: session.staffId,
         createdAt: new Date(),
+        isTraining: isTrainingMode,
       };
 
-      // ローカルDBに保存
-      await saveTransaction(transaction);
+      // トレーニングモード時はDBへの保存とAPIへの送信をスキップ
+      if (!isTrainingMode) {
+        // ローカルDBに保存
+        await saveTransaction(transaction);
+        // 販売サマリーを更新
+        await updateSalesSummary(transaction);
 
-      // バックエンドに送信
-      try {
-        const saleItems = items.map((item) => ({
-          product_id: item.product.id,
-          quantity: item.quantity,
-          unit_price: item.product.price,
-        }));
+        // バックエンドに送信
+        try {
+          const saleItems = items.map((item) => ({
+            product_id: item.product.id,
+            product_name: item.product.name,
+            circle_name: item.product.circleName || null,
+            jan: item.product.jan,
+            jan2: item.product.jan2 || null,
+            isbn: item.product.isbn || null,
+            isdn: item.product.isdn || null,
+            quantity: item.quantity,
+            unit_price: item.product.price,
+          }));
 
-        const response = await fetch(`${API_BASE_URL}/accounts/pos/sales`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-POS-Session": session.sessionId,
-          },
-          body: JSON.stringify({
+          // クーポン情報を含めたリクエストボディ
+          const saleBody: Record<string, unknown> = {
             items: saleItems,
             total_amount: total,
             payment_method: paymentMethod,
             event_id: session.eventId,
             terminal_id: settings.terminalId,
-          }),
-        });
+          };
 
-        if (!response.ok) {
-          console.error("Failed to send sale to backend:", response.statusText);
-          // バックエンド送信失敗時もローカルには保存済みなので続行
-        } else {
-          console.log("Sale successfully sent to backend");
+          // クーポンが適用されている場合は追加
+          if (appliedCoupon) {
+            saleBody.coupon_code = appliedCoupon.code;
+            saleBody.subtotal = subtotal;
+          }
+
+          const response = await fetch(`${API_BASE_URL}/accounts/pos/sales`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-POS-Session": session.sessionId,
+            },
+            body: JSON.stringify(saleBody),
+          });
+
+          if (!response.ok) {
+            console.error(
+              "Failed to send sale to backend:",
+              response.statusText,
+            );
+            // バックエンド送信失敗時もローカルには保存済みなので続行
+          } else {
+            console.log("Sale successfully sent to backend");
+          }
+        } catch (apiError) {
+          console.error("Error sending sale to backend:", apiError);
+          // ネットワークエラー等でもローカル保存は成功しているので続行
         }
-      } catch (apiError) {
-        console.error("Error sending sale to backend:", apiError);
-        // ネットワークエラー等でもローカル保存は成功しているので続行
+      } else {
+        console.log("Training mode: Transaction not saved");
       }
 
       clear();
@@ -316,6 +509,8 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     clear,
     onComplete,
     settings.terminalId,
+    appliedCoupon,
+    isTrainingMode,
   ]);
 
   // Enterキーで会計完了
@@ -336,16 +531,97 @@ export function CheckoutModal({ onClose, onComplete }: CheckoutModalProps) {
     <Modal
       open
       onClose={onClose}
-      title="会計"
+      title={isTrainingMode ? "会計 (トレーニング)" : "会計"}
       maxWidth="500px"
       disableClose={isProcessing}
     >
+      {/* トレーニングモード警告 */}
+      {isTrainingMode && (
+        <div
+          className={css({
+            padding: "12px 16px",
+            marginBottom: "16px",
+            background:
+              "linear-gradient(90deg, #dc2626 0%, #ea580c 50%, #dc2626 100%)",
+            borderRadius: "8px",
+            textAlign: "center",
+            fontSize: "14px",
+            fontWeight: 700,
+            color: "white",
+            letterSpacing: "0.05em",
+          })}
+        >
+          トレーニングモード - この取引は記録されません
+        </div>
+      )}
       {/* 合計金額 */}
       <div className={totalDisplayStyles.container}>
         <div className={totalDisplayStyles.label}>お会計</div>
         <div className={totalDisplayStyles.amount}>
           ¥{total.toLocaleString()}
         </div>
+        {/* 割引がある場合は内訳を表示 */}
+        {discountAmount > 0 && (
+          <div
+            className={css({
+              marginTop: "12px",
+              fontSize: "14px",
+              color: "#94a3b8",
+            })}
+          >
+            <div>小計: ¥{subtotal.toLocaleString()}</div>
+            <div className={css({ color: "#4ade80" })}>
+              割引: -¥{discountAmount.toLocaleString()}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* クーポン入力 */}
+      <div className={couponStyles.container}>
+        <div className={couponStyles.label}>クーポン</div>
+        {appliedCoupon ? (
+          <div className={couponStyles.applied}>
+            <div className={couponStyles.appliedInfo}>
+              <span className={couponStyles.appliedCode}>
+                {appliedCoupon.code} - {appliedCoupon.name}
+              </span>
+              <span className={couponStyles.appliedDiscount}>
+                -¥{appliedCoupon.discountAmount.toLocaleString()} 割引
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleRemoveCoupon}
+              className={couponStyles.removeButton}
+            >
+              削除
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className={couponStyles.inputRow}>
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="クーポンコード"
+                className={couponStyles.input}
+              />
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                disabled={!couponCode.trim() || isApplyingCoupon}
+                className={couponStyles.applyButton}
+              >
+                {isApplyingCoupon ? "..." : "適用"}
+              </button>
+            </div>
+            {couponError && (
+              <div className={couponStyles.error}>{couponError}</div>
+            )}
+          </>
+        )}
       </div>
 
       {/* 支払い方法 */}

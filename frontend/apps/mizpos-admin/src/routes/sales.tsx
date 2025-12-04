@@ -4,9 +4,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
-import { Header } from "../components/Header";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
+import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/sales")({
@@ -344,183 +344,174 @@ function SalesPage() {
   ).length;
 
   return (
-    <>
-      <Header title="売上管理" />
+    <PageContainer title="売上管理">
+      {/* Summary Cards */}
       <div
         className={css({
-          flex: "1",
-          padding: "6",
-          overflowY: "auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "4",
+          marginBottom: "6",
         })}
       >
-        {/* Summary Cards */}
         <div
           className={css({
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "4",
-            marginBottom: "6",
+            backgroundColor: "white",
+            padding: "4",
+            borderRadius: "lg",
+            border: "1px solid",
+            borderColor: "gray.200",
           })}
         >
-          <div
+          <p className={css({ fontSize: "sm", color: "gray.500" })}>総売上</p>
+          <p
             className={css({
-              backgroundColor: "white",
-              padding: "4",
-              borderRadius: "lg",
-              border: "1px solid",
-              borderColor: "gray.200",
+              fontSize: "2xl",
+              fontWeight: "bold",
+              color: "gray.900",
             })}
           >
-            <p className={css({ fontSize: "sm", color: "gray.500" })}>総売上</p>
-            <p
-              className={css({
-                fontSize: "2xl",
-                fontWeight: "bold",
-                color: "gray.900",
-              })}
-            >
-              ¥{totalRevenue.toLocaleString()}
-            </p>
-          </div>
-          <div
-            className={css({
-              backgroundColor: "white",
-              padding: "4",
-              borderRadius: "lg",
-              border: "1px solid",
-              borderColor: "gray.200",
-            })}
-          >
-            <p className={css({ fontSize: "sm", color: "gray.500" })}>注文数</p>
-            <p
-              className={css({
-                fontSize: "2xl",
-                fontWeight: "bold",
-                color: "gray.900",
-              })}
-            >
-              {totalOrders}件
-            </p>
-          </div>
-          <div
-            className={css({
-              backgroundColor: "white",
-              padding: "4",
-              borderRadius: "lg",
-              border: "1px solid",
-              borderColor: "gray.200",
-            })}
-          >
-            <p className={css({ fontSize: "sm", color: "gray.500" })}>
-              平均注文額
-            </p>
-            <p
-              className={css({
-                fontSize: "2xl",
-                fontWeight: "bold",
-                color: "gray.900",
-              })}
-            >
-              ¥
-              {totalOrders > 0
-                ? Math.round(totalRevenue / totalOrders).toLocaleString()
-                : 0}
-            </p>
-          </div>
+            ¥{totalRevenue.toLocaleString()}
+          </p>
         </div>
-
-        {/* Search */}
         <div
           className={css({
-            marginBottom: "6",
-            display: "flex",
-            gap: "4",
-            alignItems: "center",
+            backgroundColor: "white",
+            padding: "4",
+            borderRadius: "lg",
+            border: "1px solid",
+            borderColor: "gray.200",
           })}
         >
-          <div
+          <p className={css({ fontSize: "sm", color: "gray.500" })}>注文数</p>
+          <p
             className={css({
-              position: "relative",
-              width: "320px",
+              fontSize: "2xl",
+              fontWeight: "bold",
+              color: "gray.900",
             })}
           >
-            <IconSearch
-              size={18}
-              className={css({
-                position: "absolute",
-                left: "3",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "gray.400",
-              })}
-            />
-            <input
-              type="text"
-              placeholder="注文ID・ユーザーID・メールで検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={css({
-                width: "100%",
-                paddingLeft: "10",
-                paddingRight: "4",
-                paddingY: "2",
-                borderRadius: "md",
-                border: "1px solid",
-                borderColor: "gray.300",
-                fontSize: "sm",
-                _focus: {
-                  outline: "none",
-                  borderColor: "primary.500",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                },
-              })}
-            />
-          </div>
-          <label
-            className={css({
-              display: "flex",
-              alignItems: "center",
-              gap: "2",
-              fontSize: "sm",
-              color: "gray.700",
-              cursor: "pointer",
-              userSelect: "none",
-            })}
-          >
-            <input
-              type="checkbox"
-              checked={showCancelled}
-              onChange={(e) => setShowCancelled(e.target.checked)}
-              className={css({
-                width: "4",
-                height: "4",
-                cursor: "pointer",
-              })}
-            />
-            キャンセル済みを表示
-          </label>
+            {totalOrders}件
+          </p>
         </div>
-
-        {/* Table */}
-        {isLoading ? (
-          <div
+        <div
+          className={css({
+            backgroundColor: "white",
+            padding: "4",
+            borderRadius: "lg",
+            border: "1px solid",
+            borderColor: "gray.200",
+          })}
+        >
+          <p className={css({ fontSize: "sm", color: "gray.500" })}>
+            平均注文額
+          </p>
+          <p
             className={css({
-              textAlign: "center",
-              padding: "8",
-              color: "gray.500",
+              fontSize: "2xl",
+              fontWeight: "bold",
+              color: "gray.900",
             })}
           >
-            読み込み中...
-          </div>
-        ) : (
-          <Table
-            columns={columns}
-            data={filteredSales}
-            keyExtractor={(item) => item.sale_id}
-            emptyMessage="売上データがありません"
-          />
-        )}
+            ¥
+            {totalOrders > 0
+              ? Math.round(totalRevenue / totalOrders).toLocaleString()
+              : 0}
+          </p>
+        </div>
       </div>
+
+      {/* Search */}
+      <div
+        className={css({
+          marginBottom: "6",
+          display: "flex",
+          gap: "4",
+          alignItems: "center",
+        })}
+      >
+        <div
+          className={css({
+            position: "relative",
+            width: "320px",
+          })}
+        >
+          <IconSearch
+            size={18}
+            className={css({
+              position: "absolute",
+              left: "3",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "gray.400",
+            })}
+          />
+          <input
+            type="text"
+            placeholder="注文ID・ユーザーID・メールで検索..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={css({
+              width: "100%",
+              paddingLeft: "10",
+              paddingRight: "4",
+              paddingY: "2",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "gray.300",
+              fontSize: "sm",
+              _focus: {
+                outline: "none",
+                borderColor: "primary.500",
+                boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+              },
+            })}
+          />
+        </div>
+        <label
+          className={css({
+            display: "flex",
+            alignItems: "center",
+            gap: "2",
+            fontSize: "sm",
+            color: "gray.700",
+            cursor: "pointer",
+            userSelect: "none",
+          })}
+        >
+          <input
+            type="checkbox"
+            checked={showCancelled}
+            onChange={(e) => setShowCancelled(e.target.checked)}
+            className={css({
+              width: "4",
+              height: "4",
+              cursor: "pointer",
+            })}
+          />
+          キャンセル済みを表示
+        </label>
+      </div>
+
+      {/* Table */}
+      {isLoading ? (
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
+          })}
+        >
+          読み込み中...
+        </div>
+      ) : (
+        <Table
+          columns={columns}
+          data={filteredSales}
+          keyExtractor={(item) => item.sale_id}
+          emptyMessage="売上データがありません"
+        />
+      )}
 
       {/* Sale Detail Modal */}
       <Modal
@@ -1103,6 +1094,6 @@ function SalesPage() {
           </div>
         )}
       </Modal>
-    </>
+    </PageContainer>
   );
 }

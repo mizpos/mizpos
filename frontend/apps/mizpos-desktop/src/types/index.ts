@@ -18,13 +18,15 @@ export interface Session {
 export interface Product {
   id: string;
   jan: string;
-  jan2?: string; // 2段目バーコード
+  jan2?: string; // 2段目バーコード（書籍の場合）
   isbn?: string;
   isdn?: string; // ISDN（ハイフン区切り）
+  isBook: boolean; // 書籍フラグ
   name: string;
   circleName?: string;
   price: number;
   imageUrl?: string;
+  deletedAt?: Date; // 論理削除日時（nullの場合は有効）
 }
 
 /**
@@ -61,6 +63,7 @@ export interface Transaction {
   payments: Payment[];
   staffId: string;
   createdAt: Date;
+  isTraining?: boolean;
 }
 
 /**
@@ -83,4 +86,5 @@ export interface AppSettings {
   terminalId: string;
   taxRate: number;
   printer?: PrinterConfig;
+  isTrainingMode?: boolean;
 }

@@ -13,6 +13,12 @@ from decimal import Decimal
 import boto3
 from botocore.exceptions import ClientError
 
+from coupon_services import (
+    calculate_discount,
+    increment_usage_count,
+    validate_coupon,
+)
+
 # 環境変数
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 POS_EMPLOYEES_TABLE = os.environ.get(
@@ -734,27 +740,56 @@ def record_pos_sale(
     payment_method: str,
     event_id: str | None = None,
     terminal_id: str | None = None,
+    coupon_code: str | None = None,
+    subtotal: int | None = None,
 ) -> dict:
     """POS端末からの販売をリアルタイムで記録
 
     Args:
         session_id: POSセッションID
         items: 販売アイテム [{product_id, quantity, unit_price}]
-        total_amount: 合計金額
+        total_amount: 合計金額（クーポン割引後）
         payment_method: 支払い方法 (cash/card/other)
         event_id: イベントID
         terminal_id: 端末ID
+        coupon_code: クーポンコード（オプション）
+        subtotal: クーポン割引前の小計（オプション）
 
     Returns:
         作成された販売レコード
 
     Raises:
-        ValueError: セッションが無効な場合
+        ValueError: セッションが無効な場合、またはクーポンが無効な場合
     """
     # セッションを検証
     session = verify_pos_session(session_id)
     if not session:
         raise ValueError("Invalid or expired session")
+
+    # クーポン処理
+    coupon_info = None
+    discount_amount = 0
+    if coupon_code:
+        # 小計が指定されていない場合は合計金額を使用
+        actual_subtotal = subtotal if subtotal is not None else total_amount
+        coupon, error = validate_coupon(
+            code=coupon_code,
+            subtotal=actual_subtotal,
+            publisher_id=session.get("publisher_id"),
+            event_id=event_id or session.get("event_id"),
+        )
+        if error:
+            raise ValueError(f"クーポンエラー: {error}")
+
+        discount_amount = calculate_discount(coupon, actual_subtotal)
+        coupon_info = {
+            "coupon_id": coupon["coupon_id"],
+            "code": coupon["code"],
+            "discount_amount": discount_amount,
+        }
+
+        # 使用回数をインクリメント
+        increment_usage_count(coupon["coupon_id"])
 
     sale_id = str(uuid.uuid4())
     now = int(datetime.now(timezone.utc).timestamp())
@@ -811,11 +846,26 @@ def record_pos_sale(
     if event_id:
         sale_item["event_id"] = event_id
 
+    # クーポン情報を追加
+    if coupon_info:
+        sale_item["coupon_code"] = coupon_info["code"]
+        sale_item["coupon_id"] = coupon_info["coupon_id"]
+        sale_item["discount_amount"] = Decimal(str(coupon_info["discount_amount"]))
+        if subtotal is not None:
+            sale_item["subtotal"] = Decimal(str(subtotal))
+
     sales_table.put_item(Item=sale_item)
 
-    return {
+    result = {
         "sale_id": sale_id,
         "timestamp": now,
         "total_amount": total_amount,
         "status": "completed",
     }
+
+    # レスポンスにクーポン情報を追加
+    if coupon_info:
+        result["coupon_code"] = coupon_info["code"]
+        result["discount_amount"] = coupon_info["discount_amount"]
+
+    return result

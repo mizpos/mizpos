@@ -4,10 +4,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "6.21.0"
     }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 5.0"
-    }
   }
 
   backend "s3" {
@@ -42,10 +38,6 @@ provider "aws" {
   }
 }
 
-# Cloudflare provider
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
-}
 
 module "mizpos_infrastructure" {
   source = "../modules"
@@ -53,7 +45,6 @@ module "mizpos_infrastructure" {
   providers = {
     aws           = aws
     aws.us_east_1 = aws.us_east_1
-    cloudflare    = cloudflare
   }
 
   environment  = "dev"
@@ -64,7 +55,4 @@ module "mizpos_infrastructure" {
   domain_name          = var.domain_name
   frontend_url         = var.frontend_url
   enable_custom_domain = var.enable_custom_domain
-
-  # Cloudflare Turnstile Settings
-  cloudflare_account_id = var.cloudflare_account_id
 }
