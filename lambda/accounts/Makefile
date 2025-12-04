@@ -1,5 +1,6 @@
 .PHONY: deploy
 
 deploy:
-	pip install . -t . --upgrade --quiet 2>/dev/null || pip install . -t . --upgrade
+	pip install boto3 fastapi jinja2 mangum "pydantic[email]" "python-jose[cryptography]" httpx -t . --upgrade --quiet 2>/dev/null || \
+		pip install boto3 fastapi jinja2 mangum "pydantic[email]" "python-jose[cryptography]" httpx -t . --upgrade
 	lambroll deploy --function function.jsonnet --ext-str ENV=$(ENV)
