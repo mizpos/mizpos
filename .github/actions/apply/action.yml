@@ -37,7 +37,7 @@ runs:
 
     - name: tflint
       if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-      uses: reviewdog/action-tflint@master
+      uses: reviewdog/action-tflint@v1
       continue-on-error: true
       with:
         github_token: ${{ inputs.GITHUB_TOKEN }}
