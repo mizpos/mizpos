@@ -576,6 +576,67 @@ async def generate_barcode(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@router.post("/barcode/migrate", response_model=dict)
+async def migrate_barcodes(
+    current_user: dict = Depends(get_current_user),
+):
+    """既存商品にバーコード情報を追加するマイグレーション"""
+    try:
+        # 全商品を取得
+        response = stock_table.scan()
+        products = response.get("Items", [])
+
+        updated_count = 0
+        skipped_count = 0
+
+        for product in products:
+            product_id = product.get("product_id")
+            # 既にバーコードがある場合はスキップ
+            if product.get("jan_barcode_1"):
+                skipped_count += 1
+                continue
+
+            product_dict = dynamo_to_dict(product)
+            isdn = product_dict.get("isdn")
+            price = int(product_dict.get("price", 0))
+
+            # バーコード情報を生成
+            barcode_info = generate_full_barcode_info(
+                isdn=isdn,
+                product_id=product_id,
+                price=price,
+                c_code="3055",
+            )
+
+            # 更新
+            update_expr = "SET jan_barcode_1 = :jb1, jan_barcode_2 = :jb2, updated_at = :ua"
+            expr_values = {
+                ":jb1": barcode_info["jan_barcode_1"],
+                ":jb2": barcode_info["jan_barcode_2"],
+                ":ua": datetime.now(timezone.utc).isoformat(),
+            }
+
+            # ISDN情報も追加
+            if barcode_info.get("isdn_formatted"):
+                update_expr += ", isdn_formatted = :isdn_fmt"
+                expr_values[":isdn_fmt"] = barcode_info["isdn_formatted"]
+
+            stock_table.update_item(
+                Key={"product_id": product_id},
+                UpdateExpression=update_expr,
+                ExpressionAttributeValues=expr_values,
+            )
+            updated_count += 1
+
+        return {
+            "message": "Migration completed",
+            "updated": updated_count,
+            "skipped": skipped_count,
+        }
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @router.get("/products/{product_id}/barcode", response_model=dict)
 async def get_product_barcode(
     product_id: str,
