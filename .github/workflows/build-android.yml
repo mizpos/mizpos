@@ -38,7 +38,6 @@ jobs:
       cdn-distribution-id: ${{ steps.set-env.outputs.cdn-distribution-id }}
       cdn-domain: ${{ steps.set-env.outputs.cdn-domain }}
       aws-role-arn: ${{ steps.set-env.outputs.aws-role-arn }}
-      keystore-secret: ${{ steps.set-env.outputs.keystore-secret }}
     steps:
       - id: set-env
         run: |
@@ -57,13 +56,11 @@ jobs:
             echo "cdn-distribution-id=E3K8Z7XI6AMQJ5" >> $GITHUB_OUTPUT
             echo "cdn-domain=https://d2xppn5ml53jqk.cloudfront.net" >> $GITHUB_OUTPUT
             echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_OUTPUT
-            echo "keystore-secret=ANDROID_KEYSTORE_PROD" >> $GITHUB_OUTPUT
           else
             echo "cdn-bucket=dev-mizpos-cdn-assets" >> $GITHUB_OUTPUT
             echo "cdn-distribution-id=E195S6TD7VY00" >> $GITHUB_OUTPUT
             echo "cdn-domain=https://d1o5hbbhoeegz0.cloudfront.net" >> $GITHUB_OUTPUT
             echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_DEV }}" >> $GITHUB_OUTPUT
-            echo "keystore-secret=ANDROID_KEYSTORE_DEV" >> $GITHUB_OUTPUT
           fi
 
   build:
@@ -106,61 +103,62 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
 
-      - name: Set environment variables
-        working-directory: frontend/apps/mizpos-desktop
-        run: |
-          ENV="${{ needs.setup-env.outputs.environment }}"
-          if [[ "$ENV" == "prod" ]]; then
-            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api.mizpos.com" >> $GITHUB_ENV
-            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin.mizpos.com" >> $GITHUB_ENV
-          else
-            echo "VITE_MIZU_POS_BACKEND_API_URL=https://api-dev.mizpos.com" >> $GITHUB_ENV
-            echo "VITE_MIZU_POS_FRONTEND_BASE_URL=https://admin-dev.mizpos.com" >> $GITHUB_ENV
-          fi
-          echo "VITE_MIZU_POS_FRONTEND_DOMAIN=${{ needs.setup-env.outputs.cdn-domain }}" >> $GITHUB_ENV
-
       - name: Generate API Types
         working-directory: frontend
         run: pnpm generate-api-types
 
       - name: Build Android APK/AAB
         working-directory: frontend/apps/mizpos-desktop
+        env:
+          VITE_MODE: ${{ needs.setup-env.outputs.environment == 'prod' && 'production' || 'development' }}
         run: |
           npm run tauri android init
-          npm run tauri android build -- --apk true --aab true
-
-      - name: Setup Android keystore
-        run: |
-          echo "${{ secrets[needs.setup-env.outputs.keystore-secret] }}" | base64 -d > keystore.jks
-          echo "ANDROID_KEYSTORE_PATH=$PWD/keystore.jks" >> $GITHUB_ENV
-
-      - name: Sign APK/AAB
-        run: |
-          BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
-          
-          # Sign APK
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore $ANDROID_KEYSTORE_PATH \
-            -storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
-            $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
-            ${{ secrets.ANDROID_KEY_ALIAS }}
-            
-          # Align APK
-          zipalign -v 4 $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
-            $BUILD_DIR/apk/universal/release/mizpos-${{ needs.setup-env.outputs.environment }}.apk
-            
-          # Sign AAB
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore $ANDROID_KEYSTORE_PATH \
-            -storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
-            $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
-            ${{ secrets.ANDROID_KEY_ALIAS }}
+          # Build frontend with appropriate mode (.env.development or .env.production)
+          pnpm vite build --mode $VITE_MODE
+          # Build Android app (skip beforeBuildCommand since we already built frontend)
+          npm run tauri android build -- --apk true --aab true --config '{"build":{"beforeBuildCommand":""}}'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ needs.setup-env.outputs.aws-role-arn }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Android keystore from AWS Secrets Manager
+        run: |
+          # Get signing credentials from AWS Secrets Manager
+          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id mizpos/android-signing --query SecretString --output text)
+
+          # Extract values and set environment variables
+          echo "$SECRET_JSON" | jq -r '.keystore_base64' | base64 -d > keystore.jks
+          echo "ANDROID_KEYSTORE_PATH=$PWD/keystore.jks" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PASSWORD=$(echo "$SECRET_JSON" | jq -r '.keystore_password')" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=$(echo "$SECRET_JSON" | jq -r '.key_password')" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=$(echo "$SECRET_JSON" | jq -r '.key_alias')" >> $GITHUB_ENV
+
+      - name: Sign APK/AAB
+        run: |
+          BUILD_DIR="frontend/apps/mizpos-desktop/src-tauri/gen/android/app/build/outputs"
+
+          # Sign APK
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore $ANDROID_KEYSTORE_PATH \
+            -storepass $ANDROID_KEYSTORE_PASSWORD \
+            -keypass $ANDROID_KEY_PASSWORD \
+            $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
+            $ANDROID_KEY_ALIAS
+
+          # Align APK
+          zipalign -v 4 $BUILD_DIR/apk/universal/release/app-universal-release-unsigned.apk \
+            $BUILD_DIR/apk/universal/release/mizpos-${{ needs.setup-env.outputs.environment }}.apk
+
+          # Sign AAB
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore $ANDROID_KEYSTORE_PATH \
+            -storepass $ANDROID_KEYSTORE_PASSWORD \
+            -keypass $ANDROID_KEY_PASSWORD \
+            $BUILD_DIR/bundle/universalRelease/app-universal-release.aab \
+            $ANDROID_KEY_ALIAS
 
       - name: Upload to CDN
         env:
