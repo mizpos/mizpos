@@ -1,4 +1,4 @@
-import { css, cva } from "../../../styled-system/css";
+import { cva, cx } from "../../../styled-system/css";
 import type { ReactNode } from "react";
 
 const badgeStyles = cva({
@@ -65,5 +65,5 @@ interface BadgeProps {
 }
 
 export function Badge({ variant = "primary", size = "md", children, className }: BadgeProps) {
-  return <span className={css(badgeStyles({ variant, size }), className)}>{children}</span>;
+  return <span className={cx(badgeStyles({ variant, size }), className)}>{children}</span>;
 }

@@ -77,7 +77,6 @@ export function HeroSection() {
               className={css({
                 background: "linear-gradient(135deg, #6366f1, #06b6d4)",
                 backgroundClip: "text",
-                WebkitBackgroundClip: "text",
                 color: "transparent",
               })}
             >

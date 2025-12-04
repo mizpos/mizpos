@@ -15,19 +15,12 @@ const containerSizes = {
 };
 
 export function Container({ children, className, size = "lg" }: ContainerProps) {
-  return (
-    <div
-      className={css(
-        {
-          maxWidth: containerSizes[size],
-          marginX: "auto",
-          paddingX: { base: "1rem", md: "2rem" },
-          width: "100%",
-        },
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
+  const baseStyles = css({
+    maxWidth: containerSizes[size],
+    marginX: "auto",
+    paddingX: { base: "1rem", md: "2rem" },
+    width: "100%",
+  });
+
+  return <div className={className ? `${baseStyles} ${className}` : baseStyles}>{children}</div>;
 }

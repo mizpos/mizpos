@@ -1,4 +1,4 @@
-import { css, cva } from "../../../styled-system/css";
+import { cva, cx } from "../../../styled-system/css";
 import type { ReactNode, ButtonHTMLAttributes } from "react";
 
 const buttonStyles = cva({
@@ -117,18 +117,18 @@ export function Button({
   className,
   ...props
 }: ButtonProps) {
-  const styles = buttonStyles({ variant, size });
+  const combinedClassName = cx(buttonStyles({ variant, size }), className);
 
   if (as === "a" && href) {
     return (
-      <a href={href} className={css(styles, className)}>
+      <a href={href} className={combinedClassName}>
         {children}
       </a>
     );
   }
 
   return (
-    <button className={css(styles, className)} {...props}>
+    <button className={combinedClassName} {...props}>
       {children}
     </button>
   );
