@@ -7,6 +7,8 @@ export interface ApiProduct {
   jan_code?: string;
   isbn?: string;
   isdn?: string;
+  jan_barcode_1?: string;
+  jan_barcode_2?: string;
   category?: string;
   publisher_id?: string;
   publisher_name?: string;

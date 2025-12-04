@@ -1,12 +1,6 @@
 import Dexie, { type Table } from "dexie";
 import type { Product, Transaction } from "../types";
 import { type ApiProduct, fetchProducts } from "./api";
-import {
-  generateInstoreBarcode,
-  generateJanFromIsdn,
-  generateSecondaryBarcode,
-  generateInstoreSecondaryBarcode,
-} from "./barcode";
 
 /**
  * ローカルキャッシュ用IndexedDB
@@ -33,43 +27,23 @@ export const db = new MizPOSDatabase();
 
 /**
  * APIから商品データを同期
- * 各商品のバーコードも生成して保存する
+ * DynamoDBに保存されたバーコードをそのまま使用する
  */
 export async function syncProducts(): Promise<number> {
   const apiProducts = await fetchProducts();
 
-  // バーコード生成は非同期なので、Promise.allで並列処理
-  const products: Product[] = await Promise.all(
-    apiProducts.map(async (p: ApiProduct) => {
-      let jan: string;
-      let jan2: string | undefined;
-
-      if (p.isdn) {
-        // ISDNがある場合はISDNからバーコードを生成
-        jan = generateJanFromIsdn(p.isdn);
-        jan2 = generateSecondaryBarcode("3055", p.price);
-      } else if (p.jan_code) {
-        // jan_codeが指定されている場合はそれを使用
-        jan = p.jan_code;
-      } else {
-        // どちらもない場合はインストアバーコードを生成
-        jan = await generateInstoreBarcode(p.product_id);
-        jan2 = generateInstoreSecondaryBarcode(p.price);
-      }
-
-      return {
-        id: p.product_id,
-        jan,
-        jan2,
-        isbn: p.isbn,
-        isdn: p.isdn,
-        name: p.name,
-        circleName: p.publisher_name || p.publisher,
-        price: p.price,
-        imageUrl: p.image_url,
-      };
-    }),
-  );
+  const products: Product[] = apiProducts.map((p: ApiProduct) => ({
+    id: p.product_id,
+    // DynamoDBに保存されたバーコードを使用（なければ空文字）
+    jan: p.jan_barcode_1 || p.jan_code || "",
+    jan2: p.jan_barcode_2,
+    isbn: p.isbn,
+    isdn: p.isdn,
+    name: p.name,
+    circleName: p.publisher_name || p.publisher,
+    price: p.price,
+    imageUrl: p.image_url,
+  }));
 
   // 全商品をクリアして再挿入
   await db.products.clear();
