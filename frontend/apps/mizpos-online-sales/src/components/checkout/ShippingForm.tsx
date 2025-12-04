@@ -25,11 +25,10 @@ export function ShippingForm({
   onSubmit,
   isReadOnly = false,
 }: ShippingFormProps) {
-  const handleChange = (field: keyof CustomerInfo) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    onChange({ ...customerInfo, [field]: e.target.value });
-  };
+  const handleChange =
+    (field: keyof CustomerInfo) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange({ ...customerInfo, [field]: e.target.value });
+    };
 
   return (
     <form onSubmit={onSubmit}>

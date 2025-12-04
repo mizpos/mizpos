@@ -112,7 +112,11 @@ function PosEmployeesPage() {
         return [];
       }
       const data = await response.json();
-      return (data.events || []) as { event_id: string; name: string; is_active: boolean }[];
+      return (data.events || []) as {
+        event_id: string;
+        name: string;
+        is_active: boolean;
+      }[];
     },
   });
 
@@ -128,7 +132,11 @@ function PosEmployeesPage() {
         return [];
       }
       const data = await response.json();
-      return (data.publishers || []) as { publisher_id: string; name: string; is_active: boolean }[];
+      return (data.publishers || []) as {
+        publisher_id: string;
+        name: string;
+        is_active: boolean;
+      }[];
     },
   });
 
@@ -701,7 +709,10 @@ function PosEmployeesPage() {
                 {publishers
                   .filter((p) => p.is_active)
                   .map((publisher) => (
-                    <option key={publisher.publisher_id} value={publisher.publisher_id}>
+                    <option
+                      key={publisher.publisher_id}
+                      value={publisher.publisher_id}
+                    >
                       {publisher.name}
                     </option>
                   ))}
@@ -950,7 +961,10 @@ function PosEmployeesPage() {
                   {publishers
                     .filter((p) => p.is_active)
                     .map((publisher) => (
-                      <option key={publisher.publisher_id} value={publisher.publisher_id}>
+                      <option
+                        key={publisher.publisher_id}
+                        value={publisher.publisher_id}
+                      >
                         {publisher.name}
                       </option>
                     ))}

@@ -99,8 +99,14 @@ export default defineConfig({
           button: { value: "0.5rem" },
         },
         shadows: {
-          card: { value: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" },
-          "card-hover": { value: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" },
+          card: {
+            value:
+              "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+          },
+          "card-hover": {
+            value:
+              "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+          },
           glow: { value: "0 0 40px -10px rgb(99 102 241 / 0.5)" },
         },
       },

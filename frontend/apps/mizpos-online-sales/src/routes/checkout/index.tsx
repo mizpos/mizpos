@@ -5,11 +5,11 @@ import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import {
   AddressSelector,
+  type CustomerInfo,
   EmptyCart,
   OrderSummary,
   PaymentStep,
   ShippingForm,
-  type CustomerInfo,
 } from "../../components/checkout";
 import { Card, CardHeader } from "../../components/ui";
 import { useAuth } from "../../contexts/AuthContext";

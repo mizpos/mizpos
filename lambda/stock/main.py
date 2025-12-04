@@ -682,7 +682,9 @@ async def migrate_barcodes(
             )
 
             # 更新
-            update_expr = "SET jan_barcode_1 = :jb1, jan_barcode_2 = :jb2, updated_at = :ua"
+            update_expr = (
+                "SET jan_barcode_1 = :jb1, jan_barcode_2 = :jb2, updated_at = :ua"
+            )
             expr_values = {
                 ":jb1": barcode_info["jan_barcode_1"],
                 ":jb2": barcode_info["jan_barcode_2"],

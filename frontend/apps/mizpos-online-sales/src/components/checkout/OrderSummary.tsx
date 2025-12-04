@@ -151,7 +151,9 @@ export function OrderSummary({ items, subtotal }: OrderSummaryProps) {
       </div>
 
       <div className={css({ borderTop: "2px solid #ddd", paddingTop: "16px" })}>
-        <div className={css({ display: "flex", justifyContent: "space-between" })}>
+        <div
+          className={css({ display: "flex", justifyContent: "space-between" })}
+        >
           <span className={totalLabelStyles}>合計:</span>
           <span className={totalValueStyles}>¥{subtotal.toLocaleString()}</span>
         </div>

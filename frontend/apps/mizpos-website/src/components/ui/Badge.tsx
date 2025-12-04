@@ -1,5 +1,5 @@
-import { cva, cx } from "../../../styled-system/css";
 import type { ReactNode } from "react";
+import { cva, cx } from "../../../styled-system/css";
 
 const badgeStyles = cva({
   base: {
@@ -64,6 +64,15 @@ interface BadgeProps {
   className?: string;
 }
 
-export function Badge({ variant = "primary", size = "md", children, className }: BadgeProps) {
-  return <span className={cx(badgeStyles({ variant, size }), className)}>{children}</span>;
+export function Badge({
+  variant = "primary",
+  size = "md",
+  children,
+  className,
+}: BadgeProps) {
+  return (
+    <span className={cx(badgeStyles({ variant, size }), className)}>
+      {children}
+    </span>
+  );
 }

@@ -1,8 +1,8 @@
-import { css } from "../../../styled-system/css";
-import { Container } from "../ui/Container";
-import { Button } from "../ui/Button";
 import { IconBrandGithub, IconMenu2, IconX } from "@tabler/icons-react";
 import { useState } from "react";
+import { css } from "../../../styled-system/css";
+import { Button } from "../ui/Button";
+import { Container } from "../ui/Container";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -184,7 +184,11 @@ export function Header() {
                 marginTop: "0.5rem",
               })}
             >
-              <Button variant="secondary" as="a" href="https://github.com/mizphses/mizpos">
+              <Button
+                variant="secondary"
+                as="a"
+                href="https://github.com/mizphses/mizpos"
+              >
                 <IconBrandGithub size={18} />
                 View on GitHub
               </Button>

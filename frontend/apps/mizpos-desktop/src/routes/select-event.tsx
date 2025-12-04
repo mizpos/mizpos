@@ -165,13 +165,11 @@ function SelectEventPage() {
         const data = await response.json();
         // アクティブなイベントのみフィルタリング
         const activeEvents = (data.events || []).filter(
-          (e: Event) => e.is_active
+          (e: Event) => e.is_active,
         );
         setEvents(activeEvents);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "エラーが発生しました"
-        );
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
       } finally {
         setIsLoading(false);
       }
@@ -196,7 +194,7 @@ function SelectEventPage() {
             "X-POS-Session": session.sessionId,
           },
           body: JSON.stringify({ event_id: selectedEventId }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -209,9 +207,7 @@ function SelectEventPage() {
       // POS画面へ遷移
       navigate({ to: "/pos" });
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "エラーが発生しました"
-      );
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
     }
   };
 
@@ -220,7 +216,10 @@ function SelectEventPage() {
     navigate({ to: "/login" });
   };
 
-  const formatDateRange = (startDate: string | null, endDate: string | null) => {
+  const formatDateRange = (
+    startDate: string | null,
+    endDate: string | null,
+  ) => {
     if (!startDate) return "";
     const start = new Date(startDate).toLocaleDateString("ja-JP");
     if (!endDate) return start;

@@ -1,11 +1,11 @@
 import { css } from "../../styled-system/css";
-import { Header, Footer } from "../components/layout";
+import { Footer, Header } from "../components/layout";
 import {
-  HeroSection,
-  FeaturesSection,
-  ScreenshotsSection,
   ArchitectureSection,
+  FeaturesSection,
   GettingStartedSection,
+  HeroSection,
+  ScreenshotsSection,
 } from "../components/sections";
 
 export function HomePage() {

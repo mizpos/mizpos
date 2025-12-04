@@ -1,6 +1,10 @@
+import {
+  IconBrandGithub,
+  IconBrandTwitter,
+  IconHeart,
+} from "@tabler/icons-react";
 import { css } from "../../../styled-system/css";
 import { Container } from "../ui/Container";
-import { IconBrandGithub, IconBrandTwitter, IconHeart } from "@tabler/icons-react";
 
 const footerLinks = {
   product: [
@@ -9,14 +13,23 @@ const footerLinks = {
     { label: "Architecture", href: "#architecture" },
   ],
   resources: [
-    { label: "Documentation", href: "https://github.com/mizphses/mizpos#readme" },
+    {
+      label: "Documentation",
+      href: "https://github.com/mizphses/mizpos#readme",
+    },
     { label: "Getting Started", href: "#getting-started" },
-    { label: "Contributing", href: "https://github.com/mizphses/mizpos/blob/main/CONTRIBUTING.md" },
+    {
+      label: "Contributing",
+      href: "https://github.com/mizphses/mizpos/blob/main/CONTRIBUTING.md",
+    },
   ],
   community: [
     { label: "GitHub", href: "https://github.com/mizphses/mizpos" },
     { label: "Issues", href: "https://github.com/mizphses/mizpos/issues" },
-    { label: "Discussions", href: "https://github.com/mizphses/mizpos/discussions" },
+    {
+      label: "Discussions",
+      href: "https://github.com/mizphses/mizpos/discussions",
+    },
   ],
 };
 
@@ -255,7 +268,8 @@ export function Footer() {
               color: "gray.500",
             })}
           >
-            &copy; {new Date().getFullYear()} mizpos. Released under the MIT License.
+            &copy; {new Date().getFullYear()} mizpos. Released under the MIT
+            License.
           </p>
           <p
             className={css({
@@ -266,7 +280,9 @@ export function Footer() {
               gap: "0.25rem",
             })}
           >
-            Made with <IconHeart size={14} className={css({ color: "red.500" })} /> for doujin creators
+            Made with{" "}
+            <IconHeart size={14} className={css({ color: "red.500" })} /> for
+            doujin creators
           </p>
         </div>
       </Container>

@@ -81,7 +81,8 @@ export function AddressSelector({
 
       <div className={gridStyles}>
         {addresses.map((address) => {
-          const isSelected = selectedAddressId === address.address_id && !useManualAddress;
+          const isSelected =
+            selectedAddressId === address.address_id && !useManualAddress;
           return (
             <button
               key={address.address_id}
@@ -96,11 +97,19 @@ export function AddressSelector({
               {address.is_default && (
                 <span className={defaultBadgeStyles}>デフォルト</span>
               )}
-              <div className={css({ fontSize: "14px", fontWeight: "bold", marginBottom: "4px" })}>
+              <div
+                className={css({
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  marginBottom: "4px",
+                })}
+              >
                 {address.label}
               </div>
               <div className={css({ fontSize: "12px" })}>{address.name}</div>
-              <div className={css({ fontSize: "12px" })}>〒{address.postal_code}</div>
+              <div className={css({ fontSize: "12px" })}>
+                〒{address.postal_code}
+              </div>
               <div className={css({ fontSize: "12px" })}>
                 {address.prefecture}
                 {address.city}

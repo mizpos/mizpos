@@ -1,7 +1,7 @@
-import { css } from "../../../styled-system/css";
-import { Container } from "../ui/Container";
-import { Badge } from "../ui/Badge";
 import { useState } from "react";
+import { css } from "../../../styled-system/css";
+import { Badge } from "../ui/Badge";
+import { Container } from "../ui/Container";
 
 interface Screenshot {
   id: string;
@@ -14,26 +14,33 @@ const screenshots: Screenshot[] = [
   {
     id: "pos",
     title: "POS画面",
-    description: "シンプルで直感的なPOS画面。バーコードスキャンや手動入力でスピーディーに会計できます。",
+    description:
+      "シンプルで直感的なPOS画面。バーコードスキャンや手動入力でスピーディーに会計できます。",
     image: "https://placehold.jp/30/4f46e5/ffffff/800x500.png?text=POS+Screen",
   },
   {
     id: "inventory",
     title: "在庫管理",
-    description: "商品の在庫状況をリアルタイムで確認。残り少ない商品は自動でアラート表示されます。",
-    image: "https://placehold.jp/30/0891b2/ffffff/800x500.png?text=Inventory+Management",
+    description:
+      "商品の在庫状況をリアルタイムで確認。残り少ない商品は自動でアラート表示されます。",
+    image:
+      "https://placehold.jp/30/0891b2/ffffff/800x500.png?text=Inventory+Management",
   },
   {
     id: "analytics",
     title: "売上分析",
-    description: "イベントごとの売上推移やベストセラー商品をグラフで可視化。次回の仕入れ計画に活用できます。",
-    image: "https://placehold.jp/30/ea580c/ffffff/800x500.png?text=Sales+Analytics",
+    description:
+      "イベントごとの売上推移やベストセラー商品をグラフで可視化。次回の仕入れ計画に活用できます。",
+    image:
+      "https://placehold.jp/30/ea580c/ffffff/800x500.png?text=Sales+Analytics",
   },
   {
     id: "admin",
     title: "管理画面",
-    description: "商品登録、イベント設定、スタッフ管理などをWebブラウザから簡単に行えます。",
-    image: "https://placehold.jp/30/374151/ffffff/800x500.png?text=Admin+Dashboard",
+    description:
+      "商品登録、イベント設定、スタッフ管理などをWebブラウザから簡単に行えます。",
+    image:
+      "https://placehold.jp/30/374151/ffffff/800x500.png?text=Admin+Dashboard",
   },
 ];
 
@@ -116,8 +123,14 @@ export function ScreenshotsSection() {
                   padding: { base: "0.75rem 1rem", lg: "1rem 1.25rem" },
                   borderRadius: "0.75rem",
                   border: "2px solid",
-                  borderColor: activeScreenshot.id === screenshot.id ? "primary.500" : "gray.200",
-                  bg: activeScreenshot.id === screenshot.id ? "primary.50" : "white",
+                  borderColor:
+                    activeScreenshot.id === screenshot.id
+                      ? "primary.500"
+                      : "gray.200",
+                  bg:
+                    activeScreenshot.id === screenshot.id
+                      ? "primary.50"
+                      : "white",
                   cursor: "pointer",
                   transition: "all 0.2s ease",
                   textAlign: { base: "center", lg: "left" },
@@ -131,7 +144,10 @@ export function ScreenshotsSection() {
                   className={css({
                     fontSize: "0.9375rem",
                     fontWeight: "600",
-                    color: activeScreenshot.id === screenshot.id ? "primary.700" : "gray.900",
+                    color:
+                      activeScreenshot.id === screenshot.id
+                        ? "primary.700"
+                        : "gray.900",
                     whiteSpace: "nowrap",
                   })}
                 >
@@ -173,9 +189,30 @@ export function ScreenshotsSection() {
               })}
             >
               <div className={css({ display: "flex", gap: "0.5rem" })}>
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#ff5f57" })} />
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#febc2e" })} />
-                <div className={css({ width: "0.75rem", height: "0.75rem", borderRadius: "full", bg: "#28c840" })} />
+                <div
+                  className={css({
+                    width: "0.75rem",
+                    height: "0.75rem",
+                    borderRadius: "full",
+                    bg: "#ff5f57",
+                  })}
+                />
+                <div
+                  className={css({
+                    width: "0.75rem",
+                    height: "0.75rem",
+                    borderRadius: "full",
+                    bg: "#febc2e",
+                  })}
+                />
+                <div
+                  className={css({
+                    width: "0.75rem",
+                    height: "0.75rem",
+                    borderRadius: "full",
+                    bg: "#28c840",
+                  })}
+                />
               </div>
               <div
                 className={css({
@@ -188,7 +225,9 @@ export function ScreenshotsSection() {
                   color: "gray.400",
                 })}
               >
-                {activeScreenshot.id === "pos" ? "app://mizpos/pos" : `https://admin.mizpos.app/${activeScreenshot.id}`}
+                {activeScreenshot.id === "pos"
+                  ? "app://mizpos/pos"
+                  : `https://admin.mizpos.app/${activeScreenshot.id}`}
               </div>
             </div>
             <img

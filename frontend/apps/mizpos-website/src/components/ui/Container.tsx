@@ -1,5 +1,5 @@
-import { css } from "../../../styled-system/css";
 import type { ReactNode } from "react";
+import { css } from "../../../styled-system/css";
 
 interface ContainerProps {
   children: ReactNode;
@@ -14,7 +14,11 @@ const containerSizes = {
   xl: "1440px",
 };
 
-export function Container({ children, className, size = "lg" }: ContainerProps) {
+export function Container({
+  children,
+  className,
+  size = "lg",
+}: ContainerProps) {
   const baseStyles = css({
     maxWidth: containerSizes[size],
     marginX: "auto",
@@ -22,5 +26,9 @@ export function Container({ children, className, size = "lg" }: ContainerProps) 
     width: "100%",
   });
 
-  return <div className={className ? `${baseStyles} ${className}` : baseStyles}>{children}</div>;
+  return (
+    <div className={className ? `${baseStyles} ${className}` : baseStyles}>
+      {children}
+    </div>
+  );
 }

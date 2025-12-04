@@ -2,8 +2,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { css } from "styled-system/css";
 import CheckoutForm from "../CheckoutForm";
-import { Button } from "../ui";
-import { Card, CardHeader } from "../ui";
+import { Button, Card, CardHeader } from "../ui";
 
 interface PaymentStepProps {
   stripePromise: Promise<Stripe | null>;
@@ -21,7 +20,11 @@ export function PaymentStep({
   return (
     <Card>
       <CardHeader>お支払い情報</CardHeader>
-      <Button variant="link" onClick={onBack} className={css({ marginBottom: "16px" })}>
+      <Button
+        variant="link"
+        onClick={onBack}
+        className={css({ marginBottom: "16px" })}
+      >
         ← 配送先情報を編集
       </Button>
       {clientSecret ? (

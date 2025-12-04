@@ -1,12 +1,12 @@
-import { StrictMode } from "react";
-import ReactDOM from "react-dom/client";
 import {
-  Outlet,
-  RouterProvider,
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
+  RouterProvider,
 } from "@tanstack/react-router";
+import { StrictMode } from "react";
+import ReactDOM from "react-dom/client";
 
 import "./styles.css";
 import { HomePage } from "./pages";
@@ -38,6 +38,6 @@ if (rootElement && !rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <RouterProvider router={router} />
-    </StrictMode>
+    </StrictMode>,
   );
 }

@@ -1,5 +1,5 @@
-import { css } from "../../../styled-system/css";
 import type { ReactNode } from "react";
+import { css } from "../../../styled-system/css";
 
 interface CardProps {
   children: ReactNode;
@@ -8,7 +8,12 @@ interface CardProps {
   gradient?: boolean;
 }
 
-export function Card({ children, className, hover = false, gradient = false }: CardProps) {
+export function Card({
+  children,
+  className,
+  hover = false,
+  gradient = false,
+}: CardProps) {
   const baseStyles = css({
     bg: "white",
     borderRadius: "card",
@@ -36,7 +41,11 @@ export function Card({ children, className, hover = false, gradient = false }: C
     }),
   });
 
-  return <div className={className ? `${baseStyles} ${className}` : baseStyles}>{children}</div>;
+  return (
+    <div className={className ? `${baseStyles} ${className}` : baseStyles}>
+      {children}
+    </div>
+  );
 }
 
 interface CardHeaderProps {
@@ -49,7 +58,11 @@ export function CardHeader({ children, className }: CardHeaderProps) {
     marginBottom: "1rem",
   });
 
-  return <div className={className ? `${baseStyles} ${className}` : baseStyles}>{children}</div>;
+  return (
+    <div className={className ? `${baseStyles} ${className}` : baseStyles}>
+      {children}
+    </div>
+  );
 }
 
 interface CardTitleProps {
@@ -64,7 +77,11 @@ export function CardTitle({ children, className }: CardTitleProps) {
     color: "gray.900",
   });
 
-  return <h3 className={className ? `${baseStyles} ${className}` : baseStyles}>{children}</h3>;
+  return (
+    <h3 className={className ? `${baseStyles} ${className}` : baseStyles}>
+      {children}
+    </h3>
+  );
 }
 
 interface CardDescriptionProps {
@@ -79,7 +96,11 @@ export function CardDescription({ children, className }: CardDescriptionProps) {
     marginTop: "0.25rem",
   });
 
-  return <p className={className ? `${baseStyles} ${className}` : baseStyles}>{children}</p>;
+  return (
+    <p className={className ? `${baseStyles} ${className}` : baseStyles}>
+      {children}
+    </p>
+  );
 }
 
 interface CardContentProps {

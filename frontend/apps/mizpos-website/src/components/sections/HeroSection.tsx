@@ -1,8 +1,13 @@
+import {
+  IconArrowRight,
+  IconBrandGithub,
+  IconCloud,
+  IconDevices,
+} from "@tabler/icons-react";
 import { css } from "../../../styled-system/css";
-import { Container } from "../ui/Container";
-import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
-import { IconBrandGithub, IconArrowRight, IconCloud, IconDevices } from "@tabler/icons-react";
+import { Button } from "../ui/Button";
+import { Container } from "../ui/Container";
 
 export function HeroSection() {
   return (
@@ -12,7 +17,8 @@ export function HeroSection() {
         overflow: "hidden",
         pt: { base: "120px", md: "160px" },
         pb: { base: "64px", md: "96px" },
-        background: "linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #ecfeff 100%)",
+        background:
+          "linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #ecfeff 100%)",
       })}
     >
       {/* Background decoration */}
@@ -24,7 +30,8 @@ export function HeroSection() {
           width: "600px",
           height: "600px",
           borderRadius: "9999px",
-          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.1))",
+          background:
+            "linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.1))",
           filter: "blur(80px)",
           pointerEvents: "none",
         })}
@@ -37,7 +44,8 @@ export function HeroSection() {
           width: "400px",
           height: "400px",
           borderRadius: "9999px",
-          background: "linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(99, 102, 241, 0.1))",
+          background:
+            "linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(99, 102, 241, 0.1))",
           filter: "blur(60px)",
           pointerEvents: "none",
         })}
@@ -112,7 +120,12 @@ export function HeroSection() {
               Get Started
               <IconArrowRight size={18} />
             </Button>
-            <Button variant="secondary" size="lg" as="a" href="https://github.com/mizphses/mizpos">
+            <Button
+              variant="secondary"
+              size="lg"
+              as="a"
+              href="https://github.com/mizphses/mizpos"
+            >
               <IconBrandGithub size={20} />
               View on GitHub
             </Button>
@@ -145,9 +158,30 @@ export function HeroSection() {
               })}
             >
               <div className={css({ display: "flex", gap: "8px" })}>
-                <div className={css({ width: "12px", height: "12px", borderRadius: "9999px", bg: "#ff5f57" })} />
-                <div className={css({ width: "12px", height: "12px", borderRadius: "9999px", bg: "#febc2e" })} />
-                <div className={css({ width: "12px", height: "12px", borderRadius: "9999px", bg: "#28c840" })} />
+                <div
+                  className={css({
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "9999px",
+                    bg: "#ff5f57",
+                  })}
+                />
+                <div
+                  className={css({
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "9999px",
+                    bg: "#febc2e",
+                  })}
+                />
+                <div
+                  className={css({
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "9999px",
+                    bg: "#28c840",
+                  })}
+                />
               </div>
               <div
                 className={css({
@@ -180,7 +214,10 @@ export function HeroSection() {
           <div
             className={css({
               display: "grid",
-              gridTemplateColumns: { base: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+              gridTemplateColumns: {
+                base: "repeat(2, 1fr)",
+                md: "repeat(4, 1fr)",
+              },
               gap: { base: "24px", md: "48px" },
               mt: "64px",
               pt: "32px",
@@ -191,20 +228,54 @@ export function HeroSection() {
             })}
           >
             <div className={css({ textAlign: "center" })}>
-              <IconCloud size={24} className={css({ color: "primary.500", mx: "auto", mb: "8px" })} />
-              <div className={css({ fontSize: "14px", color: "gray.600" })}>Serverless</div>
+              <IconCloud
+                size={24}
+                className={css({ color: "primary.500", mx: "auto", mb: "8px" })}
+              />
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>
+                Serverless
+              </div>
             </div>
             <div className={css({ textAlign: "center" })}>
-              <IconDevices size={24} className={css({ color: "secondary.500", mx: "auto", mb: "8px" })} />
-              <div className={css({ fontSize: "14px", color: "gray.600" })}>Cross-platform</div>
+              <IconDevices
+                size={24}
+                className={css({
+                  color: "secondary.500",
+                  mx: "auto",
+                  mb: "8px",
+                })}
+              />
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>
+                Cross-platform
+              </div>
             </div>
             <div className={css({ textAlign: "center" })}>
-              <div className={css({ fontSize: "24px", fontWeight: "700", color: "gray.900" })}>MIT</div>
-              <div className={css({ fontSize: "14px", color: "gray.600" })}>License</div>
+              <div
+                className={css({
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  color: "gray.900",
+                })}
+              >
+                MIT
+              </div>
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>
+                License
+              </div>
             </div>
             <div className={css({ textAlign: "center" })}>
-              <div className={css({ fontSize: "24px", fontWeight: "700", color: "gray.900" })}>$0</div>
-              <div className={css({ fontSize: "14px", color: "gray.600" })}>License Fee</div>
+              <div
+                className={css({
+                  fontSize: "24px",
+                  fontWeight: "700",
+                  color: "gray.900",
+                })}
+              >
+                $0
+              </div>
+              <div className={css({ fontSize: "14px", color: "gray.600" })}>
+                License Fee
+              </div>
             </div>
           </div>
         </div>
