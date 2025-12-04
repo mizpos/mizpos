@@ -95,8 +95,8 @@ function DownloadPage() {
       platform === "Android"
         ? "android"
         : platform.toLowerCase() === "windows"
-        ? "windows"
-        : "linux";
+          ? "windows"
+          : "linux";
     const envPath = env;
 
     if (platform === "Android") {
