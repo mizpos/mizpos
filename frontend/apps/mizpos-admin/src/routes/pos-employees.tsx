@@ -100,6 +100,46 @@ function PosEmployeesPage() {
     },
   });
 
+  // イベント一覧取得
+  const { data: events = [] } = useQuery({
+    queryKey: ["events"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE}/stock/events`, {
+        headers,
+      });
+      if (!response.ok) {
+        return [];
+      }
+      const data = await response.json();
+      return (data.events || []) as {
+        event_id: string;
+        name: string;
+        is_active: boolean;
+      }[];
+    },
+  });
+
+  // サークル一覧取得
+  const { data: publishers = [] } = useQuery({
+    queryKey: ["publishers"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE}/stock/publishers`, {
+        headers,
+      });
+      if (!response.ok) {
+        return [];
+      }
+      const data = await response.json();
+      return (data.publishers || []) as {
+        publisher_id: string;
+        name: string;
+        is_active: boolean;
+      }[];
+    },
+  });
+
   // 従業員一覧取得
   const {
     data: employees = [],
@@ -221,9 +261,46 @@ function PosEmployeesPage() {
   const getUserById = (userId: string | undefined) =>
     users.find((u) => u.user_id === userId);
 
+  // イベントID/サークルIDから名前を取得するヘルパー
+  const getEventName = (eventId: string | undefined) => {
+    if (!eventId) return null;
+    const event = events.find((e) => e.event_id === eventId);
+    return event?.name || eventId;
+  };
+
+  const getPublisherName = (publisherId: string | undefined) => {
+    if (!publisherId) return null;
+    const publisher = publishers.find((p) => p.publisher_id === publisherId);
+    return publisher?.name || publisherId;
+  };
+
   const columns = [
     { key: "employee_number", header: "従業員番号" },
     { key: "display_name", header: "表示名" },
+    {
+      key: "event_id",
+      header: "イベント",
+      render: (item: PosEmployee) => {
+        const eventName = getEventName(item.event_id);
+        return eventName ? (
+          <span className={css({ fontSize: "sm" })}>{eventName}</span>
+        ) : (
+          <span className={css({ color: "gray.400", fontSize: "sm" })}>-</span>
+        );
+      },
+    },
+    {
+      key: "publisher_id",
+      header: "サークル",
+      render: (item: PosEmployee) => {
+        const publisherName = getPublisherName(item.publisher_id);
+        return publisherName ? (
+          <span className={css({ fontSize: "sm" })}>{publisherName}</span>
+        ) : (
+          <span className={css({ color: "gray.400", fontSize: "sm" })}>-</span>
+        );
+      },
+    },
     {
       key: "user_id",
       header: "紐付けアカウント",
@@ -581,39 +658,74 @@ function PosEmployeesPage() {
             </div>
             <div>
               <label htmlFor="create-event-id" className={labelClass}>
-                イベントID（オプション）
+                イベント（オプション）
               </label>
-              <input
+              <select
                 id="create-event-id"
-                type="text"
-                value={createFormData.event_id}
+                value={createFormData.event_id || ""}
                 onChange={(e) =>
                   setCreateFormData({
                     ...createFormData,
-                    event_id: e.target.value,
+                    event_id: e.target.value || undefined,
                   })
                 }
                 className={inputClass}
-                placeholder="紐付けるイベントID"
-              />
+              >
+                <option value="">指定なし</option>
+                {events
+                  .filter((e) => e.is_active)
+                  .map((event) => (
+                    <option key={event.event_id} value={event.event_id}>
+                      {event.name}
+                    </option>
+                  ))}
+              </select>
+              <p
+                className={css({
+                  fontSize: "xs",
+                  color: "gray.500",
+                  marginTop: "1",
+                })}
+              >
+                POS端末でこのイベントの販売を担当する場合に指定
+              </p>
             </div>
             <div>
               <label htmlFor="create-publisher-id" className={labelClass}>
-                サークルID（オプション）
+                サークル（オプション）
               </label>
-              <input
+              <select
                 id="create-publisher-id"
-                type="text"
-                value={createFormData.publisher_id}
+                value={createFormData.publisher_id || ""}
                 onChange={(e) =>
                   setCreateFormData({
                     ...createFormData,
-                    publisher_id: e.target.value,
+                    publisher_id: e.target.value || undefined,
                   })
                 }
                 className={inputClass}
-                placeholder="紐付けるサークルID"
-              />
+              >
+                <option value="">指定なし</option>
+                {publishers
+                  .filter((p) => p.is_active)
+                  .map((publisher) => (
+                    <option
+                      key={publisher.publisher_id}
+                      value={publisher.publisher_id}
+                    >
+                      {publisher.name}
+                    </option>
+                  ))}
+              </select>
+              <p
+                className={css({
+                  fontSize: "xs",
+                  color: "gray.500",
+                  marginTop: "1",
+                })}
+              >
+                POS端末でこのサークルの販売を担当する場合に指定
+              </p>
             </div>
             <div>
               <label htmlFor="create-user-id" className={labelClass}>
@@ -794,6 +906,77 @@ function PosEmployeesPage() {
                   })}
                 >
                   無効にすると、この従業員はPOS端末にログインできなくなります
+                </p>
+              </div>
+              <div>
+                <label htmlFor="edit-event-id" className={labelClass}>
+                  イベント
+                </label>
+                <select
+                  id="edit-event-id"
+                  value={editFormData.event_id || ""}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      event_id: e.target.value || undefined,
+                    })
+                  }
+                  className={inputClass}
+                >
+                  <option value="">指定なし</option>
+                  {events
+                    .filter((ev) => ev.is_active)
+                    .map((event) => (
+                      <option key={event.event_id} value={event.event_id}>
+                        {event.name}
+                      </option>
+                    ))}
+                </select>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginTop: "1",
+                  })}
+                >
+                  POS端末でこのイベントの販売を担当する場合に指定
+                </p>
+              </div>
+              <div>
+                <label htmlFor="edit-publisher-id" className={labelClass}>
+                  サークル
+                </label>
+                <select
+                  id="edit-publisher-id"
+                  value={editFormData.publisher_id || ""}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      publisher_id: e.target.value || undefined,
+                    })
+                  }
+                  className={inputClass}
+                >
+                  <option value="">指定なし</option>
+                  {publishers
+                    .filter((p) => p.is_active)
+                    .map((publisher) => (
+                      <option
+                        key={publisher.publisher_id}
+                        value={publisher.publisher_id}
+                      >
+                        {publisher.name}
+                      </option>
+                    ))}
+                </select>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginTop: "1",
+                  })}
+                >
+                  POS端末でこのサークルの販売を担当する場合に指定
                 </p>
               </div>
               <div>

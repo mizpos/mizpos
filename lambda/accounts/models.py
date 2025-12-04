@@ -249,6 +249,16 @@ class PosSessionRefreshRequest(BaseModel):
     session_id: str
 
 
+class PosSetEventRequest(BaseModel):
+    """POSセッションにイベントIDを設定するリクエスト"""
+
+    event_id: str = Field(
+        ...,
+        min_length=1,
+        description="設定するイベントID",
+    )
+
+
 class OfflineSalesSyncRequest(BaseModel):
     """オフライン販売同期リクエスト"""
 

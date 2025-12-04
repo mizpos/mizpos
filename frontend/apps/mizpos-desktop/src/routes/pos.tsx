@@ -326,7 +326,12 @@ function POSPage() {
   // 常にバーコード入力にフォーカス
   useEffect(() => {
     const focusInput = () => {
-      if (!showManualEntry && !showProductSelect && !showCheckout && !completedTransaction) {
+      if (
+        !showManualEntry &&
+        !showProductSelect &&
+        !showCheckout &&
+        !completedTransaction
+      ) {
         inputRef.current?.focus();
       }
     };
@@ -351,7 +356,13 @@ function POSPage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // モーダル表示中は無効
-      if (showManualEntry || showProductSelect || showCheckout || completedTransaction) return;
+      if (
+        showManualEntry ||
+        showProductSelect ||
+        showCheckout ||
+        completedTransaction
+      )
+        return;
 
       // F1: 手動入力
       if (e.key === "F1") {

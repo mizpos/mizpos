@@ -30,6 +30,7 @@ from models import (
     PosLoginRequest,
     PosSaleRequest,
     PosSessionRefreshRequest,
+    PosSetEventRequest,
     ResendConfirmationRequest,
     UpdateAddressRequest,
     UpdatePosEmployeeRequest,
@@ -64,6 +65,7 @@ from pos_services import (
     record_pos_sale,
     refresh_pos_session,
     save_offline_sale_to_db,
+    set_session_event,
     update_pos_employee,
     verify_pos_session,
 )
@@ -997,6 +999,29 @@ async def pos_verify_session(session_id: str):
         raise
     except Exception as e:
         logger.error(f"Error verifying POS session: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/pos/auth/set-event", response_model=dict)
+async def pos_set_event(request: Request, body: PosSetEventRequest):
+    """POSセッションにイベントを設定
+
+    イベント紐づけがない従業員がログイン後にイベントを選択する場合に使用
+    X-POS-Session ヘッダーでセッションIDを指定
+    """
+    session_id = request.headers.get("X-POS-Session")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing POS session")
+
+    try:
+        session = set_session_event(session_id, body.event_id)
+        if not session:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+        return {"success": True, "session": session}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting event for POS session: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

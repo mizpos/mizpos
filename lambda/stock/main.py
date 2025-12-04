@@ -18,8 +18,10 @@ from models import (
     CreateEventRequest,
     CreateProductRequest,
     CreatePublisherRequest,
+    EventProductRequest,
     GenerateBarcodeRequest,
     GenerateISDNRequest,
+    SetEventProductsRequest,
     UpdateEventRequest,
     UpdateProductRequest,
     UpdatePublisherRequest,
@@ -27,17 +29,21 @@ from models import (
     UploadResponse,
 )
 from services import (
+    add_event_product,
     build_update_expression,
     create_event,
     delete_event,
     dynamo_to_dict,
     generate_presigned_upload_url,
     get_event,
+    get_event_products,
     get_publisher,
     list_events,
     list_publishers,
     publishers_table,
     record_stock_history,
+    remove_event_product,
+    set_event_products,
     stock_history_table,
     stock_table,
     update_event,
@@ -534,6 +540,73 @@ async def delete_event_endpoint(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+# イベント-商品紐づけエンドポイント
+@router.get("/events/{event_id}/products", response_model=dict)
+async def get_event_products_endpoint(
+    event_id: str, current_user: dict = Depends(get_current_user)
+):
+    """イベントに紐づく商品IDリストを取得"""
+    try:
+        product_ids = get_event_products(event_id)
+        return {"event_id": event_id, "product_ids": product_ids}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/events/{event_id}/products", response_model=dict)
+async def set_event_products_endpoint(
+    event_id: str,
+    request: SetEventProductsRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """イベントに紐づく商品リストを設定（一括更新）"""
+    try:
+        event = set_event_products(event_id, request.product_ids)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return {"event": event}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/events/{event_id}/products", response_model=dict)
+async def add_event_product_endpoint(
+    event_id: str,
+    request: EventProductRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """イベントに商品を追加"""
+    try:
+        event = add_event_product(event_id, request.product_id)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return {"event": event}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/events/{event_id}/products/{product_id}", response_model=dict)
+async def remove_event_product_endpoint(
+    event_id: str,
+    product_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """イベントから商品を削除"""
+    try:
+        event = remove_event_product(event_id, product_id)
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        return {"event": event}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 # ISDN/JAN バーコード生成エンドポイント
 @router.post("/isdn/generate", response_model=dict)
 async def generate_new_isdn(
@@ -609,7 +682,9 @@ async def migrate_barcodes(
             )
 
             # 更新
-            update_expr = "SET jan_barcode_1 = :jb1, jan_barcode_2 = :jb2, updated_at = :ua"
+            update_expr = (
+                "SET jan_barcode_1 = :jb1, jan_barcode_2 = :jb2, updated_at = :ua"
+            )
             expr_values = {
                 ":jb1": barcode_info["jan_barcode_1"],
                 ":jb2": barcode_info["jan_barcode_2"],

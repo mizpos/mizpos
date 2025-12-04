@@ -8,7 +8,12 @@ function IndexPage() {
 
   useEffect(() => {
     if (session) {
-      navigate({ to: "/pos" });
+      // イベント紐づけ済みならPOS画面へ、なければイベント選択画面へ
+      if (session.eventId) {
+        navigate({ to: "/pos" });
+      } else {
+        navigate({ to: "/select-event" });
+      }
     } else {
       navigate({ to: "/login" });
     }

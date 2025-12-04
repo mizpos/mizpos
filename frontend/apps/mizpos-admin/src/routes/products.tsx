@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { css } from "styled-system/css";
+import { TwoTierBarcode } from "../components/BarcodeDisplay";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { ImageUploadField } from "../components/ImageUploadField";
@@ -434,175 +435,167 @@ function ProductsPage() {
               gap: "4",
             })}
           >
-            <div>
-              <label
-                htmlFor="product_name"
+            {/* 書籍JANコード（2段バーコード）の画像表示 */}
+            <TwoTierBarcode
+              barcode1={barcodeInfo.jan_barcode_1}
+              barcode2={barcodeInfo.jan_barcode_2}
+              isdn={barcodeInfo.isdn}
+              isdnFormatted={barcodeInfo.isdn_formatted}
+              productName={barcodeInfo.product_name}
+            />
+
+            {/* 詳細情報 */}
+            <details
+              className={css({
+                marginTop: "2",
+                padding: "3",
+                backgroundColor: "gray.50",
+                borderRadius: "md",
+              })}
+            >
+              <summary
                 className={css({
-                  display: "block",
+                  cursor: "pointer",
                   fontSize: "sm",
                   fontWeight: "medium",
                   color: "gray.700",
-                  marginBottom: "1",
                 })}
               >
-                商品名
-              </label>
-              <div
-                id="product_name"
-                className={css({
-                  padding: "2",
-                  backgroundColor: "gray.50",
-                  borderRadius: "md",
-                  fontSize: "sm",
-                })}
-              >
-                {barcodeInfo.product_name}
-              </div>
-            </div>
+                詳細情報を表示
+              </summary>
 
-            {barcodeInfo.isdn && (
-              <div>
-                <label
-                  className={css({
-                    display: "block",
-                    fontSize: "sm",
-                    fontWeight: "medium",
-                    color: "gray.700",
-                    marginBottom: "1",
-                  })}
-                  htmlFor="isdn"
-                >
-                  ISDN
-                </label>
-                <div
-                  id="isdn"
-                  className={css({
-                    padding: "2",
-                    backgroundColor: "gray.50",
-                    borderRadius: "md",
-                    fontSize: "lg",
-                    fontFamily: "mono",
-                  })}
-                >
-                  {barcodeInfo.isdn}
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "3",
+                  marginTop: "3",
+                })}
+              >
+                {barcodeInfo.isdn && (
+                  <div>
+                    <span
+                      className={css({
+                        display: "block",
+                        fontSize: "xs",
+                        fontWeight: "medium",
+                        color: "gray.600",
+                        marginBottom: "1",
+                      })}
+                    >
+                      ISDN
+                    </span>
+                    <div
+                      className={css({
+                        fontFamily: "mono",
+                        fontSize: "sm",
+                      })}
+                    >
+                      {barcodeInfo.isdn}
+                    </div>
+                  </div>
+                )}
+
+                {barcodeInfo.isdn_formatted && (
+                  <div>
+                    <span
+                      className={css({
+                        display: "block",
+                        fontSize: "xs",
+                        fontWeight: "medium",
+                        color: "gray.600",
+                        marginBottom: "1",
+                      })}
+                    >
+                      ISDN（Cコード・価格付き）
+                    </span>
+                    <div
+                      className={css({
+                        fontFamily: "mono",
+                        fontSize: "sm",
+                      })}
+                    >
+                      {barcodeInfo.isdn_formatted}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <span
+                    className={css({
+                      display: "block",
+                      fontSize: "xs",
+                      fontWeight: "medium",
+                      color: "gray.600",
+                      marginBottom: "1",
+                    })}
+                  >
+                    1段目バーコード（
+                    {barcodeInfo.isdn ? "ISBN/ISDN" : "インストア"}）
+                  </span>
+                  <div
+                    className={css({
+                      fontFamily: "mono",
+                      fontSize: "sm",
+                      letterSpacing: "wider",
+                    })}
+                  >
+                    {barcodeInfo.jan_barcode_1}
+                  </div>
+                </div>
+
+                <div>
+                  <span
+                    className={css({
+                      display: "block",
+                      fontSize: "xs",
+                      fontWeight: "medium",
+                      color: "gray.600",
+                      marginBottom: "1",
+                    })}
+                  >
+                    2段目バーコード（分類・価格）
+                  </span>
+                  <div
+                    className={css({
+                      fontFamily: "mono",
+                      fontSize: "sm",
+                      letterSpacing: "wider",
+                    })}
+                  >
+                    {barcodeInfo.jan_barcode_2}
+                  </div>
+                </div>
+
+                <div>
+                  <span
+                    className={css({
+                      display: "block",
+                      fontSize: "xs",
+                      fontWeight: "medium",
+                      color: "gray.600",
+                      marginBottom: "1",
+                    })}
+                  >
+                    全体表示
+                  </span>
+                  <pre
+                    className={css({
+                      padding: "2",
+                      backgroundColor: "gray.900",
+                      color: "gray.100",
+                      borderRadius: "md",
+                      fontSize: "xs",
+                      fontFamily: "mono",
+                      whiteSpace: "pre-wrap",
+                      overflowX: "auto",
+                    })}
+                  >
+                    {barcodeInfo.full_display}
+                  </pre>
                 </div>
               </div>
-            )}
-
-            {barcodeInfo.isdn_formatted && (
-              <div>
-                <label
-                  htmlFor="isdn_formatted"
-                  className={css({
-                    display: "block",
-                    fontSize: "sm",
-                    fontWeight: "medium",
-                    color: "gray.700",
-                    marginBottom: "1",
-                  })}
-                >
-                  ISDN（Cコード・価格付き）
-                </label>
-                <div
-                  id="isdn_formatted"
-                  className={css({
-                    padding: "2",
-                    backgroundColor: "gray.50",
-                    borderRadius: "md",
-                    fontSize: "sm",
-                    fontFamily: "mono",
-                  })}
-                >
-                  {barcodeInfo.isdn_formatted}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label
-                htmlFor="jan_barcode_1"
-                className={css({
-                  display: "block",
-                  fontSize: "sm",
-                  fontWeight: "medium",
-                  color: "gray.700",
-                  marginBottom: "1",
-                })}
-              >
-                JANバーコード（1段目）
-              </label>
-              <div
-                id="jan_barcode_1"
-                className={css({
-                  padding: "2",
-                  backgroundColor: "gray.50",
-                  borderRadius: "md",
-                  fontSize: "lg",
-                  fontFamily: "mono",
-                  letterSpacing: "wider",
-                })}
-              >
-                {barcodeInfo.jan_barcode_1}
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="jan_barcode_2"
-                className={css({
-                  display: "block",
-                  fontSize: "sm",
-                  fontWeight: "medium",
-                  color: "gray.700",
-                  marginBottom: "1",
-                })}
-              >
-                JANバーコード（2段目）
-              </label>
-              <div
-                id="jan_barcode_2"
-                className={css({
-                  padding: "2",
-                  backgroundColor: "gray.50",
-                  borderRadius: "md",
-                  fontSize: "lg",
-                  fontFamily: "mono",
-                  letterSpacing: "wider",
-                })}
-              >
-                {barcodeInfo.jan_barcode_2}
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="fullDisplay"
-                className={css({
-                  display: "block",
-                  fontSize: "sm",
-                  fontWeight: "medium",
-                  color: "gray.700",
-                  marginBottom: "1",
-                })}
-              >
-                全体表示
-              </label>
-              <pre
-                id="fullDisplay"
-                className={css({
-                  padding: "3",
-                  backgroundColor: "gray.900",
-                  color: "gray.100",
-                  borderRadius: "md",
-                  fontSize: "sm",
-                  fontFamily: "mono",
-                  whiteSpace: "pre-wrap",
-                  overflowX: "auto",
-                })}
-              >
-                {barcodeInfo.full_display}
-              </pre>
-            </div>
+            </details>
 
             <div
               className={css({

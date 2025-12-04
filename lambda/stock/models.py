@@ -227,8 +227,23 @@ class EventResponse(EventBase):
         ..., description="4桁のイベントコード（従業員番号の先頭4桁）"
     )
     is_active: bool
+    product_ids: list[str] = Field(
+        default_factory=list, description="紐づく商品IDリスト"
+    )
     created_at: str
     updated_at: str
 
     class Config:
         from_attributes = True
+
+
+class SetEventProductsRequest(BaseModel):
+    """イベントに紐づく商品リストを設定"""
+
+    product_ids: list[str] = Field(..., description="商品IDのリスト")
+
+
+class EventProductRequest(BaseModel):
+    """イベントに商品を追加/削除"""
+
+    product_id: str = Field(..., description="商品ID")
