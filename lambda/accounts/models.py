@@ -278,7 +278,9 @@ class PosSaleItemRequest(BaseModel):
     """POS販売アイテム"""
 
     product_id: str
-    product_name: str | None = Field(default=None, description="商品名（返品処理・履歴表示用）")
+    product_name: str | None = Field(
+        default=None, description="商品名（返品処理・履歴表示用）"
+    )
     circle_name: str | None = Field(default=None, description="サークル名")
     jan: str | None = Field(default=None, description="JANコード（1段目バーコード）")
     jan2: str | None = Field(default=None, description="2段目バーコード（書籍の場合）")

@@ -1049,7 +1049,8 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
                 fontWeight: "medium",
               })}
             >
-              注意: 価格を変更すると2段目バーコードが変わります。価格変更後は必ずバーコードを再印刷してください。
+              注意:
+              価格を変更すると2段目バーコードが変わります。価格変更後は必ずバーコードを再印刷してください。
             </p>
           </div>
         </>

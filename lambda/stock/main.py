@@ -236,19 +236,28 @@ async def update_product(
 
                 if is_book:
                     # 新しい値を取得（更新リクエストに含まれていればそれを、なければ既存値を使用）
-                    new_price = int(request_dict.get("price", product_dict.get("price", 0)))
-                    new_c_code = request_dict.get("c_code", product_dict.get("c_code", "3055")) or "3055"
+                    new_price = int(
+                        request_dict.get("price", product_dict.get("price", 0))
+                    )
+                    new_c_code = (
+                        request_dict.get("c_code", product_dict.get("c_code", "3055"))
+                        or "3055"
+                    )
 
                     # 2段目バーコードを再生成
                     from isdn import generate_secondary_barcode, format_isdn_with_price
 
-                    new_jan_barcode_2 = generate_secondary_barcode(new_c_code, new_price)
+                    new_jan_barcode_2 = generate_secondary_barcode(
+                        new_c_code, new_price
+                    )
                     request_dict["jan_barcode_2"] = new_jan_barcode_2
 
                     # ISDN表記も更新
                     isdn = product_dict.get("isdn")
                     if isdn:
-                        new_isdn_formatted = format_isdn_with_price(isdn, new_c_code, new_price)
+                        new_isdn_formatted = format_isdn_with_price(
+                            isdn, new_c_code, new_price
+                        )
                         request_dict["isdn_formatted"] = new_isdn_formatted
 
                     # jan_codeが変更された場合は1段目バーコードも更新
