@@ -216,39 +216,70 @@ class MainActivity : TauriActivity() {
 
                 val data = JSONObject(jsonData)
                 val paperWidth = data.optInt("paperWidth", CitizenPrinter.PAPER_58MM)
-                printer.init()
+                printer.init(paperWidth)
 
-                // Header
-                if (data.has("header")) {
-                    printer.printCentered(data.getString("header"))
-                    printer.printLine("")
+                // イベント名
+                val eventName = data.optString("event_name", "")
+                if (eventName.isNotEmpty()) {
+                    printer.printCentered(eventName)
                 }
 
-                // Items
+                // 責ID
+                val staffId = data.optString("staff_id", "")
+                if (staffId.isNotEmpty()) {
+                    printer.printLine("責ID: $staffId")
+                }
+
+                // ご明細書（大きめの文字・中央揃え・黒背景）
+                printer.printDoubleReverse("ご明細書")
+
+                printer.printSeparator(paperWidth)
+
+                // 商品明細
                 if (data.has("items")) {
                     val items = data.getJSONArray("items")
-                    printer.printSeparator(paperWidth)
                     for (i in 0 until items.length()) {
                         val item = items.getJSONObject(i)
-                        val name = item.getString("name")
-                        val price = item.getString("price")
+                        val shopName = item.optString("shop_name", "")
+                        val productName = item.optString("product_name", "")
+                        val productNumber = item.optString("product_number", "")
+                        val unitPrice = item.optInt("unit_price", 0)
                         val qty = item.optInt("quantity", 1)
-                        printer.printLine("$name x$qty")
-                        printer.printLine("  \\$price")
+
+                        // {ショップ}{商品名}
+                        printer.printLine("$shopName $productName")
+                        // {商品番号}
+                        if (productNumber.isNotEmpty()) {
+                            printer.printLine(productNumber)
+                        }
+                        // @{単価} x {点数}
+                        printer.printLine("　　@\\$unitPrice x $qty")
                     }
-                    printer.printSeparator(paperWidth)
                 }
 
-                // Total
-                if (data.has("total")) {
-                    printer.printBold("合計: \\${data.getString("total")}")
-                    printer.printLine("")
+                printer.printSeparator(paperWidth)
+
+                // 小計（太字）
+                val subtotal = data.optInt("subtotal", 0)
+                printer.printRightBold("小計: \\$subtotal")
+
+                // クーポン処理
+                val couponDiscount = data.optInt("coupon_discount", 0)
+                if (couponDiscount > 0) {
+                    printer.printRight("クーポン割引: -\\$couponDiscount")
                 }
 
-                // Footer
-                if (data.has("footer")) {
-                    printer.printLine("")
-                    printer.printCentered(data.getString("footer"))
+                // 支払い方法
+                val paymentMethod = data.optString("payment_method", "")
+                val paymentAmount = data.optInt("payment_amount", 0)
+                if (paymentMethod.isNotEmpty()) {
+                    printer.printRight("$paymentMethod: \\$paymentAmount")
+                }
+
+                // 釣り銭
+                val change = data.optInt("change", 0)
+                if (change > 0) {
+                    printer.printRight("　　　釣り銭: \\$change")
                 }
 
                 printer.feed(3)

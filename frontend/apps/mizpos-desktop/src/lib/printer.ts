@@ -85,7 +85,7 @@ export async function usbWelcomePrint(
   vendorId: number,
   deviceId: number,
   terminalId: string,
-  paperWidth?: number,
+  paperWidth?: number
 ): Promise<void> {
   return invoke("welcome_print", {
     vendorId,
@@ -99,7 +99,7 @@ export async function usbTextPrint(
   vendorId: number,
   deviceId: number,
   text: string,
-  paperWidth?: number,
+  paperWidth?: number
 ): Promise<void> {
   return invoke("text_print", {
     vendorId,
@@ -116,7 +116,7 @@ export async function usbPrintFullReceipt(
   vendorId: number,
   deviceId: number,
   receipt: FullReceiptData,
-  paperWidth?: number,
+  paperWidth?: number
 ): Promise<void> {
   return invoke("print_receipt", {
     vendorId,
@@ -164,14 +164,14 @@ export function isBluetoothConnected(): boolean {
   }
   const result = window.MizPosPrinter.isConnected();
   const parsed = parseAndroidResult<{ success: boolean; connected: boolean }>(
-    result,
+    result
   );
   return parsed.connected;
 }
 
 export function bluetoothWelcomePrint(
   terminalId: string,
-  paperWidth?: number,
+  paperWidth?: number
 ): PrinterResult {
   if (!window.MizPosPrinter) {
     return { success: false, error: "Bluetooth not available" };
@@ -328,7 +328,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         terminalId,
-        this.config.paperWidth,
+        this.config.paperWidth
       );
       return { success: true };
     } catch (e) {
@@ -351,7 +351,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         text,
-        this.config.paperWidth,
+        this.config.paperWidth
       );
       return { success: true };
     } catch (e) {
@@ -397,27 +397,37 @@ export class UnifiedPrinter {
   /**
    * 領収書形式のフルレシートを印刷
    * - イベント名称、スタッフID
-   * - 「領収書」ヘッダー（黒背景・中央揃え・2倍サイズ）
-   * - 宛名（黒背景・右寄せ・下線）
-   * - 商品明細（サークル名、JAN、ISBN、数量、価格）
-   * - 合計（全角数字）
-   * - 支払情報・消費税
-   * - レシート番号とQRコード
+   * - 「ご明細書」ヘッダー（黒背景・中央揃え・2倍サイズ）
+   * - 商品明細（ショップ名、商品名、商品番号、単価 x 点数）
+   * - 小計（太字）
+   * - クーポン処理
+   * - 支払い方法・釣り銭
    */
   async printFullReceipt(data: FullReceiptData): Promise<PrinterResult> {
     if (this.config.platform === "android") {
-      // Android: 既存のJavaScript Interfaceを使用
-      return bluetoothPrintReceipt({
-        header: `${data.event_name}\n責ID:${data.staff_id}`,
+      // Android: 新フォーマットでJavaScript Interfaceを使用
+      // 単価を計算（price / quantity）
+      const androidData = {
+        event_name: data.event_name,
+        staff_id: data.staff_id,
         items: data.items.map((item) => ({
-          name: `${item.circle_name} ${item.jan}\n  ${item.isbn}`,
-          price: String(item.price),
+          shop_name: item.circle_name,
+          product_name: item.jan,
+          product_number: item.isbn,
+          unit_price: Math.floor(item.price / item.quantity),
           quantity: item.quantity,
         })),
-        total: String(data.total),
-        footer: `消費税(${data.tax_rate}%): ¥${data.tax_amount}\nレシート番号: ${data.receipt_number}`,
+        subtotal: data.total,
+        coupon_discount: 0, // TODO: クーポン割引がある場合は追加
+        payment_method: data.payments[0]?.method || "",
+        payment_amount: data.payments[0]?.amount || 0,
+        change:
+          data.payments.length > 0
+            ? data.payments[0].amount - data.total
+            : 0,
         paperWidth: this.config.paperWidth,
-      });
+      };
+      return bluetoothPrintReceipt(androidData as unknown as ReceiptData);
     }
 
     // Desktop USB: Rust側の新しいprint_receiptコマンドを使用
@@ -430,7 +440,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         data,
-        this.config.paperWidth,
+        this.config.paperWidth
       );
       return { success: true };
     } catch (e) {

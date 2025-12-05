@@ -46,8 +46,15 @@ class CitizenPrinter(private val context: Context) {
         private val ESC_BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00)
         private val ESC_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
         private val ESC_LEFT = byteArrayOf(0x1B, 0x61, 0x00)
+        private val ESC_RIGHT = byteArrayOf(0x1B, 0x61, 0x02)
         private val ESC_UNDERLINE_ON = byteArrayOf(0x1B, 0x2D, 0x01)
         private val ESC_UNDERLINE_OFF = byteArrayOf(0x1B, 0x2D, 0x00)
+        // Double size (width x2, height x2)
+        private val ESC_DOUBLE_ON = byteArrayOf(0x1D, 0x21, 0x11) // GS ! n (width x2 + height x2)
+        private val ESC_DOUBLE_OFF = byteArrayOf(0x1D, 0x21, 0x00) // Normal size
+        // Reverse (white on black)
+        private val ESC_REVERSE_ON = byteArrayOf(0x1D, 0x42, 0x01) // GS B n
+        private val ESC_REVERSE_OFF = byteArrayOf(0x1D, 0x42, 0x00)
 
         // Japanese character set (Shift-JIS for CMP-30II)
         private val ESC_KANJI_MODE = byteArrayOf(0x1C, 0x26) // Enable Kanji mode
@@ -204,6 +211,95 @@ class CitizenPrinter(private val context: Context) {
         val result = printText(text)
         write(ESC_BOLD_OFF)
         return result
+    }
+
+    /**
+     * Print bold text with newline
+     */
+    fun printBoldLine(text: String): Boolean {
+        write(ESC_BOLD_ON)
+        val result = printLine(text)
+        write(ESC_BOLD_OFF)
+        return result
+    }
+
+    /**
+     * Print right-aligned text
+     */
+    fun printRight(text: String): Boolean {
+        write(ESC_RIGHT)
+        val result = printLine(text)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print right-aligned bold text
+     */
+    fun printRightBold(text: String): Boolean {
+        write(ESC_RIGHT)
+        write(ESC_BOLD_ON)
+        val result = printLine(text)
+        write(ESC_BOLD_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print double size text (centered, reverse/black background)
+     */
+    fun printDoubleReverse(text: String): Boolean {
+        write(ESC_CENTER)
+        write(ESC_DOUBLE_ON)
+        write(ESC_REVERSE_ON)
+        val result = printLine(text)
+        write(ESC_REVERSE_OFF)
+        write(ESC_DOUBLE_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print double size text (right-aligned, reverse/black background, underlined)
+     */
+    fun printDoubleReverseRightUnderline(text: String): Boolean {
+        write(ESC_RIGHT)
+        write(ESC_DOUBLE_ON)
+        write(ESC_REVERSE_ON)
+        write(ESC_UNDERLINE_ON)
+        val result = printLine(text)
+        write(ESC_UNDERLINE_OFF)
+        write(ESC_REVERSE_OFF)
+        write(ESC_DOUBLE_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print two columns: left text and right text
+     */
+    fun printRow(left: String, right: String, paperWidth: Int = PAPER_58MM): Boolean {
+        val totalWidth = getCharsPerLine(paperWidth)
+        val leftLen = getDisplayWidth(left)
+        val rightLen = getDisplayWidth(right)
+        val spaces = totalWidth - leftLen - rightLen
+        return if (spaces > 0) {
+            printLine(left + " ".repeat(spaces) + right)
+        } else {
+            printLine(left)
+            printLine("  $right")
+        }
+    }
+
+    /**
+     * Calculate display width (full-width = 2, half-width = 1)
+     */
+    private fun getDisplayWidth(text: String): Int {
+        var width = 0
+        for (char in text) {
+            width += if (char.code > 0xFF) 2 else 1
+        }
+        return width
     }
 
     /**
