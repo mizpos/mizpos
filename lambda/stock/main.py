@@ -220,6 +220,41 @@ async def update_product(
         if not request_dict:
             raise HTTPException(status_code=400, detail="No fields to update")
 
+        # 価格またはCコードが変更される場合、書籍なら2段目バーコードを再生成
+        price_changed = "price" in request_dict
+        c_code_changed = "c_code" in request_dict
+        jan_code_changed = "jan_code" in request_dict
+
+        if price_changed or c_code_changed or jan_code_changed:
+            # 現在の商品情報を取得
+            product_response = stock_table.get_item(Key={"product_id": product_id})
+            product = product_response.get("Item")
+
+            if product:
+                product_dict = dynamo_to_dict(product)
+                is_book = product_dict.get("is_book", True)
+
+                if is_book:
+                    # 新しい値を取得（更新リクエストに含まれていればそれを、なければ既存値を使用）
+                    new_price = int(request_dict.get("price", product_dict.get("price", 0)))
+                    new_c_code = request_dict.get("c_code", product_dict.get("c_code", "3055")) or "3055"
+
+                    # 2段目バーコードを再生成
+                    from isdn import generate_secondary_barcode, format_isdn_with_price
+
+                    new_jan_barcode_2 = generate_secondary_barcode(new_c_code, new_price)
+                    request_dict["jan_barcode_2"] = new_jan_barcode_2
+
+                    # ISDN表記も更新
+                    isdn = product_dict.get("isdn")
+                    if isdn:
+                        new_isdn_formatted = format_isdn_with_price(isdn, new_c_code, new_price)
+                        request_dict["isdn_formatted"] = new_isdn_formatted
+
+                    # jan_codeが変更された場合は1段目バーコードも更新
+                    if jan_code_changed and request_dict.get("jan_code"):
+                        request_dict["jan_barcode_1"] = request_dict["jan_code"]
+
         update_expressions, expression_values, expression_names = (
             build_update_expression(request_dict)
         )

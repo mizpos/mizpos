@@ -197,14 +197,23 @@ def generate_full_barcode_info(
         price: 価格
         c_code: Cコード（書籍の場合のみ使用）
         is_book: 書籍フラグ
-        jan_code: 非書籍の場合のJANコード
+        jan_code: JANコード（書籍・非書籍共通、指定時は最優先）
 
     Returns:
         バーコード情報の辞書
     """
     if is_book:
         # 書籍の場合: 2段バーコード
-        if isdn:
+        # 優先順位: jan_code > isdn > インハウスコード
+        if jan_code:
+            # JANコードが明示的に指定されている場合（既存の書籍JANを使う場合）
+            jan_barcode = jan_code
+            # ISDNも指定されていれば表示用に使用
+            if isdn:
+                isdn_formatted = format_isdn_with_price(isdn, c_code, price)
+            else:
+                isdn_formatted = None
+        elif isdn:
             # ISBN/ISDNが付与されている場合
             jan_barcode = generate_jan_barcode(isdn)
             isdn_formatted = format_isdn_with_price(isdn, c_code, price)
