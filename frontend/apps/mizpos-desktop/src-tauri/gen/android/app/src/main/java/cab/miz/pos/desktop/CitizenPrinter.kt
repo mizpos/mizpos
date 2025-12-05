@@ -46,8 +46,15 @@ class CitizenPrinter(private val context: Context) {
         private val ESC_BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00)
         private val ESC_CENTER = byteArrayOf(0x1B, 0x61, 0x01)
         private val ESC_LEFT = byteArrayOf(0x1B, 0x61, 0x00)
+        private val ESC_RIGHT = byteArrayOf(0x1B, 0x61, 0x02)
         private val ESC_UNDERLINE_ON = byteArrayOf(0x1B, 0x2D, 0x01)
         private val ESC_UNDERLINE_OFF = byteArrayOf(0x1B, 0x2D, 0x00)
+        // Double size (width x2, height x2)
+        private val ESC_DOUBLE_ON = byteArrayOf(0x1D, 0x21, 0x11) // GS ! n (width x2 + height x2)
+        private val ESC_DOUBLE_OFF = byteArrayOf(0x1D, 0x21, 0x00) // Normal size
+        // Reverse (white on black)
+        private val ESC_REVERSE_ON = byteArrayOf(0x1D, 0x42, 0x01) // GS B n
+        private val ESC_REVERSE_OFF = byteArrayOf(0x1D, 0x42, 0x00)
 
         // Japanese character set (Shift-JIS for CMP-30II)
         private val ESC_KANJI_MODE = byteArrayOf(0x1C, 0x26) // Enable Kanji mode
@@ -177,6 +184,16 @@ class CitizenPrinter(private val context: Context) {
     }
 
     /**
+     * Print bold text with newline
+     */
+    fun printBoldLine(text: String): Boolean {
+        write(ESC_BOLD_ON)
+        val result = printLine(text)
+        write(ESC_BOLD_OFF)
+        return result
+    }
+
+    /**
      * Print Japanese text (enables Kanji mode)
      */
     fun printJapanese(text: String): Boolean {
@@ -207,6 +224,107 @@ class CitizenPrinter(private val context: Context) {
     }
 
     /**
+     * Print right-aligned text
+     */
+    fun printRight(text: String): Boolean {
+        write(ESC_RIGHT)
+        val result = printLine(text)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print right-aligned bold text
+     */
+    fun printRightBold(text: String): Boolean {
+        write(ESC_RIGHT)
+        write(ESC_BOLD_ON)
+        val result = printLine(text)
+        write(ESC_BOLD_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print double size text (centered)
+     */
+    fun printDoubleCentered(text: String): Boolean {
+        write(ESC_CENTER)
+        write(ESC_DOUBLE_ON)
+        val result = printLine(text)
+        write(ESC_DOUBLE_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print double size text (centered, reverse/black background)
+     */
+    fun printDoubleReverse(text: String): Boolean {
+        write(ESC_CENTER)
+        write(ESC_DOUBLE_ON)
+        write(ESC_REVERSE_ON)
+        val result = printLine(text)
+        write(ESC_REVERSE_OFF)
+        write(ESC_DOUBLE_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print double size text (right-aligned, reverse/black background, underlined)
+     */
+    fun printDoubleReverseRightUnderline(text: String): Boolean {
+        write(ESC_RIGHT)
+        write(ESC_DOUBLE_ON)
+        write(ESC_REVERSE_ON)
+        write(ESC_UNDERLINE_ON)
+        val result = printLine(text)
+        write(ESC_UNDERLINE_OFF)
+        write(ESC_REVERSE_OFF)
+        write(ESC_DOUBLE_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
+     * Print two columns: left text and right text
+     */
+    fun printRow(left: String, right: String, paperWidth: Int = PAPER_58MM): Boolean {
+        val totalWidth = getCharsPerLine(paperWidth)
+        val leftLen = getDisplayWidth(left)
+        val rightLen = getDisplayWidth(right)
+        val spaces = totalWidth - leftLen - rightLen
+        return if (spaces > 0) {
+            printLine(left + " ".repeat(spaces) + right)
+        } else {
+            printLine(left)
+            printLine("  $right")
+        }
+    }
+
+    /**
+     * PrintRowBold
+     */
+    fun printRowBold(left: String, right: String, paperWidth: Int = PAPER_58MM): Boolean {
+        write(ESC_BOLD_ON)
+        val result = printRow(left, right, paperWidth)
+        write(ESC_BOLD_OFF)
+        return result
+    }
+
+    /**
+     * Calculate display width (full-width = 2, half-width = 1)
+     */
+    private fun getDisplayWidth(text: String): Int {
+        var width = 0
+        for (char in text) {
+            width += if (char.code > 0xFF) 2 else 1
+        }
+        return width
+    }
+
+    /**
      * Feed paper by n lines
      */
     fun feed(lines: Int): Boolean {
@@ -226,6 +344,61 @@ class CitizenPrinter(private val context: Context) {
     fun printSeparator(paperWidth: Int = PAPER_58MM): Boolean {
         val width = getCharsPerLine(paperWidth)
         return printLine("-".repeat(width))
+    }
+
+    /**
+     * Print QR code (centered)
+     * Uses ESC/POS QR code commands for Citizen CMP-30II
+     * Based on Citizen SDK ESCPOSPrinter.printQRCode implementation
+     */
+    fun printQrCode(data: String, moduleSize: Int = 6): Boolean {
+        // Center alignment before QR code
+        write(ESC_CENTER)
+
+        // Get data bytes using Shift_JIS encoding for Japanese compatibility
+        val dataBytes = try {
+            data.toByteArray(charset("Shift_JIS"))
+        } catch (e: Exception) {
+            data.toByteArray(Charsets.US_ASCII)
+        }
+        val dataLen = dataBytes.size
+
+        // CellWidthCommand: Set module size
+        // GS ( k pL pH cn fn n
+        // pL pH = 3, cn = 49 (0x31), fn = 67 (0x43), n = size (1-16)
+        val size = moduleSize.coerceIn(1, 16).toByte()
+        val cellWidthCommand = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size)
+        write(cellWidthCommand)
+
+        // ECCCommand: Set error correction level
+        // GS ( k pL pH cn fn n
+        // pL pH = 3, cn = 49 (0x31), fn = 69 (0x45), n = 48(L)/49(M)/50(Q)/51(H)
+        val eccCommand = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30) // L level (0x30)
+        write(eccCommand)
+
+        // DataHeadCommand: Store QR Code data
+        // GS ( k pL pH cn fn m d1...dk
+        // (pL + pH*256) = dataLen + 3, cn = 49 (0x31), fn = 80 (0x50), m = 48 (0x30)
+        val storeLen = dataLen + 3
+        val nL = (storeLen % 256).toByte()
+        val nH = (storeLen / 256).toByte()
+        val dataHeadCommand = byteArrayOf(0x1D, 0x28, 0x6B, nL, nH, 0x31, 0x50, 0x30)
+        write(dataHeadCommand)
+        write(dataBytes)
+
+        // PrintCommand: Print QR Code
+        // GS ( k pL pH cn fn m
+        // pL pH = 3, cn = 49 (0x31), fn = 81 (0x51), m = 48 (0x30)
+        val printCommand = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30)
+        write(printCommand)
+
+        // Line feed after QR code
+        printLine("")
+
+        // Reset to left alignment
+        write(ESC_LEFT)
+
+        return true
     }
 
     /**

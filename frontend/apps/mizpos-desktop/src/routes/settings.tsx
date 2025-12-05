@@ -10,6 +10,8 @@ import {
   getUsbDevices,
   isAndroid,
   type Platform,
+  UnifiedPrinter,
+  type UnifiedPrinterConfig,
   type UsbDevice,
 } from "../lib/printer";
 import { useAuthStore } from "../stores/auth";
@@ -154,6 +156,8 @@ function SettingsPage() {
   const navigate = useNavigate();
 
   const [eventName, setEventName] = useState(settings.eventName);
+  const [circleName, setCircleName] = useState(settings.circleName || "");
+  const [venueAddress, setVenueAddress] = useState(settings.venueAddress || "");
   const [terminalId, setTerminalId] = useState(settings.terminalId);
   const [taxRate, setTaxRate] = useState(String(settings.taxRate));
 
@@ -170,6 +174,11 @@ function SettingsPage() {
   const [syncResult, setSyncResult] = useState<{
     success: boolean;
     count?: number;
+    error?: string;
+  } | null>(null);
+  const [isTestPrinting, setIsTestPrinting] = useState(false);
+  const [testPrintResult, setTestPrintResult] = useState<{
+    success: boolean;
     error?: string;
   } | null>(null);
 
@@ -209,6 +218,8 @@ function SettingsPage() {
   const handleSave = useCallback(async () => {
     await updateSettings({
       eventName,
+      circleName,
+      venueAddress,
       terminalId,
       taxRate: Number.parseInt(taxRate, 10) || 10,
     });
@@ -216,6 +227,8 @@ function SettingsPage() {
     navigate({ to: "/pos" });
   }, [
     eventName,
+    circleName,
+    venueAddress,
     terminalId,
     taxRate,
     selectedPrinter,
@@ -243,6 +256,53 @@ function SettingsPage() {
       setIsSyncing(false);
     }
   }, []);
+
+  const handleTestPrint = useCallback(async () => {
+    if (!selectedPrinter) {
+      setTestPrintResult({
+        success: false,
+        error: "プリンターが選択されていません",
+      });
+      return;
+    }
+
+    setIsTestPrinting(true);
+    setTestPrintResult(null);
+
+    try {
+      const currentPlatform = await getPlatform();
+      const printerConfig: UnifiedPrinterConfig = {
+        platform: currentPlatform,
+        vendorId: selectedPrinter.vendorId,
+        deviceId: selectedPrinter.deviceId,
+        bluetoothAddress: selectedPrinter.bluetoothAddress,
+        name: selectedPrinter.name,
+        paperWidth: selectedPrinter.paperWidth,
+      };
+
+      const printer = new UnifiedPrinter(printerConfig);
+
+      const connectResult = await printer.connect();
+      if (!connectResult.success) {
+        throw new Error(connectResult.error || "プリンター接続に失敗しました");
+      }
+
+      const printResult = await printer.welcomePrint(terminalId || "TEST");
+      if (!printResult.success) {
+        throw new Error(printResult.error || "印刷に失敗しました");
+      }
+
+      setTestPrintResult({ success: true });
+    } catch (error) {
+      console.error("Test print failed:", error);
+      setTestPrintResult({
+        success: false,
+        error: error instanceof Error ? error.message : "印刷に失敗しました",
+      });
+    } finally {
+      setIsTestPrinting(false);
+    }
+  }, [selectedPrinter, terminalId]);
 
   const selectUsbPrinter = useCallback((device: UsbDevice) => {
     setSelectedPrinter({
@@ -300,6 +360,86 @@ function SettingsPage() {
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   placeholder="例: コミックマーケット C104"
+                />
+              </div>
+
+              <div className={sectionStyles.field}>
+                <span
+                  className={css({
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#94a3b8",
+                    marginBottom: "8px",
+                  })}
+                >
+                  サークル名
+                </span>
+                {session?.circles && session.circles.length > 0 ? (
+                  <div
+                    className={css({
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    })}
+                  >
+                    <select
+                      value={
+                        session.circles.some((c) => c.name === circleName)
+                          ? circleName
+                          : "__custom__"
+                      }
+                      onChange={(e) => {
+                        if (e.target.value !== "__custom__") {
+                          setCircleName(e.target.value);
+                        }
+                      }}
+                      className={css({
+                        width: "100%",
+                        padding: "12px 14px",
+                        fontSize: "15px",
+                        color: "#f8fafc",
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        _focus: {
+                          outline: "none",
+                          borderColor: "#3b82f6",
+                        },
+                      })}
+                    >
+                      {session.circles.map((circle) => (
+                        <option key={circle.publisher_id} value={circle.name}>
+                          {circle.name}
+                        </option>
+                      ))}
+                      <option value="__custom__">その他（手入力）</option>
+                    </select>
+                    {(!session.circles.some((c) => c.name === circleName) ||
+                      circleName === "") && (
+                      <Input
+                        value={circleName}
+                        onChange={(e) => setCircleName(e.target.value)}
+                        placeholder="サークル名を入力"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <Input
+                    value={circleName}
+                    onChange={(e) => setCircleName(e.target.value)}
+                    placeholder="例: ミズPOS出版"
+                  />
+                )}
+              </div>
+
+              <div className={sectionStyles.field}>
+                <Input
+                  label="会場住所"
+                  value={venueAddress}
+                  onChange={(e) => setVenueAddress(e.target.value)}
+                  placeholder="例: 東京都江東区有明3-11-1"
                 />
               </div>
 
@@ -463,6 +603,38 @@ function SettingsPage() {
                 ))
               )}
             </div>
+
+            {/* テスト印刷 */}
+            {selectedPrinter && (
+              <div className={css({ marginTop: "20px" })}>
+                <Button
+                  variant="outline"
+                  onClick={handleTestPrint}
+                  disabled={isTestPrinting}
+                  fullWidth
+                >
+                  {isTestPrinting ? "印刷中..." : "テスト印刷"}
+                </Button>
+                {testPrintResult && (
+                  <div
+                    className={css({
+                      marginTop: "12px",
+                      padding: "12px",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      background: testPrintResult.success
+                        ? "#14532d"
+                        : "#7f1d1d",
+                      color: testPrintResult.success ? "#86efac" : "#fca5a5",
+                    })}
+                  >
+                    {testPrintResult.success
+                      ? "テスト印刷が完了しました"
+                      : `エラー: ${testPrintResult.error}`}
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* 保存ボタン */}

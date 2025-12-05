@@ -14,6 +14,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.NumberFormat
+import java.util.Locale
 
 class MainActivity : TauriActivity() {
     private lateinit var printer: CitizenPrinter
@@ -91,6 +93,12 @@ class MainActivity : TauriActivity() {
      * - etc.
      */
     inner class PrinterBridge {
+        // 金額をカンマ区切りでフォーマット
+        private fun formatPrice(amount: Int): String {
+            val formatter = NumberFormat.getNumberInstance(Locale.JAPAN)
+            return "\\${formatter.format(amount)}"
+        }
+
         @JavascriptInterface
         fun getPairedDevices(): String {
             return try {
@@ -216,39 +224,102 @@ class MainActivity : TauriActivity() {
 
                 val data = JSONObject(jsonData)
                 val paperWidth = data.optInt("paperWidth", CitizenPrinter.PAPER_58MM)
-                printer.init()
+                printer.init(paperWidth)
 
-                // Header
-                if (data.has("header")) {
-                    printer.printCentered(data.getString("header"))
-                    printer.printLine("")
+                // イベント名
+                val circleName = data.optString("circle_name", "")
+                if (circleName.isNotEmpty()) {
+                    printer.printDoubleCentered(circleName)
                 }
 
-                // Items
+                // 会場住所（イベント名の下）
+                val venueAddress = data.optString("venue_address", "")
+                val eventName = data.optString("event_name", "")
+                if (venueAddress.isNotEmpty() && eventName.isNotEmpty()) {
+                    printer.printBoldLine(eventName);
+                    printer.printLine(venueAddress);
+                }
+
+                // ご明細書（大きめの文字・中央揃え・黒背景）
+                printer.printDoubleReverse("　　ご明細書　　")
+
+                val receiptNumber = data.optString("receipt_number", "")
+                printer.printLine("# $receiptNumber");
+
+                // 責ID
+                val saleStartDateTime = data.optString("sale_start_date_time", "")
+                val staffId = data.optString("staff_id", "")
+                if (staffId.isNotEmpty()) {
+                    printer.printLine("$saleStartDateTime 責: $staffId")
+                }
+
+                printer.printSeparator(paperWidth)
+
+                // 商品明細
                 if (data.has("items")) {
                     val items = data.getJSONArray("items")
-                    printer.printSeparator(paperWidth)
                     for (i in 0 until items.length()) {
                         val item = items.getJSONObject(i)
-                        val name = item.getString("name")
-                        val price = item.getString("price")
+                        val shopName = item.optString("shop_name", "")
+                        val productName = item.optString("product_name", "")
+                        val productNumber = item.optString("product_number", "")
+                        val isdn = item.optString("isdn", "")
+                        val jan2 = item.optString("jan2", "")
+                        val isBook = item.optBoolean("is_book", false)
+                        val unitPrice = item.optInt("unit_price", 0)
                         val qty = item.optInt("quantity", 1)
-                        printer.printLine("$name x$qty")
-                        printer.printLine("  \\$price")
+
+                        // 商品番号: 書籍の場合は「ISDN Cコード 値段」、それ以外はJAN
+                        val displayNumber = if (isBook && isdn.isNotEmpty() && jan2.isNotEmpty()) {
+                            // jan2からCコードと値段を抽出（例: 1920094001600 → C0094 ¥1,600）
+                            val cCode = if (jan2.length >= 7) "C${jan2.substring(3, 7)}" else ""
+                            val priceStr = if (jan2.length >= 9) {
+                                val priceValue = jan2.substring(8,12).trimStart('0').toIntOrNull() ?: 0
+                                formatPrice(priceValue)
+                            } else ""
+                            "$isdn $cCode $priceStr"
+                        } else {
+                            productNumber
+                        }
+
+                        printer.printBoldLine(displayNumber)
+                        printer.printLine("$shopName / $productName")
+                        // @{単価} x {点数} （右寄せ）
+                        printer.printRightBold("@ ${formatPrice(unitPrice)}　 $qty 点　${formatPrice(unitPrice * qty)}")
                     }
+                }
+
+                printer.printSeparator(paperWidth)
+
+                // 小計（太字・右寄せ）
+                val subtotal = data.optInt("subtotal", 0)
+                printer.printRowBold("合　計", formatPrice(subtotal), paperWidth)
+
+                // クーポン処理
+                val couponDiscount = data.optInt("coupon_discount", 0)
+                if (couponDiscount > 0) {
+                    printer.printRow("　 クーポン割引", "-${formatPrice(couponDiscount)}", paperWidth)
+                }
+
+                // 支払い方法
+                val paymentMethod = data.optString("payment_method", "")
+                val paymentAmount = data.optInt("payment_amount", 0)
+                if (paymentMethod.isNotEmpty()) {
+                    printer.printRow("　 $paymentMethod", formatPrice(paymentAmount), paperWidth)
+                }
+
+                // 釣り銭
+                val change = data.optInt("change", 0)
+                if (change > 0) {
+                    printer.printRow("　 釣り銭", formatPrice(change), paperWidth)
+                }
+
+                if (receiptNumber.isNotEmpty()) {
                     printer.printSeparator(paperWidth)
-                }
-
-                // Total
-                if (data.has("total")) {
-                    printer.printBold("合計: \\${data.getString("total")}")
+                    printer.printLine("当店は免税事業者であり、適格請求書を発行することはできません。返品・返金は落丁・乱丁の場合のみ受け付けます。返品・返金の場合は本明細書を添付しサポートセンター support-pos@miz.cabにご連絡ください。");
                     printer.printLine("")
-                }
-
-                // Footer
-                if (data.has("footer")) {
-                    printer.printLine("")
-                    printer.printCentered(data.getString("footer"))
+                    // QRコード（レシート番号）
+                    printer.printQrCode(receiptNumber, 6)
                 }
 
                 printer.feed(3)

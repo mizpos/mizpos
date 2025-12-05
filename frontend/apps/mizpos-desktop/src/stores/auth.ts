@@ -6,12 +6,18 @@ import { useSettingsStore } from "./settings";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+interface CircleInfo {
+  publisher_id: string;
+  name: string;
+}
+
 interface PosLoginResponse {
   session_id: string;
   employee_number: string;
   display_name: string;
   event_id?: string;
   publisher_id?: string;
+  circles?: CircleInfo[];
   expires_at: number;
   offline_verification_hash: string;
 }
@@ -128,6 +134,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         staffName: data.display_name,
         eventId: data.event_id,
         publisherId: data.publisher_id,
+        circles: data.circles,
         expiresAt: data.expires_at,
         offlineVerificationHash: data.offline_verification_hash,
         loginAt: new Date(),

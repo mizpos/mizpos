@@ -216,9 +216,12 @@ function SelectEventPage() {
       // ローカルストアを更新
       await setEventId(selectedEventId);
 
-      // イベント名を設定に同期（レシート印刷用）
+      // イベント情報を設定に同期（レシート印刷用）
       if (selectedEvent) {
-        await updateSettings({ eventName: selectedEvent.name });
+        await updateSettings({
+          eventName: selectedEvent.name,
+          venueAddress: selectedEvent.location || "",
+        });
       }
 
       // POS画面へ遷移

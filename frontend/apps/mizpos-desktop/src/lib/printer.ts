@@ -209,10 +209,18 @@ export interface ReceiptData {
 export interface ReceiptItem {
   /** 出版サークル名 */
   circle_name: string;
+  /** 商品名 */
+  name: string;
   /** JAN */
   jan: string;
   /** ISBN */
   isbn: string;
+  /** ISDN（書籍の場合） */
+  isdn?: string;
+  /** 2段目バーコード（Cコード＋値段、書籍の場合） */
+  jan2?: string;
+  /** 書籍フラグ */
+  is_book: boolean;
   /** 商品数 */
   quantity: number;
   /** 値段（単価 x 数量） */
@@ -235,6 +243,12 @@ export interface PaymentInfo {
 export interface FullReceiptData {
   /** イベント名称 */
   event_name: string;
+  /** サークル名（トップに大きく表示） */
+  circle_name?: string;
+  /** 会場住所 */
+  venue_address?: string;
+  /** 発売日時 */
+  sale_start_date_time?: string;
   /** スタッフ番号 */
   staff_id: string;
   /** 宛名（様の前に表示） */
@@ -397,27 +411,42 @@ export class UnifiedPrinter {
   /**
    * 領収書形式のフルレシートを印刷
    * - イベント名称、スタッフID
-   * - 「領収書」ヘッダー（黒背景・中央揃え・2倍サイズ）
-   * - 宛名（黒背景・右寄せ・下線）
-   * - 商品明細（サークル名、JAN、ISBN、数量、価格）
-   * - 合計（全角数字）
-   * - 支払情報・消費税
-   * - レシート番号とQRコード
+   * - 「ご明細書」ヘッダー（黒背景・中央揃え・2倍サイズ）
+   * - 商品明細（ショップ名、商品名、商品番号、単価 x 点数）
+   * - 小計（太字）
+   * - クーポン処理
+   * - 支払い方法・釣り銭
    */
   async printFullReceipt(data: FullReceiptData): Promise<PrinterResult> {
     if (this.config.platform === "android") {
-      // Android: 既存のJavaScript Interfaceを使用
-      return bluetoothPrintReceipt({
-        header: `${data.event_name}\n責ID:${data.staff_id}`,
+      // Android: 新フォーマットでJavaScript Interfaceを使用
+      // 単価を計算（price / quantity）
+      const androidData = {
+        event_name: data.event_name,
+        circle_name: data.circle_name || "",
+        venue_address: data.venue_address || "",
+        sale_start_date_time: data.sale_start_date_time || "",
+        staff_id: data.staff_id,
         items: data.items.map((item) => ({
-          name: `${item.circle_name} ${item.jan}\n  ${item.isbn}`,
-          price: String(item.price),
+          shop_name: item.circle_name,
+          product_name: item.name,
+          product_number: item.jan,
+          isdn: item.isdn || "",
+          jan2: item.jan2 || "",
+          is_book: item.is_book,
+          unit_price: Math.floor(item.price / item.quantity),
           quantity: item.quantity,
         })),
-        total: String(data.total),
-        footer: `消費税(${data.tax_rate}%): ¥${data.tax_amount}\nレシート番号: ${data.receipt_number}`,
+        subtotal: data.total,
+        coupon_discount: 0, // TODO: クーポン割引がある場合は追加
+        payment_method: data.payments[0]?.method || "",
+        payment_amount: data.payments[0]?.amount || 0,
+        change:
+          data.payments.length > 0 ? data.payments[0].amount - data.total : 0,
+        receipt_number: data.receipt_number,
         paperWidth: this.config.paperWidth,
-      });
+      };
+      return bluetoothPrintReceipt(androidData as unknown as ReceiptData);
     }
 
     // Desktop USB: Rust側の新しいprint_receiptコマンドを使用

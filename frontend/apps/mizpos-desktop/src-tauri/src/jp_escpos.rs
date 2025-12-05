@@ -361,6 +361,21 @@ impl<D: Driver> JpPrinter<D> {
         self.row(left, right, self.paper_width.chars())
     }
 
+    /// Print two columns with bold right side
+    pub fn row_auto_bold(&mut self, left: &str, right: &str) -> Result<(), String> {
+        let total_chars = self.paper_width.chars();
+        let left_len = left.chars().count();
+        let right_len = right.chars().count();
+        let space_len = total_chars.saturating_sub(left_len + right_len);
+        let spaces = " ".repeat(space_len);
+
+        // Print left part normally
+        self.text(left)?;
+        self.text(&spaces)?;
+        // Print right part in bold
+        self.jp_textln(right, TextStyle::default().bold())
+    }
+
     /// Print QR code
     /// size: 1-16 (default: 4)
     pub fn qr_code(&mut self, data: &str, size: Option<u8>) -> Result<(), String> {
