@@ -246,6 +246,18 @@ class CitizenPrinter(private val context: Context) {
     }
 
     /**
+     * Print double size text (centered)
+     */
+    fun printDoubleCentered(text: String): Boolean {
+        write(ESC_CENTER)
+        write(ESC_DOUBLE_ON)
+        val result = printLine(text)
+        write(ESC_DOUBLE_OFF)
+        write(ESC_LEFT)
+        return result
+    }
+
+    /**
      * Print double size text (centered, reverse/black background)
      */
     fun printDoubleReverse(text: String): Boolean {
@@ -326,32 +338,43 @@ class CitizenPrinter(private val context: Context) {
 
     /**
      * Print QR code (centered)
-     * Uses ESC/POS QR code commands
+     * Uses ESC/POS QR code commands for Citizen CMP-30II
      */
     fun printQrCode(data: String, moduleSize: Int = 6): Boolean {
-        // GS ( k - QR Code commands
-        val dataBytes = data.toByteArray(charset("Shift_JIS"))
-        val dataLen = dataBytes.size + 3
+        // Center alignment before QR code
+        write(ESC_CENTER)
 
-        // 1. Select model (Model 2)
+        // GS ( k - QR Code commands
+        // Use ASCII encoding for QR data
+        val dataBytes = data.toByteArray(Charsets.US_ASCII)
+
+        // 1. Select model: GS ( k pL pH cn fn n1 n2
+        // cn=49 (QR Code), fn=65 (model), n1=50 (Model 2), n2=0
         write(byteArrayOf(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00))
 
-        // 2. Set module size (1-16)
+        // 2. Set module size: GS ( k pL pH cn fn n
+        // cn=49 (QR Code), fn=67 (size), n=moduleSize (1-16)
         val size = moduleSize.coerceIn(1, 16).toByte()
         write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size))
 
-        // 3. Set error correction level (L=48, M=49, Q=50, H=51)
-        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31)) // M level
+        // 3. Set error correction level: GS ( k pL pH cn fn n
+        // cn=49 (QR Code), fn=69 (error correction), n=48(L)/49(M)/50(Q)/51(H)
+        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30)) // L level for simplicity
 
-        // 4. Store data in symbol storage area
-        val pL = (dataLen and 0xFF).toByte()
-        val pH = ((dataLen shr 8) and 0xFF).toByte()
+        // 4. Store data: GS ( k pL pH cn fn m d1...dk
+        // cn=49 (QR Code), fn=80 (store), m=48
+        // pL pH = (data length + 3) as little-endian
+        val storeLen = dataBytes.size + 3
+        val pL = (storeLen and 0xFF).toByte()
+        val pH = ((storeLen shr 8) and 0xFF).toByte()
         write(byteArrayOf(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30))
         write(dataBytes)
 
-        // 5. Print the symbol
-        write(ESC_CENTER)
+        // 5. Print the symbol: GS ( k pL pH cn fn m
+        // cn=49 (QR Code), fn=81 (print), m=48
         write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30))
+
+        // Reset to left alignment
         write(ESC_LEFT)
 
         return true

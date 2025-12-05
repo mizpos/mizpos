@@ -229,7 +229,7 @@ class MainActivity : TauriActivity() {
                 // イベント名
                 val eventName = data.optString("event_name", "")
                 if (eventName.isNotEmpty()) {
-                    printer.printCentered(eventName)
+                    printer.printDoubleCentered(eventName)
                 }
 
                 // 責ID
@@ -260,9 +260,9 @@ class MainActivity : TauriActivity() {
                         // 商品番号: 書籍の場合は「ISDN Cコード 値段」、それ以外はJAN
                         val displayNumber = if (isBook && isdn.isNotEmpty() && jan2.isNotEmpty()) {
                             // jan2からCコードと値段を抽出（例: 1920094001600 → C0094 ¥1,600）
-                            val cCode = if (jan2.length >= 5) "C${jan2.substring(1, 5)}" else ""
+                            val cCode = if (jan2.length >= 7) "C${jan2.substring(3, 7)}" else ""
                             val priceStr = if (jan2.length >= 9) {
-                                val priceValue = jan2.substring(5).trimStart('0').toIntOrNull() ?: 0
+                                val priceValue = jan2.substring(8,12).trimStart('0').toIntOrNull() ?: 0
                                 formatPrice(priceValue)
                             } else ""
                             "$isdn $cCode $priceStr"
@@ -271,7 +271,7 @@ class MainActivity : TauriActivity() {
                         }
 
                         printer.printLine(displayNumber)
-                        printer.printLine("$shopName / $productName")
+                        printer.printDoubleCentered("$shopName / $productName")
                         // @{単価} x {点数} （右寄せ）
                         printer.printRight("${formatPrice(unitPrice)} @ $qty")
                     }
@@ -309,7 +309,7 @@ class MainActivity : TauriActivity() {
                     printer.printRow("レシート番号", receiptNumber, paperWidth)
                     printer.printLine("")
                     // QRコード（レシート番号）
-                    printer.printQrCode(receiptNumber, receiptNumber.length, 6)
+                    printer.printQrCode(receiptNumber, 6)
                 }
 
                 printer.feed(3)
