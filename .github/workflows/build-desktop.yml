@@ -1,4 +1,4 @@
-name: Build Desktop App (Production Only)
+name: Build Desktop App
 
 on:
   push:
@@ -124,7 +124,7 @@ jobs:
         with:
           projectPath: frontend/apps/mizpos-desktop
           includeDebug: ${{ needs.setup-env.outputs.environment == 'dev' && true || false }}
-          args: ${{ needs.setup-env.outputs.environment == 'dev' && '--config tauri.dev.conf.json' || '' }}
+          args: ${{ needs.setup-env.outputs.environment == 'dev' && '--config src-tauri/tauri.dev.conf.json' || '' }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
