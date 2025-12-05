@@ -158,11 +158,9 @@ jobs:
             cd $BUNDLE_DIR/msi
             for file in *.msi; do
               # Upload with timestamp for history (tagged for auto-deletion after 30 days)
-              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.msi" \
-                --tagging "keep=false"
+              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.msi"
               # Upload as latest (tagged to keep)
-              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.msi" \
-                --tagging "keep=true"
+              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.msi"
             done
           else
             cd $BUNDLE_DIR
@@ -171,11 +169,9 @@ jobs:
               cd appimage
               for file in *.AppImage; do
                 # Upload with timestamp for history (tagged for auto-deletion after 30 days)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.AppImage" \
-                  --tagging "keep=false"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.AppImage"
                 # Upload as latest (tagged to keep)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.AppImage" \
-                  --tagging "keep=true"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.AppImage"
               done
               cd ..
             fi
@@ -184,11 +180,9 @@ jobs:
               cd deb
               for file in *.deb; do
                 # Upload with timestamp for history (tagged for auto-deletion after 30 days)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.deb" \
-                  --tagging "keep=false"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.deb"
                 # Upload as latest (tagged to keep)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.deb" \
-                  --tagging "keep=true"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.deb"
               done
             fi
           fi
