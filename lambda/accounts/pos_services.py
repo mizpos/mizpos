@@ -880,14 +880,29 @@ def record_pos_sale(
             else:
                 raise
 
-        sale_items.append(
-            {
-                "product_id": product_id,
-                "quantity": quantity,
-                "unit_price": Decimal(str(unit_price)),
-                "subtotal": Decimal(str(unit_price * quantity)),
-            }
-        )
+        # 商品情報を含めて保存（返品処理・履歴表示用）
+        sale_item_data = {
+            "product_id": product_id,
+            "quantity": quantity,
+            "unit_price": Decimal(str(unit_price)),
+            "subtotal": Decimal(str(unit_price * quantity)),
+        }
+
+        # オプション項目を追加（nullでない場合のみ）
+        if item.get("product_name"):
+            sale_item_data["product_name"] = item["product_name"]
+        if item.get("circle_name"):
+            sale_item_data["circle_name"] = item["circle_name"]
+        if item.get("jan"):
+            sale_item_data["jan"] = item["jan"]
+        if item.get("jan2"):
+            sale_item_data["jan2"] = item["jan2"]
+        if item.get("isbn"):
+            sale_item_data["isbn"] = item["isbn"]
+        if item.get("isdn"):
+            sale_item_data["isdn"] = item["isdn"]
+
+        sale_items.append(sale_item_data)
 
     # 販売レコードを作成
     sale_item = {
