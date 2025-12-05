@@ -10,9 +10,9 @@ import {
   getUsbDevices,
   isAndroid,
   type Platform,
-  type UsbDevice,
   UnifiedPrinter,
   type UnifiedPrinterConfig,
+  type UsbDevice,
 } from "../lib/printer";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
@@ -259,7 +259,10 @@ function SettingsPage() {
 
   const handleTestPrint = useCallback(async () => {
     if (!selectedPrinter) {
-      setTestPrintResult({ success: false, error: "プリンターが選択されていません" });
+      setTestPrintResult({
+        success: false,
+        error: "プリンターが選択されていません",
+      });
       return;
     }
 
@@ -619,7 +622,9 @@ function SettingsPage() {
                       padding: "12px",
                       borderRadius: "8px",
                       fontSize: "14px",
-                      background: testPrintResult.success ? "#14532d" : "#7f1d1d",
+                      background: testPrintResult.success
+                        ? "#14532d"
+                        : "#7f1d1d",
                       color: testPrintResult.success ? "#86efac" : "#fca5a5",
                     })}
                   >
