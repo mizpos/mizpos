@@ -215,6 +215,12 @@ export interface ReceiptItem {
   jan: string;
   /** ISBN */
   isbn: string;
+  /** ISDN（書籍の場合） */
+  isdn?: string;
+  /** 2段目バーコード（Cコード＋値段、書籍の場合） */
+  jan2?: string;
+  /** 書籍フラグ */
+  is_book: boolean;
   /** 商品数 */
   quantity: number;
   /** 値段（単価 x 数量） */
@@ -416,6 +422,9 @@ export class UnifiedPrinter {
           shop_name: item.circle_name,
           product_name: item.name,
           product_number: item.jan,
+          isdn: item.isdn || "",
+          jan2: item.jan2 || "",
+          is_book: item.is_book,
           unit_price: Math.floor(item.price / item.quantity),
           quantity: item.quantity,
         })),

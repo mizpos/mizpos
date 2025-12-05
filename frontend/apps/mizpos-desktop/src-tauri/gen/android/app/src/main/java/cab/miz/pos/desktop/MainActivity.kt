@@ -251,12 +251,27 @@ class MainActivity : TauriActivity() {
                         val shopName = item.optString("shop_name", "")
                         val productName = item.optString("product_name", "")
                         val productNumber = item.optString("product_number", "")
+                        val isdn = item.optString("isdn", "")
+                        val jan2 = item.optString("jan2", "")
+                        val isBook = item.optBoolean("is_book", false)
                         val unitPrice = item.optInt("unit_price", 0)
                         val qty = item.optInt("quantity", 1)
 
-                        // {ショップ}{商品名}
-                        printer.printLine("$shopName $productNumber")
-                        printer.printLine(productName)
+                        // 商品番号: 書籍の場合は「ISDN Cコード 値段」、それ以外はJAN
+                        val displayNumber = if (isBook && isdn.isNotEmpty() && jan2.isNotEmpty()) {
+                            // jan2からCコードと値段を抽出（例: 1920094001600 → C0094 ¥1,600）
+                            val cCode = if (jan2.length >= 5) "C${jan2.substring(1, 5)}" else ""
+                            val priceStr = if (jan2.length >= 9) {
+                                val priceValue = jan2.substring(5).trimStart('0').toIntOrNull() ?: 0
+                                formatPrice(priceValue)
+                            } else ""
+                            "$isdn $cCode $priceStr"
+                        } else {
+                            productNumber
+                        }
+
+                        printer.printLine(displayNumber)
+                        printer.printLine("$shopName / $productName")
                         // @{単価} x {点数} （右寄せ）
                         printer.printRight("${formatPrice(unitPrice)} @ $qty")
                     }
@@ -293,6 +308,8 @@ class MainActivity : TauriActivity() {
                     printer.printLine("レシート番号: $receiptNumber")
                 }
 
+                // QRコード
+                printer.printQRCode(receiptNumber, Some(6))
                 printer.feed(3)
                 printer.cut()
 
