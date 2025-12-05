@@ -197,6 +197,7 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
         staff_id: transaction.staffId,
         items: transaction.items.map((item) => ({
           circle_name: item.product.circleName || "",
+          name: item.product.name,
           jan: item.product.jan,
           isbn: item.product.isbn || "",
           quantity: item.quantity,

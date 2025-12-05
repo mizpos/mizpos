@@ -209,6 +209,8 @@ export interface ReceiptData {
 export interface ReceiptItem {
   /** 出版サークル名 */
   circle_name: string;
+  /** 商品名 */
+  name: string;
   /** JAN */
   jan: string;
   /** ISBN */
@@ -412,8 +414,8 @@ export class UnifiedPrinter {
         staff_id: data.staff_id,
         items: data.items.map((item) => ({
           shop_name: item.circle_name,
-          product_name: item.jan,
-          product_number: item.isbn,
+          product_name: item.name,
+          product_number: item.jan,
           unit_price: Math.floor(item.price / item.quantity),
           quantity: item.quantity,
         })),

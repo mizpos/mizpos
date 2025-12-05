@@ -231,7 +231,7 @@ class MainActivity : TauriActivity() {
                 }
 
                 // ご明細書（大きめの文字・中央揃え・黒背景）
-                printer.printDoubleReverse("ご明細書")
+                printer.printDoubleReverse("　　ご明細書　　")
 
                 printer.printSeparator(paperWidth)
 
@@ -252,14 +252,14 @@ class MainActivity : TauriActivity() {
                         if (productNumber.isNotEmpty()) {
                             printer.printLine(productNumber)
                         }
-                        // @{単価} x {点数}
-                        printer.printLine("　　@\\$unitPrice x $qty")
+                        // @{単価} x {点数} （右寄せ）
+                        printer.printRight("@\\$unitPrice x $qty")
                     }
                 }
 
                 printer.printSeparator(paperWidth)
 
-                // 小計（太字）
+                // 小計（太字・右寄せ）
                 val subtotal = data.optInt("subtotal", 0)
                 printer.printRightBold("小計: \\$subtotal")
 
