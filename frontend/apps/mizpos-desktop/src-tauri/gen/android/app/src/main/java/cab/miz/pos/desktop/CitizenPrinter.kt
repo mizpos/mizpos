@@ -339,44 +339,48 @@ class CitizenPrinter(private val context: Context) {
     /**
      * Print QR code (centered)
      * Uses ESC/POS QR code commands for Citizen CMP-30II
-     * Reference: Citizen ESC/POS Command Reference
+     * Based on Citizen SDK ESCPOSPrinter.printQRCode implementation
      */
     fun printQrCode(data: String, moduleSize: Int = 6): Boolean {
         // Center alignment before QR code
         write(ESC_CENTER)
 
-        val dataBytes = data.toByteArray(Charsets.US_ASCII)
+        // Get data bytes using Shift_JIS encoding for Japanese compatibility
+        val dataBytes = try {
+            data.toByteArray(charset("Shift_JIS"))
+        } catch (e: Exception) {
+            data.toByteArray(Charsets.US_ASCII)
+        }
         val dataLen = dataBytes.size
 
-        // Function 165: Select QR Code model
-        // GS ( k pL pH cn fn n1 n2
-        // pL pH = 4, cn = 49, fn = 65, n1 = 50 (Model 2), n2 = 0
-        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00))
-
-        // Function 167: Set module size
+        // CellWidthCommand: Set module size
         // GS ( k pL pH cn fn n
-        // pL pH = 3, cn = 49, fn = 67, n = size (1-16)
+        // pL pH = 3, cn = 49 (0x31), fn = 67 (0x43), n = size (1-16)
         val size = moduleSize.coerceIn(1, 16).toByte()
-        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size))
+        val cellWidthCommand = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size)
+        write(cellWidthCommand)
 
-        // Function 169: Set error correction level
+        // ECCCommand: Set error correction level
         // GS ( k pL pH cn fn n
-        // pL pH = 3, cn = 49, fn = 69, n = 48(L)/49(M)/50(Q)/51(H)
-        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31)) // M level
+        // pL pH = 3, cn = 49 (0x31), fn = 69 (0x45), n = 48(L)/49(M)/50(Q)/51(H)
+        val eccCommand = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30) // L level (0x30)
+        write(eccCommand)
 
-        // Function 180: Store QR Code data
+        // DataHeadCommand: Store QR Code data
         // GS ( k pL pH cn fn m d1...dk
-        // (pL + pH*256) = dataLen + 3, cn = 49, fn = 80, m = 48
+        // (pL + pH*256) = dataLen + 3, cn = 49 (0x31), fn = 80 (0x50), m = 48 (0x30)
         val storeLen = dataLen + 3
-        val pL = (storeLen and 0xFF).toByte()
-        val pH = ((storeLen shr 8) and 0xFF).toByte()
-        write(byteArrayOf(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30))
+        val nL = (storeLen % 256).toByte()
+        val nH = (storeLen / 256).toByte()
+        val dataHeadCommand = byteArrayOf(0x1D, 0x28, 0x6B, nL, nH, 0x31, 0x50, 0x30)
+        write(dataHeadCommand)
         write(dataBytes)
 
-        // Function 181: Print QR Code
+        // PrintCommand: Print QR Code
         // GS ( k pL pH cn fn m
-        // pL pH = 3, cn = 49, fn = 81, m = 48
-        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30))
+        // pL pH = 3, cn = 49 (0x31), fn = 81 (0x51), m = 48 (0x30)
+        val printCommand = byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30)
+        write(printCommand)
 
         // Line feed after QR code
         printLine("")
