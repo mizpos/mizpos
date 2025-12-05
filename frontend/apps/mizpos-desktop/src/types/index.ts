@@ -85,8 +85,6 @@ export interface AppSettings {
   eventName: string;
   /** 会場住所 */
   venueAddress?: string;
-  /** 発売日時（ISO 8601形式） */
-  saleStartDateTime?: string;
   terminalId: string;
   taxRate: number;
   printer?: PrinterConfig;

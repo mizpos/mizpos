@@ -14,7 +14,6 @@ interface SettingsState {
 const defaultSettings: AppSettings = {
   eventName: "イベント名",
   venueAddress: "",
-  saleStartDateTime: "",
   terminalId: "001",
   taxRate: 10,
   printer: undefined,

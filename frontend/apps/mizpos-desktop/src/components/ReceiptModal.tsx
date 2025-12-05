@@ -190,12 +190,16 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
         throw new Error(connectResult.error || "プリンター接続に失敗しました");
       }
 
+      // 取引日時をフォーマット（例: 2025年12月31日 10:30）
+      const now = new Date();
+      const saleDateTime = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
       const receiptData: FullReceiptData = {
         event_name: isTraining
           ? `【トレーニング】${settings.eventName}`
           : settings.eventName,
         venue_address: settings.venueAddress || "",
-        sale_start_date_time: settings.saleStartDateTime || "",
+        sale_start_date_time: saleDateTime,
         staff_id: transaction.staffId,
         items: transaction.items.map((item) => ({
           circle_name: item.product.circleName || "",

@@ -221,7 +221,6 @@ function SelectEventPage() {
         await updateSettings({
           eventName: selectedEvent.name,
           venueAddress: selectedEvent.location || "",
-          saleStartDateTime: selectedEvent.start_date || "",
         });
       }
 
