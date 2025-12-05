@@ -30,6 +30,10 @@ POS_SESSIONS_TABLE = os.environ.get(
 OFFLINE_SALES_QUEUE_TABLE = os.environ.get(
     "OFFLINE_SALES_QUEUE_TABLE", f"{ENVIRONMENT}-mizpos-offline-sales-queue"
 )
+PUBLISHERS_TABLE = os.environ.get(
+    "PUBLISHERS_TABLE", f"{ENVIRONMENT}-mizpos-publishers"
+)
+ROLES_TABLE = os.environ.get("ROLES_TABLE", f"{ENVIRONMENT}-mizpos-roles")
 
 # セッション有効期間（秒）: 12時間
 SESSION_EXPIRY_SECONDS = 12 * 60 * 60
@@ -42,6 +46,8 @@ dynamodb = boto3.resource("dynamodb")
 pos_employees_table = dynamodb.Table(POS_EMPLOYEES_TABLE)
 pos_sessions_table = dynamodb.Table(POS_SESSIONS_TABLE)
 offline_sales_queue_table = dynamodb.Table(OFFLINE_SALES_QUEUE_TABLE)
+publishers_table = dynamodb.Table(PUBLISHERS_TABLE)
+roles_table = dynamodb.Table(ROLES_TABLE)
 
 
 def dynamo_to_dict(item: dict) -> dict:
@@ -107,6 +113,51 @@ def generate_offline_verification_hash(
     message = f"{session_id}:{employee_number}:{expires_at}".encode("utf-8")
     key = PIN_SECRET_KEY.encode("utf-8")
     return hmac.new(key, message, hashlib.sha256).hexdigest()
+
+
+def get_user_circles(user_id: str) -> list[dict]:
+    """ユーザーに紐づくサークル（Publisher）情報のリストを取得
+
+    Args:
+        user_id: mizposアカウントのユーザーID
+
+    Returns:
+        サークル情報のリスト [{"publisher_id": "xxx", "name": "サークル名"}, ...]
+    """
+    if not user_id:
+        return []
+
+    # ユーザーのロールからpublisher_idを取得
+    response = roles_table.query(
+        KeyConditionExpression="user_id = :user_id",
+        FilterExpression="role_type IN (:admin, :sales)",
+        ExpressionAttributeValues={
+            ":user_id": user_id,
+            ":admin": "publisher_admin",
+            ":sales": "publisher_sales",
+        },
+    )
+
+    publisher_ids = set()
+    for role in response.get("Items", []):
+        if "publisher_id" in role and role["publisher_id"]:
+            publisher_ids.add(role["publisher_id"])
+
+    # 各publisher_idからサークル情報を取得
+    circles = []
+    for publisher_id in publisher_ids:
+        try:
+            pub_response = publishers_table.get_item(Key={"publisher_id": publisher_id})
+            if "Item" in pub_response:
+                item = dynamo_to_dict(pub_response["Item"])
+                circles.append({
+                    "publisher_id": item["publisher_id"],
+                    "name": item.get("name", ""),
+                })
+        except ClientError:
+            continue
+
+    return circles
 
 
 # ==========================================
@@ -409,12 +460,19 @@ def authenticate_pos_employee(
         session_id, employee_number, expires_at
     )
 
+    # ユーザーに紐づくサークルリストを取得
+    circles = []
+    user_id = employee.get("user_id")
+    if user_id:
+        circles = get_user_circles(user_id)
+
     return {
         "session_id": session_id,
         "employee_number": employee_number,
         "display_name": employee["display_name"],
         "event_id": employee.get("event_id"),
         "publisher_id": employee.get("publisher_id"),
+        "circles": circles,
         "expires_at": expires_at,
         "offline_verification_hash": offline_hash,
     }

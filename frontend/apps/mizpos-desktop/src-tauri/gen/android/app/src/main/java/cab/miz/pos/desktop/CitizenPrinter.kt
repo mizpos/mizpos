@@ -184,6 +184,16 @@ class CitizenPrinter(private val context: Context) {
     }
 
     /**
+     * Print bold text with newline
+     */
+    fun printBoldLine(text: String): Boolean {
+        write(ESC_BOLD_ON)
+        val result = printLine(text)
+        write(ESC_BOLD_OFF)
+        return result
+    }
+
+    /**
      * Print Japanese text (enables Kanji mode)
      */
     fun printJapanese(text: String): Boolean {
@@ -209,16 +219,6 @@ class CitizenPrinter(private val context: Context) {
     fun printBold(text: String): Boolean {
         write(ESC_BOLD_ON)
         val result = printText(text)
-        write(ESC_BOLD_OFF)
-        return result
-    }
-
-    /**
-     * Print bold text with newline
-     */
-    fun printBoldLine(text: String): Boolean {
-        write(ESC_BOLD_ON)
-        val result = printLine(text)
         write(ESC_BOLD_OFF)
         return result
     }
@@ -301,6 +301,16 @@ class CitizenPrinter(private val context: Context) {
             printLine(left)
             printLine("  $right")
         }
+    }
+
+    /**
+     * PrintRowBold
+     */
+    fun printRowBold(left: String, right: String, paperWidth: Int = PAPER_58MM): Boolean {
+        write(ESC_BOLD_ON)
+        val result = printRow(left, right, paperWidth)
+        write(ESC_BOLD_OFF)
+        return result
     }
 
     /**

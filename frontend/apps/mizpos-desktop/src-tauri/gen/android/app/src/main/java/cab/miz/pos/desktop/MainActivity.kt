@@ -227,30 +227,30 @@ class MainActivity : TauriActivity() {
                 printer.init(paperWidth)
 
                 // イベント名
-                val eventName = data.optString("event_name", "")
-                if (eventName.isNotEmpty()) {
-                    printer.printDoubleCentered(eventName)
+                val circleName = data.optString("circle_name", "")
+                if (circleName.isNotEmpty()) {
+                    printer.printDoubleCentered(circleName)
                 }
 
                 // 会場住所（イベント名の下）
                 val venueAddress = data.optString("venue_address", "")
-                if (venueAddress.isNotEmpty()) {
-                    printer.printCentered(venueAddress)
-                }
-
-                // 発売日時
-                val saleStartDateTime = data.optString("sale_start_date_time", "")
-                if (saleStartDateTime.isNotEmpty()) {
-                    printer.printCentered("発売日時: $saleStartDateTime")
+                val eventName = data.optString("event_name", "")
+                if (venueAddress.isNotEmpty() && eventName.isNotEmpty()) {
+                    printer.printBoldLine(eventName);
+                    printer.printLine(venueAddress);
                 }
 
                 // ご明細書（大きめの文字・中央揃え・黒背景）
                 printer.printDoubleReverse("　　ご明細書　　")
 
+                val receiptNumber = data.optString("receipt_number", "")
+                printer.printLine("# $receiptNumber");
+
                 // 責ID
+                val saleStartDateTime = data.optString("sale_start_date_time", "")
                 val staffId = data.optString("staff_id", "")
                 if (staffId.isNotEmpty()) {
-                    printer.printLine("責ID: $staffId")
+                    printer.printLine("$saleStartDateTime 責: $staffId")
                 }
 
                 printer.printSeparator(paperWidth)
@@ -282,10 +282,10 @@ class MainActivity : TauriActivity() {
                             productNumber
                         }
 
-                        printer.printLine(displayNumber)
+                        printer.printBoldLine(displayNumber)
                         printer.printLine("$shopName / $productName")
                         // @{単価} x {点数} （右寄せ）
-                        printer.printRight("${formatPrice(unitPrice)} @ $qty")
+                        printer.printRightBold("@ ${formatPrice(unitPrice)}　 $qty 点　${formatPrice(unitPrice * qty)}")
                     }
                 }
 
@@ -293,32 +293,30 @@ class MainActivity : TauriActivity() {
 
                 // 小計（太字・右寄せ）
                 val subtotal = data.optInt("subtotal", 0)
-                printer.printRightBold("小計: ${formatPrice(subtotal)}")
+                printer.printRowBold("合　計", formatPrice(subtotal), paperWidth)
 
                 // クーポン処理
                 val couponDiscount = data.optInt("coupon_discount", 0)
                 if (couponDiscount > 0) {
-                    printer.printRight("クーポン割引: -${formatPrice(couponDiscount)}")
+                    printer.printRow("　 クーポン割引", "-${formatPrice(couponDiscount)}", paperWidth)
                 }
 
                 // 支払い方法
                 val paymentMethod = data.optString("payment_method", "")
                 val paymentAmount = data.optInt("payment_amount", 0)
                 if (paymentMethod.isNotEmpty()) {
-                    printer.printRight("$paymentMethod: ${formatPrice(paymentAmount)}")
+                    printer.printRow("　 $paymentMethod", formatPrice(paymentAmount), paperWidth)
                 }
 
                 // 釣り銭
                 val change = data.optInt("change", 0)
                 if (change > 0) {
-                    printer.printRight("　　　釣り銭: ${formatPrice(change)}")
+                    printer.printRow("　 釣り銭", formatPrice(change), paperWidth)
                 }
 
-                // レシート番号
-                val receiptNumber = data.optString("receipt_number", "")
                 if (receiptNumber.isNotEmpty()) {
                     printer.printSeparator(paperWidth)
-                    printer.printRow("レシート番号", receiptNumber, paperWidth)
+                    printer.printLine("当店は免税事業者であり、適格請求書を発行することはできません。返品・返金は落丁・乱丁の場合のみ受け付けます。返品・返金の場合は本明細書を添付しサポートセンター support-pos@miz.cabにご連絡ください。");
                     printer.printLine("")
                     // QRコード（レシート番号）
                     printer.printQrCode(receiptNumber, 6)

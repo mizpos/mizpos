@@ -154,6 +154,7 @@ function SettingsPage() {
   const navigate = useNavigate();
 
   const [eventName, setEventName] = useState(settings.eventName);
+  const [circleName, setCircleName] = useState(settings.circleName || "");
   const [venueAddress, setVenueAddress] = useState(settings.venueAddress || "");
   const [terminalId, setTerminalId] = useState(settings.terminalId);
   const [taxRate, setTaxRate] = useState(String(settings.taxRate));
@@ -210,6 +211,7 @@ function SettingsPage() {
   const handleSave = useCallback(async () => {
     await updateSettings({
       eventName,
+      circleName,
       venueAddress,
       terminalId,
       taxRate: Number.parseInt(taxRate, 10) || 10,
@@ -218,6 +220,7 @@ function SettingsPage() {
     navigate({ to: "/pos" });
   }, [
     eventName,
+    circleName,
     venueAddress,
     terminalId,
     taxRate,
@@ -304,6 +307,71 @@ function SettingsPage() {
                   onChange={(e) => setEventName(e.target.value)}
                   placeholder="例: コミックマーケット C104"
                 />
+              </div>
+
+              <div className={sectionStyles.field}>
+                <label
+                  className={css({
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#94a3b8",
+                    marginBottom: "8px",
+                  })}
+                >
+                  サークル名
+                </label>
+                {session?.circles && session.circles.length > 0 ? (
+                  <div className={css({ display: "flex", flexDirection: "column", gap: "8px" })}>
+                    <select
+                      value={
+                        session.circles.some((c) => c.name === circleName)
+                          ? circleName
+                          : "__custom__"
+                      }
+                      onChange={(e) => {
+                        if (e.target.value !== "__custom__") {
+                          setCircleName(e.target.value);
+                        }
+                      }}
+                      className={css({
+                        width: "100%",
+                        padding: "12px 14px",
+                        fontSize: "15px",
+                        color: "#f8fafc",
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        _focus: {
+                          outline: "none",
+                          borderColor: "#3b82f6",
+                        },
+                      })}
+                    >
+                      {session.circles.map((circle) => (
+                        <option key={circle.publisher_id} value={circle.name}>
+                          {circle.name}
+                        </option>
+                      ))}
+                      <option value="__custom__">その他（手入力）</option>
+                    </select>
+                    {(!session.circles.some((c) => c.name === circleName) ||
+                      circleName === "") && (
+                      <Input
+                        value={circleName}
+                        onChange={(e) => setCircleName(e.target.value)}
+                        placeholder="サークル名を入力"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <Input
+                    value={circleName}
+                    onChange={(e) => setCircleName(e.target.value)}
+                    placeholder="例: ミズPOS出版"
+                  />
+                )}
               </div>
 
               <div className={sectionStyles.field}>

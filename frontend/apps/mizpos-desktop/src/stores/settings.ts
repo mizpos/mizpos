@@ -13,6 +13,7 @@ interface SettingsState {
 
 const defaultSettings: AppSettings = {
   eventName: "イベント名",
+  circleName: "",
   venueAddress: "",
   terminalId: "001",
   taxRate: 10,

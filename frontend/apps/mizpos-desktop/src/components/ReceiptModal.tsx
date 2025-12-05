@@ -192,12 +192,18 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
 
       // 取引日時をフォーマット（例: 2025年12月31日 10:30）
       const now = new Date();
-      const saleDateTime = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      const saleDateTime = `${now.getFullYear()}/${
+        now.getMonth() + 1
+      }/${now.getDate()} ${now.getHours().toString().padStart(2, "0")}:${now
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`;
 
       const receiptData: FullReceiptData = {
         event_name: isTraining
           ? `【トレーニング】${settings.eventName}`
           : settings.eventName,
+        circle_name: settings.circleName || "",
         venue_address: settings.venueAddress || "",
         sale_start_date_time: saleDateTime,
         staff_id: transaction.staffId,
@@ -233,7 +239,7 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
     } catch (error) {
       console.error("Print failed:", error);
       setPrintError(
-        error instanceof Error ? error.message : "印刷に失敗しました",
+        error instanceof Error ? error.message : "印刷に失敗しました"
       );
     } finally {
       setIsPrinting(false);

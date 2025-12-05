@@ -1,4 +1,12 @@
 /**
+ * サークル情報
+ */
+export interface Circle {
+  publisher_id: string;
+  name: string;
+}
+
+/**
  * ユーザーセッション
  */
 export interface Session {
@@ -7,6 +15,7 @@ export interface Session {
   staffName: string;
   eventId?: string;
   publisherId?: string;
+  circles?: Circle[];
   expiresAt: number;
   offlineVerificationHash: string;
   loginAt: Date;
@@ -83,6 +92,8 @@ export interface PrinterConfig {
  */
 export interface AppSettings {
   eventName: string;
+  /** サークル名 */
+  circleName?: string;
   /** 会場住所 */
   venueAddress?: string;
   terminalId: string;

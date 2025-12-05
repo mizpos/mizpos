@@ -243,6 +243,8 @@ export interface PaymentInfo {
 export interface FullReceiptData {
   /** イベント名称 */
   event_name: string;
+  /** サークル名（トップに大きく表示） */
+  circle_name?: string;
   /** 会場住所 */
   venue_address?: string;
   /** 発売日時 */
@@ -421,6 +423,7 @@ export class UnifiedPrinter {
       // 単価を計算（price / quantity）
       const androidData = {
         event_name: data.event_name,
+        circle_name: data.circle_name || "",
         venue_address: data.venue_address || "",
         sale_start_date_time: data.sale_start_date_time || "",
         staff_id: data.staff_id,
