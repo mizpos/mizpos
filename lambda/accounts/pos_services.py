@@ -150,10 +150,12 @@ def get_user_circles(user_id: str) -> list[dict]:
             pub_response = publishers_table.get_item(Key={"publisher_id": publisher_id})
             if "Item" in pub_response:
                 item = dynamo_to_dict(pub_response["Item"])
-                circles.append({
-                    "publisher_id": item["publisher_id"],
-                    "name": item.get("name", ""),
-                })
+                circles.append(
+                    {
+                        "publisher_id": item["publisher_id"],
+                        "name": item.get("name", ""),
+                    }
+                )
         except ClientError:
             continue
 

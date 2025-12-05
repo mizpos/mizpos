@@ -21,10 +21,18 @@ mod desktop_printer {
     pub struct ReceiptItem {
         /// 出版サークル名
         pub circle_name: String,
+        /// 商品名
+        pub name: String,
         /// JAN
         pub jan: String,
         /// ISBN
         pub isbn: String,
+        /// ISDN（書籍の場合）
+        pub isdn: Option<String>,
+        /// 2段目バーコード（Cコード＋値段、書籍の場合）
+        pub jan2: Option<String>,
+        /// 書籍フラグ
+        pub is_book: bool,
         /// 商品数
         pub quantity: u32,
         /// 値段（単価 x 数量）
@@ -45,9 +53,15 @@ mod desktop_printer {
     pub struct ReceiptData {
         /// イベント名称
         pub event_name: String,
+        /// サークル名（トップに大きく表示）
+        pub circle_name: Option<String>,
+        /// 会場住所
+        pub venue_address: Option<String>,
+        /// 発売日時
+        pub sale_start_date_time: Option<String>,
         /// スタッフ番号
         pub staff_id: String,
-        /// 宛名（様の前に表示）
+        /// 宛名（様の前に表示、未使用）
         pub customer_name: Option<String>,
         /// 商品明細リスト
         pub items: Vec<ReceiptItem>,

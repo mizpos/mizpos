@@ -239,7 +239,7 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
     } catch (error) {
       console.error("Print failed:", error);
       setPrintError(
-        error instanceof Error ? error.message : "印刷に失敗しました"
+        error instanceof Error ? error.message : "印刷に失敗しました",
       );
     } finally {
       setIsPrinting(false);

@@ -85,7 +85,7 @@ export async function usbWelcomePrint(
   vendorId: number,
   deviceId: number,
   terminalId: string,
-  paperWidth?: number
+  paperWidth?: number,
 ): Promise<void> {
   return invoke("welcome_print", {
     vendorId,
@@ -99,7 +99,7 @@ export async function usbTextPrint(
   vendorId: number,
   deviceId: number,
   text: string,
-  paperWidth?: number
+  paperWidth?: number,
 ): Promise<void> {
   return invoke("text_print", {
     vendorId,
@@ -116,7 +116,7 @@ export async function usbPrintFullReceipt(
   vendorId: number,
   deviceId: number,
   receipt: FullReceiptData,
-  paperWidth?: number
+  paperWidth?: number,
 ): Promise<void> {
   return invoke("print_receipt", {
     vendorId,
@@ -164,14 +164,14 @@ export function isBluetoothConnected(): boolean {
   }
   const result = window.MizPosPrinter.isConnected();
   const parsed = parseAndroidResult<{ success: boolean; connected: boolean }>(
-    result
+    result,
   );
   return parsed.connected;
 }
 
 export function bluetoothWelcomePrint(
   terminalId: string,
-  paperWidth?: number
+  paperWidth?: number,
 ): PrinterResult {
   if (!window.MizPosPrinter) {
     return { success: false, error: "Bluetooth not available" };
@@ -342,7 +342,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         terminalId,
-        this.config.paperWidth
+        this.config.paperWidth,
       );
       return { success: true };
     } catch (e) {
@@ -365,7 +365,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         text,
-        this.config.paperWidth
+        this.config.paperWidth,
       );
       return { success: true };
     } catch (e) {
@@ -442,9 +442,7 @@ export class UnifiedPrinter {
         payment_method: data.payments[0]?.method || "",
         payment_amount: data.payments[0]?.amount || 0,
         change:
-          data.payments.length > 0
-            ? data.payments[0].amount - data.total
-            : 0,
+          data.payments.length > 0 ? data.payments[0].amount - data.total : 0,
         receipt_number: data.receipt_number,
         paperWidth: this.config.paperWidth,
       };
@@ -461,7 +459,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         data,
-        this.config.paperWidth
+        this.config.paperWidth,
       );
       return { success: true };
     } catch (e) {

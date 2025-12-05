@@ -310,7 +310,7 @@ function SettingsPage() {
               </div>
 
               <div className={sectionStyles.field}>
-                <label
+                <span
                   className={css({
                     display: "block",
                     fontSize: "14px",
@@ -320,9 +320,15 @@ function SettingsPage() {
                   })}
                 >
                   サークル名
-                </label>
+                </span>
                 {session?.circles && session.circles.length > 0 ? (
-                  <div className={css({ display: "flex", flexDirection: "column", gap: "8px" })}>
+                  <div
+                    className={css({
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    })}
+                  >
                     <select
                       value={
                         session.circles.some((c) => c.name === circleName)
