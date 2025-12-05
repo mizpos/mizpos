@@ -291,9 +291,16 @@ class MainActivity : TauriActivity() {
 
                 printer.printSeparator(paperWidth)
 
-                // 小計（太字・右寄せ）
+                // 合計（税込）（太字・右寄せ）
                 val subtotal = data.optInt("subtotal", 0)
-                printer.printRowBold("合　計", formatPrice(subtotal), paperWidth)
+                printer.printRowBold("合計(税込)", formatPrice(subtotal), paperWidth)
+
+                // 内税表示
+                val taxRate = data.optInt("tax_rate", 0)
+                val taxAmount = data.optInt("tax_amount", 0)
+                if (taxRate > 0 && taxAmount > 0) {
+                    printer.printRow("(内 ${taxRate}%税)", formatPrice(taxAmount), paperWidth)
+                }
 
                 // クーポン処理
                 val couponDiscount = data.optInt("coupon_discount", 0)

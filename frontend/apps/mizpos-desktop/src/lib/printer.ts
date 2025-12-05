@@ -438,6 +438,8 @@ export class UnifiedPrinter {
           quantity: item.quantity,
         })),
         subtotal: data.total,
+        tax_rate: data.tax_rate,
+        tax_amount: data.tax_amount,
         coupon_discount: 0, // TODO: クーポン割引がある場合は追加
         payment_method: data.payments[0]?.method || "",
         payment_amount: data.payments[0]?.amount || 0,
