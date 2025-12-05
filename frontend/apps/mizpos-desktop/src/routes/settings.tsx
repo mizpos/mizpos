@@ -11,6 +11,8 @@ import {
   isAndroid,
   type Platform,
   type UsbDevice,
+  UnifiedPrinter,
+  type UnifiedPrinterConfig,
 } from "../lib/printer";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
@@ -174,6 +176,11 @@ function SettingsPage() {
     count?: number;
     error?: string;
   } | null>(null);
+  const [isTestPrinting, setIsTestPrinting] = useState(false);
+  const [testPrintResult, setTestPrintResult] = useState<{
+    success: boolean;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -249,6 +256,50 @@ function SettingsPage() {
       setIsSyncing(false);
     }
   }, []);
+
+  const handleTestPrint = useCallback(async () => {
+    if (!selectedPrinter) {
+      setTestPrintResult({ success: false, error: "プリンターが選択されていません" });
+      return;
+    }
+
+    setIsTestPrinting(true);
+    setTestPrintResult(null);
+
+    try {
+      const currentPlatform = await getPlatform();
+      const printerConfig: UnifiedPrinterConfig = {
+        platform: currentPlatform,
+        vendorId: selectedPrinter.vendorId,
+        deviceId: selectedPrinter.deviceId,
+        bluetoothAddress: selectedPrinter.bluetoothAddress,
+        name: selectedPrinter.name,
+        paperWidth: selectedPrinter.paperWidth,
+      };
+
+      const printer = new UnifiedPrinter(printerConfig);
+
+      const connectResult = await printer.connect();
+      if (!connectResult.success) {
+        throw new Error(connectResult.error || "プリンター接続に失敗しました");
+      }
+
+      const printResult = await printer.welcomePrint(terminalId || "TEST");
+      if (!printResult.success) {
+        throw new Error(printResult.error || "印刷に失敗しました");
+      }
+
+      setTestPrintResult({ success: true });
+    } catch (error) {
+      console.error("Test print failed:", error);
+      setTestPrintResult({
+        success: false,
+        error: error instanceof Error ? error.message : "印刷に失敗しました",
+      });
+    } finally {
+      setIsTestPrinting(false);
+    }
+  }, [selectedPrinter, terminalId]);
 
   const selectUsbPrinter = useCallback((device: UsbDevice) => {
     setSelectedPrinter({
@@ -549,6 +600,36 @@ function SettingsPage() {
                 ))
               )}
             </div>
+
+            {/* テスト印刷 */}
+            {selectedPrinter && (
+              <div className={css({ marginTop: "20px" })}>
+                <Button
+                  variant="outline"
+                  onClick={handleTestPrint}
+                  disabled={isTestPrinting}
+                  fullWidth
+                >
+                  {isTestPrinting ? "印刷中..." : "テスト印刷"}
+                </Button>
+                {testPrintResult && (
+                  <div
+                    className={css({
+                      marginTop: "12px",
+                      padding: "12px",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      background: testPrintResult.success ? "#14532d" : "#7f1d1d",
+                      color: testPrintResult.success ? "#86efac" : "#fca5a5",
+                    })}
+                  >
+                    {testPrintResult.success
+                      ? "テスト印刷が完了しました"
+                      : `エラー: ${testPrintResult.error}`}
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* 保存ボタン */}

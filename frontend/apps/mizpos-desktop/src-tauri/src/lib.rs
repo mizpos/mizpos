@@ -199,6 +199,25 @@ mod desktop_printer {
         format!("¥{}", result)
     }
 
+    /// ISDN + jan2からCコード＋値段の表示文字列を生成
+    fn format_book_number(isdn: &Option<String>, jan2: &Option<String>) -> Option<String> {
+        let isdn_str = isdn.as_ref()?;
+        let jan2_str = jan2.as_ref()?;
+
+        if isdn_str.is_empty() || jan2_str.len() < 12 {
+            return None;
+        }
+
+        // jan2からCコードを抽出（例: 1920094001600 → C0094）
+        let c_code = format!("C{}", &jan2_str[3..7]);
+
+        // jan2から値段を抽出
+        let price_str = &jan2_str[8..12];
+        let price_value: u32 = price_str.trim_start_matches('0').parse().unwrap_or(0);
+
+        Some(format!("{} {} {}", isdn_str, c_code, format_price(price_value)))
+    }
+
     /// レシート印刷
     #[tauri::command]
     pub fn print_receipt(
@@ -214,64 +233,80 @@ mod desktop_printer {
         let mut printer = JpPrinter::with_paper_width(driver, width);
         printer.init()?;
 
-        // イベント名称
-        printer.jp_textln(&receipt.event_name, TextStyle::default().center())?;
-
-        // 責ID: {スタッフ番号}
-        printer.jp_textln(&format!("責ID:{}", receipt.staff_id), TextStyle::default())?;
-
-        // 領収書（黒背景中央揃え文字２倍サイズ）
-        printer.jp_textln_padded("ご明細書", TextStyle::default().double().reverse().center())?;
-
-        printer.textln("")?;
-
-        // 様（右寄せ黒背景文字２倍サイズ下線）
-        if let Some(ref name) = receipt.customer_name {
-            let customer_line = format!("{}　様", name);
-            printer.jp_textln_padded(&customer_line, TextStyle::default().double().reverse().underline().right())?;
-        } else {
-            printer.jp_textln_padded("　　　　　　　　　様", TextStyle::default().double().reverse().underline().right())?;
+        // サークル名（トップに大きく表示）
+        if let Some(ref circle_name) = receipt.circle_name {
+            if !circle_name.is_empty() {
+                printer.jp_textln_padded(circle_name, TextStyle::default().double().center())?;
+            }
         }
 
-        printer.textln("")?;
+        // イベント名・会場住所（サークル名の下に表示）
+        if let Some(ref venue_address) = receipt.venue_address {
+            if !venue_address.is_empty() && !receipt.event_name.is_empty() {
+                printer.jp_textln(&receipt.event_name, TextStyle::default().bold())?;
+                printer.jp_textln(venue_address, TextStyle::default())?;
+            }
+        }
 
-        // お買上明細（中央揃え）
-        printer.jp_textln("お買上明細", TextStyle::default().center())?;
+        // ご明細書（黒背景中央揃え文字２倍サイズ）
+        printer.jp_textln_padded("　　ご明細書　　", TextStyle::default().double().reverse().center())?;
+
+        // レシート番号
+        printer.jp_textln(&format!("# {}", receipt.receipt_number), TextStyle::default())?;
+
+        // 発売日時 責: {スタッフ番号}
+        if let Some(ref sale_date_time) = receipt.sale_start_date_time {
+            printer.jp_textln(&format!("{} 責: {}", sale_date_time, receipt.staff_id), TextStyle::default())?;
+        } else {
+            printer.jp_textln(&format!("責: {}", receipt.staff_id), TextStyle::default())?;
+        }
 
         printer.separator()?;
 
         // 商品明細
         for item in &receipt.items {
-            // {出版サークル}    {JAN}
-            printer.row_auto(&item.circle_name, &item.jan)?;
-            // 　　{ISBN}    商品数    値段
-            let quantity_price = format!("{}点    {}", item.quantity, format_price(item.price));
-            printer.row_auto(&format!("  {}", item.isbn), &quantity_price)?;
+            // 商品番号: 書籍の場合は「ISDN Cコード 値段」、それ以外はJAN
+            let display_number = if item.is_book {
+                format_book_number(&item.isdn, &item.jan2).unwrap_or_else(|| item.jan.clone())
+            } else {
+                item.jan.clone()
+            };
+
+            printer.jp_textln(&display_number, TextStyle::default().bold())?;
+            printer.jp_textln(&format!("{} / {}", item.circle_name, item.name), TextStyle::default())?;
+
+            // 単価を計算
+            let unit_price = if item.quantity > 0 { item.price / item.quantity } else { item.price };
+            // @ {単価} {点数}点 {小計} （右寄せ・太字）
+            printer.jp_textln(
+                &format!("@ {}　 {} 点　{}", format_price(unit_price), item.quantity, format_price(item.price)),
+                TextStyle::default().right().bold()
+            )?;
         }
 
         printer.separator()?;
 
-        // 合計（右寄せ、全角数字）
-        let total_fullwidth = to_fullwidth_number(receipt.total);
-        printer.jp_textln(&format!("合計　　¥{}", total_fullwidth), TextStyle::default().right().bold())?;
-
-        printer.textln("")?;
+        // 合計（太字・右寄せ）
+        printer.row_auto_bold("合　計", &format_price(receipt.total))?;
 
         // 支払情報
         for payment in &receipt.payments {
-            printer.row_auto(&payment.method, &format_price(payment.amount))?;
+            printer.row_auto(&format!("　 {}", payment.method), &format_price(payment.amount))?;
         }
 
-        // 内消費税
-        printer.jp_textln(
-            &format!("　　（内消費税{}%　{}）", receipt.tax_rate, format_price(receipt.tax_amount)),
-            TextStyle::default().right()
-        )?;
+        // 釣り銭計算（現金支払いの場合）
+        let cash_payment = receipt.payments.iter().find(|p| p.method == "現金");
+        if let Some(cash) = cash_payment {
+            let change = cash.amount.saturating_sub(receipt.total);
+            if change > 0 {
+                printer.row_auto("　 釣り銭", &format_price(change))?;
+            }
+        }
 
         printer.separator()?;
 
-        // レシート番号
-        printer.row_auto("レシート番号", &receipt.receipt_number)?;
+        // 免税事業者の説明文
+        printer.jp_textln("当店は免税事業者であり、適格請求書を発行することはできません。返品・返金は落丁・乱丁の場合のみ受け付けます。返品・返金の場合は本明細書を添付しサポートセンター support-pos@miz.cabにご連絡ください。", TextStyle::default())?;
 
         printer.textln("")?;
 
