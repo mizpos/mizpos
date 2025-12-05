@@ -207,7 +207,7 @@ mod desktop_printer {
         printer.jp_textln(&format!("責ID:{}", receipt.staff_id), TextStyle::default())?;
 
         // 領収書（黒背景中央揃え文字２倍サイズ）
-        printer.jp_textln_padded("領収書", TextStyle::default().double().reverse().center())?;
+        printer.jp_textln_padded("ご明細書", TextStyle::default().double().reverse().center())?;
 
         printer.textln("")?;
 

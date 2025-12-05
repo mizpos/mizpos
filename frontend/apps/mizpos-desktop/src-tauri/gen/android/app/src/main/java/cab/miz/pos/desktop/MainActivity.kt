@@ -14,6 +14,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.NumberFormat
+import java.util.Locale
 
 class MainActivity : TauriActivity() {
     private lateinit var printer: CitizenPrinter
@@ -91,6 +93,12 @@ class MainActivity : TauriActivity() {
      * - etc.
      */
     inner class PrinterBridge {
+        // 金額をカンマ区切りでフォーマット
+        private fun formatPrice(amount: Int): String {
+            val formatter = NumberFormat.getNumberInstance(Locale.JAPAN)
+            return "\\${formatter.format(amount)}"
+        }
+
         @JavascriptInterface
         fun getPairedDevices(): String {
             return try {
@@ -247,13 +255,10 @@ class MainActivity : TauriActivity() {
                         val qty = item.optInt("quantity", 1)
 
                         // {ショップ}{商品名}
-                        printer.printLine("$shopName $productName")
-                        // {商品番号}
-                        if (productNumber.isNotEmpty()) {
-                            printer.printLine(productNumber)
-                        }
+                        printer.printLine("$shopName $productNumber")
+                        printer.printLine(productName)
                         // @{単価} x {点数} （右寄せ）
-                        printer.printRight("@\\$unitPrice x $qty")
+                        printer.printRight("${formatPrice(unitPrice)} @ $qty")
                     }
                 }
 
@@ -261,25 +266,31 @@ class MainActivity : TauriActivity() {
 
                 // 小計（太字・右寄せ）
                 val subtotal = data.optInt("subtotal", 0)
-                printer.printRightBold("小計: \\$subtotal")
+                printer.printRightBold("小計: ${formatPrice(subtotal)}")
 
                 // クーポン処理
                 val couponDiscount = data.optInt("coupon_discount", 0)
                 if (couponDiscount > 0) {
-                    printer.printRight("クーポン割引: -\\$couponDiscount")
+                    printer.printRight("クーポン割引: -${formatPrice(couponDiscount)}")
                 }
 
                 // 支払い方法
                 val paymentMethod = data.optString("payment_method", "")
                 val paymentAmount = data.optInt("payment_amount", 0)
                 if (paymentMethod.isNotEmpty()) {
-                    printer.printRight("$paymentMethod: \\$paymentAmount")
+                    printer.printRight("$paymentMethod: ${formatPrice(paymentAmount)}")
                 }
 
                 // 釣り銭
                 val change = data.optInt("change", 0)
                 if (change > 0) {
-                    printer.printRight("　　　釣り銭: \\$change")
+                    printer.printRight("　　　釣り銭: ${formatPrice(change)}")
+                }
+
+                // レシート番号
+                val receiptNumber = data.optString("receipt_number", "")
+                if (receiptNumber.isNotEmpty()) {
+                    printer.printLine("レシート番号: $receiptNumber")
                 }
 
                 printer.feed(3)
