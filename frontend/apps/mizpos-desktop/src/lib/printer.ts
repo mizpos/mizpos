@@ -436,6 +436,7 @@ export class UnifiedPrinter {
           data.payments.length > 0
             ? data.payments[0].amount - data.total
             : 0,
+        receipt_number: data.receipt_number,
         paperWidth: this.config.paperWidth,
       };
       return bluetoothPrintReceipt(androidData as unknown as ReceiptData);

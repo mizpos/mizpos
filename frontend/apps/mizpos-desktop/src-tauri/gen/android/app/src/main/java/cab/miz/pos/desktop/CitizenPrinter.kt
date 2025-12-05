@@ -325,6 +325,39 @@ class CitizenPrinter(private val context: Context) {
     }
 
     /**
+     * Print QR code (centered)
+     * Uses ESC/POS QR code commands
+     */
+    fun printQrCode(data: String, moduleSize: Int = 6): Boolean {
+        // GS ( k - QR Code commands
+        val dataBytes = data.toByteArray(charset("Shift_JIS"))
+        val dataLen = dataBytes.size + 3
+
+        // 1. Select model (Model 2)
+        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00))
+
+        // 2. Set module size (1-16)
+        val size = moduleSize.coerceIn(1, 16).toByte()
+        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size))
+
+        // 3. Set error correction level (L=48, M=49, Q=50, H=51)
+        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31)) // M level
+
+        // 4. Store data in symbol storage area
+        val pL = (dataLen and 0xFF).toByte()
+        val pH = ((dataLen shr 8) and 0xFF).toByte()
+        write(byteArrayOf(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30))
+        write(dataBytes)
+
+        // 5. Print the symbol
+        write(ESC_CENTER)
+        write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30))
+        write(ESC_LEFT)
+
+        return true
+    }
+
+    /**
      * Print welcome message (for testing)
      */
     fun printWelcome(terminalId: String, paperWidth: Int = PAPER_58MM): Boolean {
