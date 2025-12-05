@@ -1007,6 +1007,52 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
               4桁のCコード（例: 3055=専門・教養書）
             </p>
           </div>
+
+          <div className={css({ gridColumn: "span 2" })}>
+            <label htmlFor="jan_code_book" className={labelClass}>
+              JANコード（1段目）
+            </label>
+            <input
+              id="jan_code_book"
+              type="text"
+              value={(data as CreateProductForm).jan_code || ""}
+              onChange={(e) => onChange({ ...data, jan_code: e.target.value })}
+              className={inputClass}
+              placeholder="9784123456789（既存のISBN-13/JAN）"
+              maxLength={13}
+            />
+            <p
+              className={css({
+                fontSize: "xs",
+                color: "gray.500",
+                marginTop: "1",
+              })}
+            >
+              既に流通しているJAN/ISBN-13がある場合に入力（ISDN/ISBNより優先されます）
+            </p>
+          </div>
+
+          <div
+            className={css({
+              gridColumn: "span 2",
+              padding: "3",
+              backgroundColor: "yellow.50",
+              borderRadius: "md",
+              border: "1px solid",
+              borderColor: "yellow.200",
+            })}
+          >
+            <p
+              className={css({
+                fontSize: "xs",
+                color: "yellow.800",
+                fontWeight: "medium",
+              })}
+            >
+              注意:
+              価格を変更すると2段目バーコードが変わります。価格変更後は必ずバーコードを再印刷してください。
+            </p>
+          </div>
         </>
       )}
 
