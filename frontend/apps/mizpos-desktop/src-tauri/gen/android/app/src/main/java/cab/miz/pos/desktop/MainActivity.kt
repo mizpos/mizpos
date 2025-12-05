@@ -229,7 +229,7 @@ class MainActivity : TauriActivity() {
                 // イベント名
                 val eventName = data.optString("event_name", "")
                 if (eventName.isNotEmpty()) {
-                    printer.printDoubleReverseCentered(eventName)
+                    printer.printCentered(eventName)
                 }
 
                 // 責ID
@@ -309,7 +309,7 @@ class MainActivity : TauriActivity() {
                     printer.printRow("レシート番号", receiptNumber, paperWidth)
                     printer.printLine("")
                     // QRコード（レシート番号）
-                    printer.printQrCode(receiptNumber, 6)
+                    printer.printQrCode(receiptNumber, receiptNumber.length, 6)
                 }
 
                 printer.feed(3)
