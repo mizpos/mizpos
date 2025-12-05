@@ -154,6 +154,10 @@ function SettingsPage() {
   const navigate = useNavigate();
 
   const [eventName, setEventName] = useState(settings.eventName);
+  const [venueAddress, setVenueAddress] = useState(settings.venueAddress || "");
+  const [saleStartDateTime, setSaleStartDateTime] = useState(
+    settings.saleStartDateTime || ""
+  );
   const [terminalId, setTerminalId] = useState(settings.terminalId);
   const [taxRate, setTaxRate] = useState(String(settings.taxRate));
 
@@ -209,6 +213,8 @@ function SettingsPage() {
   const handleSave = useCallback(async () => {
     await updateSettings({
       eventName,
+      venueAddress,
+      saleStartDateTime,
       terminalId,
       taxRate: Number.parseInt(taxRate, 10) || 10,
     });
@@ -216,6 +222,8 @@ function SettingsPage() {
     navigate({ to: "/pos" });
   }, [
     eventName,
+    venueAddress,
+    saleStartDateTime,
     terminalId,
     taxRate,
     selectedPrinter,
@@ -300,6 +308,24 @@ function SettingsPage() {
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   placeholder="例: コミックマーケット C104"
+                />
+              </div>
+
+              <div className={sectionStyles.field}>
+                <Input
+                  label="会場住所"
+                  value={venueAddress}
+                  onChange={(e) => setVenueAddress(e.target.value)}
+                  placeholder="例: 東京都江東区有明3-11-1"
+                />
+              </div>
+
+              <div className={sectionStyles.field}>
+                <Input
+                  label="発売日時"
+                  value={saleStartDateTime}
+                  onChange={(e) => setSaleStartDateTime(e.target.value)}
+                  placeholder="例: 2025年12月31日 10:00"
                 />
               </div>
 

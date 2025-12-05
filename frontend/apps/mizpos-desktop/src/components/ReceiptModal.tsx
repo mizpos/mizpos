@@ -194,6 +194,8 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
         event_name: isTraining
           ? `【トレーニング】${settings.eventName}`
           : settings.eventName,
+        venue_address: settings.venueAddress || "",
+        sale_start_date_time: settings.saleStartDateTime || "",
         staff_id: transaction.staffId,
         items: transaction.items.map((item) => ({
           circle_name: item.product.circleName || "",

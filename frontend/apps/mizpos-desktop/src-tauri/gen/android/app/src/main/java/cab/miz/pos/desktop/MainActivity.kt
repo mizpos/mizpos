@@ -232,6 +232,18 @@ class MainActivity : TauriActivity() {
                     printer.printDoubleCentered(eventName)
                 }
 
+                // 会場住所（イベント名の下）
+                val venueAddress = data.optString("venue_address", "")
+                if (venueAddress.isNotEmpty()) {
+                    printer.printCentered(venueAddress)
+                }
+
+                // 発売日時
+                val saleStartDateTime = data.optString("sale_start_date_time", "")
+                if (saleStartDateTime.isNotEmpty()) {
+                    printer.printCentered("発売日時: $saleStartDateTime")
+                }
+
                 // ご明細書（大きめの文字・中央揃え・黒背景）
                 printer.printDoubleReverse("　　ご明細書　　")
 
