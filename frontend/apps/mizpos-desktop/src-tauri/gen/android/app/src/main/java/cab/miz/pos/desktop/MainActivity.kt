@@ -232,14 +232,14 @@ class MainActivity : TauriActivity() {
                     printer.printDoubleCentered(eventName)
                 }
 
+                // ご明細書（大きめの文字・中央揃え・黒背景）
+                printer.printDoubleReverse("　　ご明細書　　")
+
                 // 責ID
                 val staffId = data.optString("staff_id", "")
                 if (staffId.isNotEmpty()) {
                     printer.printLine("責ID: $staffId")
                 }
-
-                // ご明細書（大きめの文字・中央揃え・黒背景）
-                printer.printDoubleReverse("　　ご明細書　　")
 
                 printer.printSeparator(paperWidth)
 
@@ -271,7 +271,7 @@ class MainActivity : TauriActivity() {
                         }
 
                         printer.printLine(displayNumber)
-                        printer.printDoubleCentered("$shopName / $productName")
+                        printer.printLine("$shopName / $productName")
                         // @{単価} x {点数} （右寄せ）
                         printer.printRight("${formatPrice(unitPrice)} @ $qty")
                     }
