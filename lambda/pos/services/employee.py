@@ -380,7 +380,11 @@ def record_pos_sale(
     subtotal: Optional[int] = None,
 ) -> dict:
     """POS端末からの販売をリアルタイムで記録"""
-    from services.coupon import calculate_discount, increment_usage_count, validate_coupon
+    from services.coupon import (
+        calculate_discount,
+        increment_usage_count,
+        validate_coupon,
+    )
 
     session = verify_pos_session(session_id)
     if not session:

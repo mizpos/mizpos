@@ -1,5 +1,6 @@
 import createClient from "openapi-fetch";
 import type { paths as accountsPaths } from "./generated/accounts";
+import type { paths as posPaths } from "./generated/pos";
 import type { paths as salesPaths } from "./generated/sales";
 import type { paths as stockPaths } from "./generated/stock";
 
@@ -7,6 +8,10 @@ export type {
   components as AccountsComponents,
   paths as AccountsPaths,
 } from "./generated/accounts";
+export type {
+  components as PosComponents,
+  paths as PosPaths,
+} from "./generated/pos";
 export type {
   components as SalesComponents,
   paths as SalesPaths,
@@ -42,10 +47,18 @@ export function createSalesClient(config: ApiConfig) {
   });
 }
 
+export function createPosClient(config: ApiConfig) {
+  return createClient<posPaths>({
+    baseUrl: config.baseUrl,
+    headers: config.headers,
+  });
+}
+
 export interface MizposApiClients {
   accounts: ReturnType<typeof createAccountsClient>;
   stock: ReturnType<typeof createStockClient>;
   sales: ReturnType<typeof createSalesClient>;
+  pos: ReturnType<typeof createPosClient>;
 }
 
 export function createMizposClients(config: ApiConfig): MizposApiClients {
@@ -53,6 +66,7 @@ export function createMizposClients(config: ApiConfig): MizposApiClients {
     accounts: createAccountsClient(config),
     stock: createStockClient(config),
     sales: createSalesClient(config),
+    pos: createPosClient(config),
   };
 }
 

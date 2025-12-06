@@ -21,6 +21,10 @@
     "./sales": {
       "types": "./dist/generated/sales.d.ts",
       "import": "./dist/generated/sales.js"
+    },
+    "./pos": {
+      "types": "./dist/generated/pos.d.ts",
+      "import": "./dist/generated/pos.js"
     }
   },
   "scripts": {

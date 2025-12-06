@@ -11,3 +11,7 @@ apis:
     root: https://6z64vei2y5.execute-api.ap-northeast-1.amazonaws.com/prod/sales/openapi.json
     x-openapi-ts:
       output: ./generated/sales.ts
+  PosApi:
+    root: https://6z64vei2y5.execute-api.ap-northeast-1.amazonaws.com/prod/pos/openapi.json
+    x-openapi-ts:
+      output: ./generated/pos.ts

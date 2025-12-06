@@ -29,7 +29,9 @@ class TerminalAuthRequest(BaseModel):
 class PosLoginRequest(BaseModel):
     """POSログインリクエスト"""
 
-    employee_number: str = Field(..., min_length=7, max_length=7, description="従業員番号（7桁）")
+    employee_number: str = Field(
+        ..., min_length=7, max_length=7, description="従業員番号（7桁）"
+    )
     pin: str = Field(..., min_length=3, max_length=8, description="PIN（3〜8桁）")
     terminal_id: str = Field(..., description="端末ID")
 
