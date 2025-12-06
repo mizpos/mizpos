@@ -11,7 +11,6 @@ on:
         options:
           - all
           - infrastructure
-          - lambda
           - frontend
 
 env:
@@ -240,23 +239,6 @@ jobs:
           echo "- **Frontend URL**: ${{ steps.tf-outputs.outputs.frontend_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
 
-  setup-env-desktop:
-    name: Setup Environment
-    runs-on: ubuntu-latest
-    outputs:
-      environment: ${{ steps.set-env.outputs.environment }}
-      cdn-bucket: ${{ steps.set-env.outputs.cdn-bucket }}
-      cdn-distribution-id: ${{ steps.set-env.outputs.cdn-distribution-id }}
-      cdn-domain: ${{ steps.set-env.outputs.cdn-domain }}
-    steps:
-      - id: set-env
-        run: |
-          ENV="prod"
-          echo "environment=$ENV" >> $GITHUB_OUTPUT
-          echo "cdn-bucket=prod-mizpos-cdn-assets" >> $GITHUB_OUTPUT
-          echo "cdn-distribution-id=E3K8Z7XI6AMQJ5" >> $GITHUB_OUTPUT
-          echo "cdn-domain=https://d2xppn5ml53jqk.cloudfront.net" >> $GITHUB_OUTPUT
-
   deploy-desktop:
     name: Invoke Desktop and Android App Deploy for Production
     runs-on: ubuntu-slim
@@ -268,15 +250,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Invoke Desktop and Android App Deploy
-        uses: ./.github/actions/deploy-desktop
+      - name: Invoke Desktop App Deploy Workflow
+        uses: ./.github/workflows/build-desktop.yml
         with:
           environment: prod
-          aws-account-id: 346536893439
-          aws-region: ap-northeast-1
-          cdn-bucket: prod-mizpos-cdn-assets
-          cdn-distribution-id: E3K8Z7XI6AMQJ5
-          cdn-domain: https://d2xppn5ml53jqk.cloudfront.net
+
+      - name: Invoke Android App Deploy Workflow
+        uses: ./.github/workflows/build-android.yml
+        with:
+          environment: prod
 
   create-release:
     name: Create Release Tag

@@ -55,8 +55,8 @@ jobs:
           # Set environment-specific values
           if [[ "$ENV" == "prod" ]]; then
             echo "cdn-bucket=prod-mizpos-cdn-assets" >> $GITHUB_OUTPUT
-            echo "cdn-distribution-id=E3K8Z7XI6AMQJ5" >> $GITHUB_OUTPUT
-            echo "cdn-domain=https://d2xppn5ml53jqk.cloudfront.net" >> $GITHUB_OUTPUT
+            echo "cdn-distribution-id=E2H6IWQATGJWQS" >> $GITHUB_OUTPUT
+            echo "cdn-domain=https://di1aotrw2gywt.cloudfront.net" >> $GITHUB_OUTPUT
           else
             echo "cdn-bucket=dev-mizpos-cdn-assets" >> $GITHUB_OUTPUT
             echo "cdn-distribution-id=E195S6TD7VY00" >> $GITHUB_OUTPUT
