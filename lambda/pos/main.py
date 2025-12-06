@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 
-from auth import get_pos_session, require_terminal_auth
+from auth import get_pos_session
 from models import (
     ApplyCouponRequest,
     OfflineSalesSyncRequest,
@@ -228,7 +228,7 @@ async def pos_get_events(request: Request):
     X-POS-Session ヘッダーでセッションIDを指定
     アクティブなイベントのみ返却
     """
-    session = await get_pos_session(request)
+    _ = await get_pos_session(request)
     try:
         events = get_events_for_pos()
         return {"events": events}
