@@ -235,7 +235,11 @@ def verify_terminal_signature(
         (検証成功, 端末情報, エラーメッセージ) のタプル
     """
     if not NACL_AVAILABLE:
-        return False, None, "Signature verification not available (PyNaCl not installed)"
+        return (
+            False,
+            None,
+            "Signature verification not available (PyNaCl not installed)",
+        )
 
     # タイムスタンプの検証（リプレイ攻撃対策）
     current_time = int(time.time())
@@ -293,7 +297,9 @@ def authenticate_terminal(
     Raises:
         ValueError: 認証失敗時
     """
-    success, terminal, error = verify_terminal_signature(terminal_id, timestamp, signature)
+    success, terminal, error = verify_terminal_signature(
+        terminal_id, timestamp, signature
+    )
     if not success:
         raise ValueError(error or "Authentication failed")
     return terminal

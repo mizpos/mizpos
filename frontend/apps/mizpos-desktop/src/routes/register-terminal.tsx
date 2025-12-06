@@ -9,7 +9,6 @@ function RegisterTerminalPage() {
   const {
     status,
     terminalId,
-    qrPayload,
     isRegisteredOnServer,
     initializeTerminal,
     generateQrData,
@@ -30,7 +29,9 @@ function RegisterTerminalPage() {
       const data = await generateQrData(deviceName);
       setQrData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "QRコード生成に失敗しました");
+      setError(
+        err instanceof Error ? err.message : "QRコード生成に失敗しました",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +47,7 @@ function RegisterTerminalPage() {
         .then(() => generateQr())
         .catch((err) => {
           setError(
-            err instanceof Error ? err.message : "端末の初期化に失敗しました"
+            err instanceof Error ? err.message : "端末の初期化に失敗しました",
           );
         });
     }
@@ -81,7 +82,7 @@ function RegisterTerminalPage() {
   const handleReset = async () => {
     if (
       window.confirm(
-        "端末の登録情報をリセットしますか？\nこの操作は取り消せません。"
+        "端末の登録情報をリセットしますか？\nこの操作は取り消せません。",
       )
     ) {
       try {

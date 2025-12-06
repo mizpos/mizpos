@@ -47,7 +47,7 @@ interface AndroidTerminalAuth {
   saveKeyPair: (
     terminalId: string,
     privateKeyBase64: string,
-    publicKeyBase64: string
+    publicKeyBase64: string,
   ) => string;
   getPrivateKey: () => string;
   clearKeychain: () => string;
@@ -129,7 +129,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       if (isAndroid()) {
         // Android: JavaScript Interface を使用
         const response = JSON.parse(
-          window.MizPosTerminalAuth!.getTerminalStatus()
+          window.MizPosTerminalAuth?.getTerminalStatus(),
         ) as AndroidTerminalAuthResponse;
 
         if (!response.success) {
@@ -192,11 +192,11 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         const publicKeyBase64 = encodeBase64(keyPair.publicKey);
 
         const response = JSON.parse(
-          window.MizPosTerminalAuth!.saveKeyPair(
+          window.MizPosTerminalAuth?.saveKeyPair(
             terminalId,
             privateKeyBase64,
-            publicKeyBase64
-          )
+            publicKeyBase64,
+          ),
         ) as AndroidTerminalAuthResponse;
 
         if (!response.success) {
@@ -269,7 +269,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       if (isAndroid()) {
         // Android: JavaScript Interface から秘密鍵を取得して署名
         const response = JSON.parse(
-          window.MizPosTerminalAuth!.getPrivateKey()
+          window.MizPosTerminalAuth?.getPrivateKey(),
         ) as AndroidTerminalAuthResponse;
 
         if (!response.success || !response.private_key) {
@@ -299,8 +299,9 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         };
       } else {
         // Desktop: Tauriコマンドを使用
-        const signatureData =
-          await invoke<SignatureData>("create_auth_signature");
+        const signatureData = await invoke<SignatureData>(
+          "create_auth_signature",
+        );
         return signatureData;
       }
     } catch (error) {
@@ -318,7 +319,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       const response = await fetch(
-        `${apiBaseUrl}/accounts/terminals/check/${terminalId}`
+        `${apiBaseUrl}/accounts/terminals/check/${terminalId}`,
       );
 
       if (!response.ok) {
@@ -349,7 +350,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       if (isAndroid()) {
         // Android: JavaScript Interface を使用
         const response = JSON.parse(
-          window.MizPosTerminalAuth!.clearKeychain()
+          window.MizPosTerminalAuth?.clearKeychain(),
         ) as AndroidTerminalAuthResponse;
 
         if (!response.success) {

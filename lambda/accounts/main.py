@@ -41,7 +41,6 @@ from models import (
     # 端末管理用モデル
     RegisterTerminalRequest,
     TerminalAuthRequest,
-    CheckTerminalRequest,
 )
 from permissions import (
     get_user_id_from_auth,
@@ -76,7 +75,6 @@ from pos_services import (
 from terminal_services import (
     authenticate_terminal,
     check_terminal_registered,
-    delete_terminal,
     get_terminal,
     list_terminals,
     register_terminal,

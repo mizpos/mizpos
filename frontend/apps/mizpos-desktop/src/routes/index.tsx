@@ -10,7 +10,10 @@ function IndexPage() {
 
   useEffect(() => {
     // まず端末登録状態を確認
-    if (terminalStatus === "uninitialized" || terminalStatus === "initialized") {
+    if (
+      terminalStatus === "uninitialized" ||
+      terminalStatus === "initialized"
+    ) {
       // 端末が未登録の場合は登録画面へ
       if (!isRegisteredOnServer) {
         navigate({ to: "/register-terminal" });

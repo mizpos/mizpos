@@ -6,7 +6,6 @@
 import {
   IconDeviceDesktop,
   IconDeviceMobile,
-  IconPlus,
   IconQrcode,
   IconSearch,
   IconTrash,
@@ -55,7 +54,7 @@ function TerminalsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannedData, setScannedData] = useState<RegistrationQrPayload | null>(
-    null
+    null,
   );
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<Terminal | null>(null);
@@ -124,7 +123,7 @@ function TerminalsPage() {
         {
           method: "DELETE",
           headers,
-        }
+        },
       );
       if (!response.ok) {
         throw new Error("端末の無効化に失敗しました");
@@ -164,7 +163,7 @@ function TerminalsPage() {
   const filteredTerminals = terminals.filter(
     (t) =>
       t.device_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.terminal_id.toLowerCase().includes(searchTerm.toLowerCase())
+      t.terminal_id.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // OS アイコン
@@ -342,7 +341,7 @@ function TerminalsPage() {
                   <td>{getStatusBadge(terminal.status)}</td>
                   <td>
                     {new Date(terminal.registered_at).toLocaleDateString(
-                      "ja-JP"
+                      "ja-JP",
                     )}
                   </td>
                   <td>
