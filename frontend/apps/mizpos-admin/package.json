@@ -22,7 +22,7 @@
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
-    "@yudiel/react-qr-scanner": "^2.0.0",
+    "@yudiel/react-qr-scanner": "^2.4.1",
     "aws-amplify": "^6.15.8",
     "jsbarcode": "^3.12.1",
     "qrcode.react": "^4.2.0",
