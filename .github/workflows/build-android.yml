@@ -17,6 +17,7 @@ on:
         options:
           - dev
           - prod
+  workflow_call:
 
 env:
   NODE_VERSION: "24"
