@@ -75,7 +75,7 @@ jobs:
             os_name: windows
             arch: x64
             artifact_ext: ".exe,.msi"
-          - platform: ubuntu-22.04
+          - platform: blacksmith-2vcpu-ubuntu-2404
             target: x86_64-unknown-linux-gnu
             os_name: linux
             arch: x64
@@ -117,7 +117,8 @@ jobs:
             libxdo-dev \
             libssl-dev \
             libayatana-appindicator3-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            xdg-utils
 
       - name: Generate API Types
         working-directory: frontend
