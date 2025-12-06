@@ -73,10 +73,17 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             os_name: windows
+            arch: x64
             artifact_ext: ".exe,.msi"
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             os_name: linux
+            arch: x64
+            artifact_ext: ".AppImage,.deb"
+          - platform: blacksmith-2vcpu-ubuntu-2404-arm
+            target: aarch64-unknown-linux-gnu
+            os_name: linux
+            arch: arm64
             artifact_ext: ".AppImage,.deb"
     runs-on: ${{ matrix.platform }}
     steps:
@@ -95,8 +102,8 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install system dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Install system dependencies (Linux)
+        if: matrix.os_name == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -142,13 +149,19 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
           # Prepare files based on platform
+          # Use arch suffix for Linux paths to distinguish x64 and arm64
+          OS_PATH="${{ matrix.os_name }}"
+          if [[ "${{ matrix.os_name }}" == "linux" ]]; then
+            OS_PATH="linux-${{ matrix.arch }}"
+          fi
+
           if [[ "${{ matrix.os_name }}" == "windows" ]]; then
             cd $BUNDLE_DIR/msi
             for file in *.msi; do
               # Upload with timestamp for history (tagged for auto-deletion after 30 days)
-              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.msi"
+              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${OS_PATH}/mizpos-${TIMESTAMP}.msi"
               # Upload as latest (tagged to keep)
-              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.msi"
+              aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${OS_PATH}/mizpos-latest.msi"
             done
           else
             cd $BUNDLE_DIR
@@ -157,9 +170,9 @@ jobs:
               cd appimage
               for file in *.AppImage; do
                 # Upload with timestamp for history (tagged for auto-deletion after 30 days)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.AppImage"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${OS_PATH}/mizpos-${TIMESTAMP}.AppImage"
                 # Upload as latest (tagged to keep)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.AppImage"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${OS_PATH}/mizpos-latest.AppImage"
               done
               cd ..
             fi
@@ -168,9 +181,9 @@ jobs:
               cd deb
               for file in *.deb; do
                 # Upload with timestamp for history (tagged for auto-deletion after 30 days)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-${TIMESTAMP}.deb"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${OS_PATH}/mizpos-${TIMESTAMP}.deb"
                 # Upload as latest (tagged to keep)
-                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${{ matrix.os_name }}/mizpos-latest.deb"
+                aws s3 cp "$file" "s3://$CDN_BUCKET/desktop/$ENV/${OS_PATH}/mizpos-latest.deb"
               done
             fi
           fi
