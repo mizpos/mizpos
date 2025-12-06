@@ -286,8 +286,16 @@ mod desktop_printer {
 
         printer.separator()?;
 
-        // 合計（太字・右寄せ）
-        printer.row_auto_bold("合　計", &format_price(receipt.total))?;
+        // 合計（税込）（太字・右寄せ）
+        printer.row_auto_bold("合計(税込)", &format_price(receipt.total))?;
+
+        // 内税表示（税率と税額）
+        if receipt.tax_rate > 0 && receipt.tax_amount > 0 {
+            printer.row_auto(
+                &format!("(内 {}%税)", receipt.tax_rate),
+                &format_price(receipt.tax_amount)
+            )?;
+        }
 
         // 支払情報
         for payment in &receipt.payments {

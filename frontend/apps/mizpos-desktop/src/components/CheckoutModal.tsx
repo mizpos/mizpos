@@ -556,15 +556,25 @@ export function CheckoutModal({
       )}
       {/* 合計金額 */}
       <div className={totalDisplayStyles.container}>
-        <div className={totalDisplayStyles.label}>お会計</div>
+        <div className={totalDisplayStyles.label}>お会計(税込)</div>
         <div className={totalDisplayStyles.amount}>
           ¥{total.toLocaleString()}
+        </div>
+        {/* 内税表示 */}
+        <div
+          className={css({
+            marginTop: "8px",
+            fontSize: "12px",
+            color: "#64748b",
+          })}
+        >
+          (内 {taxRate}%税 ¥{taxAmount.toLocaleString()})
         </div>
         {/* 割引がある場合は内訳を表示 */}
         {discountAmount > 0 && (
           <div
             className={css({
-              marginTop: "12px",
+              marginTop: "8px",
               fontSize: "14px",
               color: "#94a3b8",
             })}

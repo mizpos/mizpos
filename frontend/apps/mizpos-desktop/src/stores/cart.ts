@@ -98,15 +98,17 @@ export const useCartStore = create<CartState>((set, get) => ({
   getTaxAmount: (taxRate: number) => {
     const subtotal = get().getSubtotal();
     const discount = get().getDiscountAmount();
-    // 割引後の金額に対して税額を計算
-    return Math.floor((subtotal - discount) * (taxRate / 100));
+    const total = subtotal - discount;
+    // 内税方式: 税込価格から税額を逆算
+    // 税額 = 合計 × 税率 / (100 + 税率)
+    return Math.floor((total * taxRate) / (100 + taxRate));
   },
 
-  getTotal: (taxRate: number) => {
+  getTotal: (_taxRate: number) => {
     const subtotal = get().getSubtotal();
     const discount = get().getDiscountAmount();
-    const tax = get().getTaxAmount(taxRate);
-    return subtotal - discount + tax;
+    // 内税方式: 商品価格は税込みなので、合計 = 小計 - 割引
+    return subtotal - discount;
   },
 
   getTotalQuantity: () => {
