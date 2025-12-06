@@ -128,9 +128,11 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
       if (isAndroid()) {
         // Android: JavaScript Interface を使用
-        const response = JSON.parse(
-          window.MizPosTerminalAuth?.getTerminalStatus(),
-        ) as AndroidTerminalAuthResponse;
+        const statusJson = window.MizPosTerminalAuth?.getTerminalStatus();
+        if (!statusJson) {
+          throw new Error("MizPosTerminalAuth.getTerminalStatus returned undefined");
+        }
+        const response = JSON.parse(statusJson) as AndroidTerminalAuthResponse;
 
         if (!response.success) {
           throw new Error(response.error || "Failed to get terminal status");
@@ -191,13 +193,15 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         const privateKeyBase64 = encodeBase64(keyPair.secretKey.slice(0, 32)); // Ed25519の秘密鍵は先頭32バイト
         const publicKeyBase64 = encodeBase64(keyPair.publicKey);
 
-        const response = JSON.parse(
-          window.MizPosTerminalAuth?.saveKeyPair(
-            terminalId,
-            privateKeyBase64,
-            publicKeyBase64,
-          ),
-        ) as AndroidTerminalAuthResponse;
+        const saveResultJson = window.MizPosTerminalAuth?.saveKeyPair(
+          terminalId,
+          privateKeyBase64,
+          publicKeyBase64,
+        );
+        if (!saveResultJson) {
+          throw new Error("MizPosTerminalAuth.saveKeyPair returned undefined");
+        }
+        const response = JSON.parse(saveResultJson) as AndroidTerminalAuthResponse;
 
         if (!response.success) {
           throw new Error(response.error || "Failed to save key pair");
@@ -268,9 +272,11 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     try {
       if (isAndroid()) {
         // Android: JavaScript Interface から秘密鍵を取得して署名
-        const response = JSON.parse(
-          window.MizPosTerminalAuth?.getPrivateKey(),
-        ) as AndroidTerminalAuthResponse;
+        const privateKeyJson = window.MizPosTerminalAuth?.getPrivateKey();
+        if (!privateKeyJson) {
+          throw new Error("MizPosTerminalAuth.getPrivateKey returned undefined");
+        }
+        const response = JSON.parse(privateKeyJson) as AndroidTerminalAuthResponse;
 
         if (!response.success || !response.private_key) {
           throw new Error(response.error || "Failed to get private key");
@@ -349,9 +355,11 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     try {
       if (isAndroid()) {
         // Android: JavaScript Interface を使用
-        const response = JSON.parse(
-          window.MizPosTerminalAuth?.clearKeychain(),
-        ) as AndroidTerminalAuthResponse;
+        const clearResultJson = window.MizPosTerminalAuth?.clearKeychain();
+        if (!clearResultJson) {
+          throw new Error("MizPosTerminalAuth.clearKeychain returned undefined");
+        }
+        const response = JSON.parse(clearResultJson) as AndroidTerminalAuthResponse;
 
         if (!response.success) {
           throw new Error(response.error || "Failed to clear keychain");

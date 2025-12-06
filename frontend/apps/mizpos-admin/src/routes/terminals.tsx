@@ -289,90 +289,90 @@ function TerminalsPage() {
           エラーが発生しました
         </div>
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <th>端末名</th>
-              <th>OS</th>
-              <th>ステータス</th>
-              <th>登録日時</th>
-              <th>最終アクセス</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTerminals.length === 0 ? (
-              <tr>
-                <td colSpan={6} className={css({ textAlign: "center" })}>
-                  端末がありません
-                </td>
-              </tr>
-            ) : (
-              filteredTerminals.map((terminal) => (
-                <tr key={terminal.terminal_id}>
-                  <td>
-                    <div>
-                      <div className={css({ fontWeight: 500 })}>
-                        {terminal.device_name}
-                      </div>
-                      <div
-                        className={css({
-                          fontSize: "11px",
-                          color: "#999",
-                          fontFamily: "monospace",
-                        })}
-                      >
-                        {terminal.terminal_id.slice(0, 8)}...
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div
-                      className={css({
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      })}
-                    >
-                      {getOsIcon(terminal.os)}
-                      {terminal.os}
-                    </div>
-                  </td>
-                  <td>{getStatusBadge(terminal.status)}</td>
-                  <td>
-                    {new Date(terminal.registered_at).toLocaleDateString(
-                      "ja-JP",
-                    )}
-                  </td>
-                  <td>
-                    {terminal.last_seen_at
-                      ? new Date(terminal.last_seen_at).toLocaleString("ja-JP")
-                      : "-"}
-                  </td>
-                  <td>
-                    {terminal.status === "active" && (
-                      <button
-                        type="button"
-                        onClick={() => setRevokeTarget(terminal)}
-                        className={css({
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "#c62828",
-                          padding: "4px",
-                          "&:hover": { opacity: 0.7 },
-                        })}
-                        title="無効化"
-                      >
-                        <IconTrash size={18} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
+        <Table
+          data={filteredTerminals}
+          keyExtractor={(terminal) => terminal.terminal_id}
+          emptyMessage="端末がありません"
+          columns={[
+            {
+              key: "device_name",
+              header: "端末名",
+              render: (terminal) => (
+                <div>
+                  <div className={css({ fontWeight: 500 })}>
+                    {terminal.device_name}
+                  </div>
+                  <div
+                    className={css({
+                      fontSize: "11px",
+                      color: "#999",
+                      fontFamily: "monospace",
+                    })}
+                  >
+                    {terminal.terminal_id.slice(0, 8)}...
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: "os",
+              header: "OS",
+              render: (terminal) => (
+                <div
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  })}
+                >
+                  {getOsIcon(terminal.os)}
+                  {terminal.os}
+                </div>
+              ),
+            },
+            {
+              key: "status",
+              header: "ステータス",
+              render: (terminal) => getStatusBadge(terminal.status),
+            },
+            {
+              key: "registered_at",
+              header: "登録日時",
+              render: (terminal) =>
+                new Date(terminal.registered_at).toLocaleDateString("ja-JP"),
+            },
+            {
+              key: "last_seen_at",
+              header: "最終アクセス",
+              render: (terminal) =>
+                terminal.last_seen_at
+                  ? new Date(terminal.last_seen_at).toLocaleString("ja-JP")
+                  : "-",
+            },
+            {
+              key: "actions",
+              header: "操作",
+              render: (terminal) =>
+                terminal.status === "active" ? (
+                  <button
+                    type="button"
+                    onClick={() => setRevokeTarget(terminal)}
+                    className={css({
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#c62828",
+                      padding: "4px",
+                      "&:hover": { opacity: 0.7 },
+                    })}
+                    title="無効化"
+                  >
+                    <IconTrash size={18} />
+                  </button>
+                ) : null,
+            },
+          ]}
+        />
       )}
 
       {/* QRスキャナーモーダル */}
