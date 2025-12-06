@@ -11,7 +11,6 @@ on:
         options:
           - all
           - infrastructure
-          - lambda
           - frontend
 
 env:
@@ -37,8 +36,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -94,6 +91,13 @@ jobs:
         uses: ./.github/actions/deploy-lambda
         with:
           function-path: lambda/sales
+          environment: prod
+          aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
+
+      - name: Deploy "pos" Lambda Functions
+        uses: ./.github/actions/deploy-lambda
+        with:
+          function-path: lambda/pos
           environment: prod
           aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
 
@@ -241,6 +245,22 @@ jobs:
           echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Frontend URL**: ${{ steps.tf-outputs.outputs.frontend_url }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  deploy-desktop:
+    name: Build and Deploy Desktop App for Production
+    if: github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop'
+    uses: ./.github/workflows/build-desktop.yml
+    with:
+      environment: prod
+    secrets: inherit
+
+  deploy-android:
+    name: Build and Deploy Android App for Production
+    if: github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop'
+    uses: ./.github/workflows/build-android.yml
+    with:
+      environment: prod
+    secrets: inherit
 
   create-release:
     name: Create Release Tag

@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.git/
+.gitignore
+.python-version
+pyproject.toml
+README.md
+function.jsonnet
+uv.lock
+.venv/
+*.md
+tests/
+test_*.py
+*_test.py

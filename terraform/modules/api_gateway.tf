@@ -99,6 +99,17 @@ resource "aws_apigatewayv2_integration" "sales" {
   payload_format_version = "2.0"
 }
 
+# Lambda Integration - pos
+resource "aws_apigatewayv2_integration" "pos" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  connection_type        = "INTERNET"
+  integration_method     = "POST"
+  integration_uri        = aws_lambda_function.pos.invoke_arn
+  payload_format_version = "2.0"
+}
+
 # Routes - accounts (JWT validation handled by Lambda)
 resource "aws_apigatewayv2_route" "accounts" {
   api_id    = aws_apigatewayv2_api.main.id
@@ -122,6 +133,15 @@ resource "aws_apigatewayv2_route" "sales" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /sales/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.sales.id}"
+
+  authorization_type = "NONE"
+}
+
+# Routes - pos (POS端末専用、認証はLambda内で処理)
+resource "aws_apigatewayv2_route" "pos" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "ANY /pos/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.pos.id}"
 
   authorization_type = "NONE"
 }
@@ -175,6 +195,22 @@ resource "aws_apigatewayv2_route" "docs_sales" {
   authorization_type = "NONE"
 }
 
+resource "aws_apigatewayv2_route" "openapi_pos" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /pos/openapi.json"
+  target    = "integrations/${aws_apigatewayv2_integration.pos.id}"
+
+  authorization_type = "NONE"
+}
+
+resource "aws_apigatewayv2_route" "docs_pos" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /pos/docs"
+  target    = "integrations/${aws_apigatewayv2_integration.pos.id}"
+
+  authorization_type = "NONE"
+}
+
 # Lambda Permissions
 resource "aws_lambda_permission" "accounts" {
   statement_id  = "AllowAPIGatewayInvoke"
@@ -196,6 +232,14 @@ resource "aws_lambda_permission" "sales" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.sales.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "pos" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.pos.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

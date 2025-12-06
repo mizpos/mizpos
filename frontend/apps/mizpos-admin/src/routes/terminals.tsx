@@ -18,16 +18,11 @@ import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
 import { Table } from "../components/Table";
-import { getAuthHeaders } from "../lib/api";
+import { getAuthenticatedClients } from "../lib/api";
 
 export const Route = createFileRoute("/terminals")({
   component: TerminalsPage,
 });
-
-// API Base URL
-const API_BASE =
-  import.meta.env.VITE_API_GATEWAY_BASE ||
-  "https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com/dev";
 
 interface Terminal {
   terminal_id: string;
@@ -68,40 +63,33 @@ function TerminalsPage() {
   } = useQuery({
     queryKey: ["terminals"],
     queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE}/accounts/terminals`, {
-        headers,
-      });
-      if (!response.ok) {
+      const { accounts } = await getAuthenticatedClients();
+      const { data, error } = await accounts.GET("/terminals");
+      if (error) {
         throw new Error("端末一覧の取得に失敗しました");
       }
-      const data = await response.json();
-      return (data.terminals || []) as Terminal[];
+      return (data?.terminals || []) as Terminal[];
     },
   });
 
   // 端末登録
   const registerMutation = useMutation({
     mutationFn: async (payload: RegistrationQrPayload) => {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE}/accounts/terminals`, {
-        method: "POST",
-        headers: {
-          ...headers,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const { accounts } = await getAuthenticatedClients();
+      const { data, error } = await accounts.POST("/terminals", {
+        body: {
           terminal_id: payload.terminal_id,
           public_key: payload.public_key,
           device_name: payload.device_name,
           os: payload.os,
-        }),
+        },
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || "端末の登録に失敗しました");
+      if (error) {
+        throw new Error(
+          (error as { detail?: string }).detail || "端末の登録に失敗しました",
+        );
       }
-      return response.json();
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["terminals"] });
@@ -117,15 +105,13 @@ function TerminalsPage() {
   // 端末revoke
   const revokeMutation = useMutation({
     mutationFn: async (terminalId: string) => {
-      const headers = await getAuthHeaders();
-      const response = await fetch(
-        `${API_BASE}/accounts/terminals/${terminalId}`,
-        {
-          method: "DELETE",
-          headers,
+      const { accounts } = await getAuthenticatedClients();
+      const { error } = await accounts.DELETE("/terminals/{terminal_id}", {
+        params: {
+          path: { terminal_id: terminalId },
         },
-      );
-      if (!response.ok) {
+      });
+      if (error) {
         throw new Error("端末の無効化に失敗しました");
       }
     },
