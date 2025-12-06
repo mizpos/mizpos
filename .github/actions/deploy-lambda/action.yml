@@ -1,35 +1,60 @@
-name: 'Deploy Lambda Function'
-description: 'Deploy Lambda functions using Lambroll'
+name: "Deploy Lambda Functions"
+description: "Deploy Lambda Functions"
+
 inputs:
-  function-path:
-    description: 'Path to Lambda function'
+  WORKING_DIR:
+    description: "ディレクトリ"
     required: true
-  environment:
-    description: 'Environment (dev/prod)'
+  ENV:
+    description: "Env"
     required: true
-  aws-account-id:
-    description: 'AWS Account ID'
+  AWS_ACCOUNT_ID:
+    description: "AWS Account ID"
     required: true
-  lambroll-version:
-    description: 'Lambroll version'
-    required: false
-    default: '1.3.2'
+  LAMBDA_FUNTION_PATH:
+    description: "Lambda Function Path"
+    required: true
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Install Lambroll
+    - name: Check uv exists
+      id: check-uv
       shell: bash
       run: |
-        if ! command -v lambroll &> /dev/null; then
-          curl -L https://github.com/fujiwara/lambroll/releases/download/v${{ inputs.lambroll-version }}/lambroll_v${{ inputs.lambroll-version }}_linux_amd64.tar.gz | tar -xz
-          sudo mv lambroll /usr/local/bin/
+        if ! command -v uv &> /dev/null; then
+          echo "uv is not installed"
+          echo "exists=false" >> $GITHUB_OUTPUT
+          exit 0
         fi
+        echo "uv is installed"
+        echo "exists=true" >> $GITHUB_OUTPUT
 
-    - name: Deploy Lambda Function
+    - name: install uv
+      if: steps.check-uv.outputs.exists == 'false'
       shell: bash
-      working-directory: ${{ inputs.function-path }}
       run: |
-        export ENV=${{ inputs.environment }}
-        export AWS_ACCOUNT_ID=${{ inputs.aws-account-id }}
-        make deploy
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    - name: Create requirements.txt
+      shell: bash
+      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
+      run: |
+        uv pip compile pyproject.toml > requirements.txt
+
+    - name: Deploy Lambda Functions
+      shell: bash
+      env:
+        ENV: ${{ inputs.ENV }}
+        AWS_ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
+      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
+      run: |
+        echo "Installing dependencies for ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
+        pip install -r requirements.txt -t .
+        echo "Deploying ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
+        lambroll deploy \
+          --function function.jsonnet \
+          --ext-str ENV=${{ inputs.ENV }} \
+          --ext-str AWS_ACCOUNT_ID=${{ inputs.AWS_ACCOUNT_ID }} \
+          --src . \
+          --exclude-file .lambdaignore
