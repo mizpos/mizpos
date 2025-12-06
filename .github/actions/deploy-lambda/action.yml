@@ -2,17 +2,14 @@ name: "Deploy Lambda Functions"
 description: "Deploy Lambda Functions"
 
 inputs:
-  WORKING_DIR:
-    description: "ディレクトリ"
-    required: true
-  ENV:
-    description: "Env"
-    required: true
-  AWS_ACCOUNT_ID:
-    description: "AWS Account ID"
-    required: true
-  LAMBDA_FUNTION_PATH:
+  function-path:
     description: "Lambda Function Path"
+    required: true
+  environment:
+    description: "Environment (dev, prod)"
+    required: true
+  aws-account-id:
+    description: "AWS Account ID"
     required: true
 
 runs:
@@ -22,7 +19,7 @@ runs:
       id: check-uv
       shell: bash
       run: |
-        if ! command -v uv &> /dev/null; then
+        if ! command -v uv &> /dev/null && [ ! -f "$HOME/.local/bin/uv" ]; then
           echo "uv is not installed"
           echo "exists=false" >> $GITHUB_OUTPUT
           exit 0
@@ -30,7 +27,7 @@ runs:
         echo "uv is installed"
         echo "exists=true" >> $GITHUB_OUTPUT
 
-    - name: install uv
+    - name: Install uv
       if: steps.check-uv.outputs.exists == 'false'
       shell: bash
       run: |
@@ -38,23 +35,24 @@ runs:
 
     - name: Create requirements.txt
       shell: bash
-      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
+      working-directory: ${{ inputs.function-path }}
       run: |
+        export PATH="$HOME/.local/bin:$PATH"
         uv pip compile pyproject.toml > requirements.txt
 
     - name: Deploy Lambda Functions
       shell: bash
       env:
-        ENV: ${{ inputs.ENV }}
-        AWS_ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
-      working-directory: ${{ inputs.LAMBDA_FUNTION_PATH }}
+        ENV: ${{ inputs.environment }}
+        AWS_ACCOUNT_ID: ${{ inputs.aws-account-id }}
+      working-directory: ${{ inputs.function-path }}
       run: |
-        echo "Installing dependencies for ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
+        echo "Installing dependencies for ${{ inputs.function-path }} Lambda function..."
         pip install -r requirements.txt -t .
-        echo "Deploying ${{ inputs.LAMBDA_FUNTION_PATH }} Lambda function..."
+        echo "Deploying ${{ inputs.function-path }} Lambda function..."
         lambroll deploy \
           --function function.jsonnet \
-          --ext-str ENV=${{ inputs.ENV }} \
-          --ext-str AWS_ACCOUNT_ID=${{ inputs.AWS_ACCOUNT_ID }} \
+          --ext-str ENV=${{ inputs.environment }} \
+          --ext-str AWS_ACCOUNT_ID=${{ inputs.aws-account-id }} \
           --src . \
           --exclude-file .lambdaignore
