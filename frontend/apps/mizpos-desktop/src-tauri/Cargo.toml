@@ -34,7 +34,7 @@ uuid = { version = "1", features = ["v4"] }
 [target.'cfg(not(target_os = "android"))'.dependencies]
 escpos = { version = "^0.17.0", features = ["native_usb"] }
 nusb = "^0.2.1"
-keyring = "4"  # OS Keychain/Credential Manager
+keyring = "3"  # OS Keychain/Credential Manager (v4 is still alpha)
 
 # Android dependencies (Bluetooth printer support)
 [target.'cfg(target_os = "android")'.dependencies]
