@@ -420,3 +420,98 @@ class ApplyCouponResponse(BaseModel):
     discount_value: int
     discount_amount: int  # 実際の割引額（計算済み）
     new_total: int  # 割引後の金額
+
+
+# ==========================================
+# 端末管理用モデル（公開鍵認証）
+# ==========================================
+
+
+class RegisterTerminalRequest(BaseModel):
+    """端末登録リクエスト（mizpos-admin用）
+
+    QRコードからスキャンしたデータを使用して端末を登録
+    """
+
+    terminal_id: str = Field(
+        ...,
+        min_length=36,
+        max_length=36,
+        description="端末ID (UUID形式)",
+    )
+    public_key: str = Field(
+        ...,
+        min_length=40,
+        max_length=50,
+        description="Base64エンコードされたEd25519公開鍵 (32バイト)",
+    )
+    device_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="端末名",
+    )
+    os: str = Field(
+        ...,
+        pattern="^(macos|windows|android|linux)$",
+        description="OS種別",
+    )
+
+
+class TerminalResponse(BaseModel):
+    """端末レスポンス"""
+
+    terminal_id: str
+    device_name: str
+    os: str
+    status: str  # active | revoked
+    registered_by: str
+    registered_at: str
+    revoked_at: str | None = None
+    last_seen_at: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class TerminalAuthRequest(BaseModel):
+    """端末認証リクエスト（mizpos-desktop用）
+
+    端末がサーバーに認証する際に使用
+    """
+
+    terminal_id: str = Field(
+        ...,
+        min_length=36,
+        max_length=36,
+        description="端末ID (UUID形式)",
+    )
+    timestamp: int = Field(
+        ...,
+        description="Unix タイムスタンプ（署名時刻）",
+    )
+    signature: str = Field(
+        ...,
+        description="Base64エンコードされたEd25519署名",
+    )
+
+
+class TerminalAuthResponse(BaseModel):
+    """端末認証レスポンス"""
+
+    valid: bool
+    terminal: TerminalResponse | None = None
+
+
+class CheckTerminalRequest(BaseModel):
+    """端末登録確認リクエスト（mizpos-desktop用）
+
+    端末が登録済みかどうかを確認する際に使用
+    """
+
+    terminal_id: str = Field(
+        ...,
+        min_length=36,
+        max_length=36,
+        description="端末ID (UUID形式)",
+    )

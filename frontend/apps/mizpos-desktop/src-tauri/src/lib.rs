@@ -2,6 +2,9 @@
 #[cfg(not(target_os = "android"))]
 mod jp_escpos;
 
+// 端末認証モジュール
+mod terminal_auth;
+
 // Desktop USB printer implementation
 #[cfg(not(target_os = "android"))]
 mod desktop_printer {
@@ -401,6 +404,85 @@ mod common {
     }
 }
 
+// 端末認証コマンド
+mod terminal_commands {
+    use crate::terminal_auth;
+
+    /// 端末の状態を取得
+    #[tauri::command]
+    pub fn get_terminal_status() -> Result<terminal_auth::TerminalAuthResult, String> {
+        terminal_auth::get_terminal_status().map_err(|e| e.to_string())
+    }
+
+    /// 端末を初期化（キーペア生成）
+    #[tauri::command]
+    pub fn initialize_terminal(
+        device_name: String,
+    ) -> Result<terminal_auth::RegistrationQrPayload, String> {
+        terminal_auth::initialize_terminal(&device_name).map_err(|e| e.to_string())
+    }
+
+    /// QRコード用のJSONデータを生成
+    #[tauri::command]
+    pub fn generate_registration_qr(
+        device_name: String,
+    ) -> Result<String, String> {
+        // 既に初期化されている場合は現在の状態を返す
+        let status = terminal_auth::get_terminal_status().map_err(|e| e.to_string())?;
+
+        let payload = if status.status == "initialized" {
+            // 既存のデータからペイロードを構築
+            terminal_auth::RegistrationQrPayload {
+                v: 1,
+                terminal_id: status.terminal_id.unwrap_or_default(),
+                public_key: status.public_key.unwrap_or_default(),
+                device_name,
+                os: get_os_type(),
+                created_at: "".to_string(), // 既存のため空
+            }
+        } else {
+            // 新規初期化
+            terminal_auth::initialize_terminal(&device_name).map_err(|e| e.to_string())?
+        };
+
+        serde_json::to_string(&payload).map_err(|e| e.to_string())
+    }
+
+    /// 認証用の署名データを生成
+    #[tauri::command]
+    pub fn create_auth_signature() -> Result<terminal_auth::SignatureData, String> {
+        terminal_auth::create_auth_signature().map_err(|e| e.to_string())
+    }
+
+    /// Keychainをクリア（デバッグ用）
+    #[tauri::command]
+    pub fn clear_terminal_keychain() -> Result<(), String> {
+        terminal_auth::clear_keychain().map_err(|e| e.to_string())
+    }
+
+    fn get_os_type() -> String {
+        #[cfg(target_os = "macos")]
+        return "macos".to_string();
+
+        #[cfg(target_os = "windows")]
+        return "windows".to_string();
+
+        #[cfg(target_os = "linux")]
+        return "linux".to_string();
+
+        #[cfg(target_os = "android")]
+        return "android".to_string();
+
+        #[cfg(not(any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "linux",
+            target_os = "android"
+        )))]
+        return "unknown".to_string();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -408,6 +490,13 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             common::get_platform,
+            // 端末認証コマンド
+            terminal_commands::get_terminal_status,
+            terminal_commands::initialize_terminal,
+            terminal_commands::generate_registration_qr,
+            terminal_commands::create_auth_signature,
+            terminal_commands::clear_terminal_keychain,
+            // プリンターコマンド（デスクトップ）
             #[cfg(not(target_os = "android"))]
             desktop_printer::get_usb_devices,
             #[cfg(not(target_os = "android"))]
@@ -416,6 +505,7 @@ pub fn run() {
             desktop_printer::welcome_print,
             #[cfg(not(target_os = "android"))]
             desktop_printer::print_receipt,
+            // プリンターコマンド（Android）
             #[cfg(target_os = "android")]
             android_printer::get_bluetooth_devices,
             #[cfg(target_os = "android")]

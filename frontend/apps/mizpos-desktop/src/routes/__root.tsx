@@ -3,19 +3,21 @@ import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
+import { useTerminalStore } from "../stores/terminal";
 
 function RootLayout() {
   const [isInitialized, setIsInitialized] = useState(false);
   const { initialize: initAuth } = useAuthStore();
   const { initialize: initSettings } = useSettingsStore();
+  const { initialize: initTerminal } = useTerminalStore();
 
   useEffect(() => {
     const init = async () => {
-      await Promise.all([initAuth(), initSettings()]);
+      await Promise.all([initAuth(), initSettings(), initTerminal()]);
       setIsInitialized(true);
     };
     init();
-  }, [initAuth, initSettings]);
+  }, [initAuth, initSettings, initTerminal]);
 
   if (!isInitialized) {
     return (

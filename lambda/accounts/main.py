@@ -38,6 +38,9 @@ from models import (
     CreateCouponRequest,
     UpdateCouponRequest,
     ApplyCouponRequest,
+    # 端末管理用モデル
+    RegisterTerminalRequest,
+    TerminalAuthRequest,
 )
 from permissions import (
     get_user_id_from_auth,
@@ -68,6 +71,14 @@ from pos_services import (
     set_session_event,
     update_pos_employee,
     verify_pos_session,
+)
+from terminal_services import (
+    authenticate_terminal,
+    check_terminal_registered,
+    get_terminal,
+    list_terminals,
+    register_terminal,
+    revoke_terminal,
 )
 from services import (
     DynamoDBClientError,
@@ -1344,6 +1355,145 @@ async def lookup_coupon_endpoint(request: Request, code: str):
         raise
     except Exception as e:
         logger.error(f"Error looking up coupon: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# 端末管理エンドポイント（公開鍵認証）
+# ==========================================
+
+
+@router.get("/terminals", response_model=dict)
+async def list_terminals_endpoint(
+    status: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """端末一覧取得
+
+    認証: Cognito JWT（mizpos-admin）
+    status パラメータで active/revoked をフィルタ可能
+    """
+    try:
+        terminals = list_terminals(status=status)
+        return {"terminals": terminals}
+    except Exception as e:
+        logger.error(f"Error listing terminals: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminals", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def register_terminal_endpoint(
+    request: RegisterTerminalRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """端末登録
+
+    認証: Cognito JWT（mizpos-admin）
+    QRコードからスキャンしたデータを使用して端末を登録
+    """
+    try:
+        current_user_id = await get_user_id_from_auth(current_user)
+        terminal = register_terminal(
+            terminal_id=request.terminal_id,
+            public_key=request.public_key,
+            device_name=request.device_name,
+            os_type=request.os,
+            registered_by=current_user_id,
+        )
+        return {"terminal": terminal}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error registering terminal: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminals/{terminal_id}", response_model=dict)
+async def get_terminal_endpoint(
+    terminal_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """端末詳細取得
+
+    認証: Cognito JWT（mizpos-admin）
+    """
+    try:
+        terminal = get_terminal(terminal_id)
+        if not terminal:
+            raise HTTPException(status_code=404, detail="Terminal not found")
+        return {"terminal": terminal}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting terminal: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/terminals/{terminal_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_terminal_endpoint(
+    terminal_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """端末無効化（revoke）
+
+    認証: Cognito JWT（mizpos-admin）
+    端末を無効化し、以降の認証を拒否
+    """
+    try:
+        success = revoke_terminal(terminal_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Terminal not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error revoking terminal: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminals/auth", response_model=dict)
+async def authenticate_terminal_endpoint(request: TerminalAuthRequest):
+    """端末認証
+
+    認証不要（端末からの呼び出し）
+    署名を検証して端末を認証
+    """
+    try:
+        terminal = authenticate_terminal(
+            terminal_id=request.terminal_id,
+            timestamp=request.timestamp,
+            signature=request.signature,
+        )
+        return {
+            "valid": True,
+            "terminal": {
+                "terminal_id": terminal["terminal_id"],
+                "device_name": terminal["device_name"],
+                "status": terminal["status"],
+            },
+        }
+    except ValueError as e:
+        # 認証失敗
+        return {"valid": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"Error authenticating terminal: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminals/check/{terminal_id}", response_model=dict)
+async def check_terminal_endpoint(terminal_id: str):
+    """端末登録確認
+
+    認証不要（端末からの呼び出し）
+    端末が登録済みかどうかを確認
+    """
+    try:
+        is_registered, terminal_status = check_terminal_registered(terminal_id)
+        return {
+            "registered": is_registered,
+            "status": terminal_status,
+        }
+    except Exception as e:
+        logger.error(f"Error checking terminal: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

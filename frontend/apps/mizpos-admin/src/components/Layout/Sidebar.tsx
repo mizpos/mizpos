@@ -5,6 +5,7 @@ import {
   IconChartBar,
   IconChevronLeft,
   IconChevronRight,
+  IconCpu,
   IconDeviceDesktop,
   IconDownload,
   IconGift,
@@ -50,6 +51,11 @@ const navItems: NavItem[] = [
     label: "POS従業員",
     href: "/pos-employees",
     icon: <IconDeviceDesktop size={20} />,
+  },
+  {
+    label: "端末管理",
+    href: "/terminals",
+    icon: <IconCpu size={20} />,
   },
   {
     label: "クライアント",

@@ -24,11 +24,17 @@ tauri-plugin-store = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 encoding_rs = "0.8"
+# 端末認証用
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+base64 = "0.22"
+uuid = { version = "1", features = ["v4"] }
 
 # Desktop only dependencies (USB printer support)
 [target.'cfg(not(target_os = "android"))'.dependencies]
 escpos = { version = "^0.17.0", features = ["native_usb"] }
 nusb = "^0.2.1"
+keyring = "4"  # OS Keychain/Credential Manager
 
 # Android dependencies (Bluetooth printer support)
 [target.'cfg(target_os = "android")'.dependencies]
