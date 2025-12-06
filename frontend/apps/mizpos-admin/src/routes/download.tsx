@@ -14,16 +14,19 @@ export const Route = createFileRoute("/download")({
   component: DownloadPage,
 });
 
+interface DownloadFile {
+  name: string;
+  filename: string;
+  arch?: "x64" | "arm64";
+  size?: string;
+  recommended?: boolean;
+}
+
 interface DownloadItem {
   platform: string;
   icon: React.ReactNode;
   description: string;
-  files: {
-    name: string;
-    filename: string;
-    size?: string;
-    recommended?: boolean;
-  }[];
+  files: DownloadFile[];
   instructions: string[];
 }
 
@@ -56,19 +59,32 @@ function DownloadPage() {
       description: "Ubuntu / Debian / Fedora など",
       files: [
         {
-          name: "AppImage (全ディストリ対応)",
+          name: "AppImage x64 (Intel/AMD)",
           filename: "mizpos-latest.AppImage",
+          arch: "x64",
           recommended: true,
         },
         {
-          name: "Debian パッケージ (.deb)",
+          name: "AppImage ARM64 (Raspberry Pi等)",
+          filename: "mizpos-latest.AppImage",
+          arch: "arm64",
+        },
+        {
+          name: "Debian パッケージ x64 (.deb)",
           filename: "mizpos-latest.deb",
+          arch: "x64",
+        },
+        {
+          name: "Debian パッケージ ARM64 (.deb)",
+          filename: "mizpos-latest.deb",
+          arch: "arm64",
         },
       ],
       instructions: [
         "AppImage: ダウンロード後、chmod +x で実行権限を付与して起動",
         "DEB: sudo dpkg -i でインストール",
         "依存関係が不足している場合は sudo apt --fix-broken install",
+        "ARM64版はRaspberry Pi 4/5やその他ARMデバイス向け",
       ],
     },
     {
@@ -90,19 +106,24 @@ function DownloadPage() {
     },
   ];
 
-  const getDownloadUrl = (filename: string, platform: string): string => {
-    const osPath =
-      platform === "Android"
-        ? "android"
-        : platform.toLowerCase() === "windows"
-          ? "windows"
-          : "linux";
+  const getDownloadUrl = (
+    filename: string,
+    platform: string,
+    arch?: "x64" | "arm64",
+  ): string => {
     const envPath = env;
 
     if (platform === "Android") {
-      return `${cdnUrl}/${osPath}/${envPath}/${filename}`;
+      return `${cdnUrl}/android/${envPath}/${filename}`;
     }
-    return `${cdnUrl}/desktop/${envPath}/${osPath}/${filename}`;
+
+    if (platform.toLowerCase() === "windows") {
+      return `${cdnUrl}/desktop/${envPath}/windows/${filename}`;
+    }
+
+    // Linux with architecture
+    const linuxPath = arch ? `linux-${arch}` : "linux-x64";
+    return `${cdnUrl}/desktop/${envPath}/${linuxPath}/${filename}`;
   };
 
   return (
@@ -245,8 +266,12 @@ function DownloadPage() {
               >
                 {item.files.map((file) => (
                   <a
-                    key={file.filename}
-                    href={getDownloadUrl(file.filename, item.platform)}
+                    key={`${file.filename}-${file.arch || "default"}`}
+                    href={getDownloadUrl(
+                      file.filename,
+                      item.platform,
+                      file.arch,
+                    )}
                     download
                     className={css({
                       display: "flex",
