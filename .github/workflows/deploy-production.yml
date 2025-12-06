@@ -254,6 +254,16 @@ jobs:
         with:
           environment: prod
 
+  deploy-android:
+    name: Invoke Desktop and Android App Deploy for Production
+    runs-on: ubuntu-slim
+    if: |
+      always() &&
+      (github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Invoke Android App Deploy Workflow
         uses: ./.github/workflows/build-android.yml
         with:

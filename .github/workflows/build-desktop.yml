@@ -20,6 +20,11 @@ on:
           - dev
           - prod
   workflow_call:
+    inputs:
+      environment:
+        description: "Environment to build for"
+        required: true
+        type: string
 
 env:
   NODE_VERSION: "24"
