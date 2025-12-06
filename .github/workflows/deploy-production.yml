@@ -94,6 +94,13 @@ jobs:
           environment: prod
           aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
 
+      - name: Deploy "pos" Lambda Functions
+        uses: ./.github/actions/deploy-lambda
+        with:
+          function-path: lambda/pos
+          environment: prod
+          aws-account-id: ${{ env.AWS_ACCOUNT_ID }}
+
   build-frontend:
     name: Build Production Frontend
     runs-on: ubuntu-slim

@@ -300,3 +300,79 @@ resource "aws_iam_role_policy" "lambda_sales" {
     ]
   })
 }
+
+# Lambda実行ロール - pos
+resource "aws_iam_role" "lambda_pos" {
+  name = "${var.environment}-${var.project_name}-lambda-pos-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.environment}-${var.project_name}-lambda-pos-role"
+  }
+}
+
+# Lambda pos用ポリシー
+resource "aws_iam_role_policy" "lambda_pos" {
+  name = "${var.environment}-${var.project_name}-lambda-pos-policy"
+  role = aws_iam_role.lambda_pos.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          aws_dynamodb_table.terminals.arn,
+          "${aws_dynamodb_table.terminals.arn}/index/*",
+          aws_dynamodb_table.pos_employees.arn,
+          "${aws_dynamodb_table.pos_employees.arn}/index/*",
+          aws_dynamodb_table.pos_sessions.arn,
+          "${aws_dynamodb_table.pos_sessions.arn}/index/*",
+          aws_dynamodb_table.offline_sales_queue.arn,
+          "${aws_dynamodb_table.offline_sales_queue.arn}/index/*",
+          aws_dynamodb_table.sales.arn,
+          "${aws_dynamodb_table.sales.arn}/index/*",
+          aws_dynamodb_table.stock.arn,
+          "${aws_dynamodb_table.stock.arn}/index/*",
+          aws_dynamodb_table.coupons.arn,
+          "${aws_dynamodb_table.coupons.arn}/index/*",
+          aws_dynamodb_table.events.arn,
+          "${aws_dynamodb_table.events.arn}/index/*",
+          aws_dynamodb_table.publishers.arn,
+          "${aws_dynamodb_table.publishers.arn}/index/*",
+          aws_dynamodb_table.roles.arn,
+          "${aws_dynamodb_table.roles.arn}/index/*"
+        ]
+      }
+    ]
+  })
+}

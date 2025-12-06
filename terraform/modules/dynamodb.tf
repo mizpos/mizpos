@@ -418,6 +418,51 @@ resource "aws_dynamodb_table" "offline_sales_queue" {
   }
 }
 
+# Terminals table - POS端末管理（Ed25519公開鍵登録）
+# mizpos-desktop端末の登録・認証用
+resource "aws_dynamodb_table" "terminals" {
+  name         = "${var.environment}-mizpos-terminals"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "terminal_id"
+
+  attribute {
+    name = "terminal_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "name"
+    type = "S"
+  }
+
+  attribute {
+    name = "event_id"
+    type = "S"
+  }
+
+  # 端末名での検索用
+  global_secondary_index {
+    name            = "NameIndex"
+    hash_key        = "name"
+    projection_type = "ALL"
+  }
+
+  # イベント別端末一覧取得用
+  global_secondary_index {
+    name            = "EventIndex"
+    hash_key        = "event_id"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-terminals"
+  }
+}
+
 # Coupons table - クーポン管理
 # クーポンタイプ:
 #   - fixed: 固定金額割引（例: ¥500引き）- 売上計算上マイナス円の商品として扱う

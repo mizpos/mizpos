@@ -154,3 +154,53 @@ resource "aws_cloudwatch_log_group" "sales" {
     Name = "${var.environment}-${var.project_name}-sales-logs"
   }
 }
+
+# Lambda Function - pos
+resource "aws_lambda_function" "pos" {
+  function_name = "${var.environment}-${var.project_name}-pos"
+  role          = aws_iam_role.lambda_pos.arn
+  handler       = "main.handler"
+  runtime       = "python3.12"
+  timeout       = 30
+  memory_size   = 256
+
+  filename         = "${path.module}/lambda_placeholder.zip"
+  source_code_hash = filebase64sha256("${path.module}/lambda_placeholder.zip")
+
+  environment {
+    variables = {
+      ENVIRONMENT               = var.environment
+      TERMINALS_TABLE           = aws_dynamodb_table.terminals.name
+      POS_EMPLOYEES_TABLE       = aws_dynamodb_table.pos_employees.name
+      POS_SESSIONS_TABLE        = aws_dynamodb_table.pos_sessions.name
+      OFFLINE_SALES_QUEUE_TABLE = aws_dynamodb_table.offline_sales_queue.name
+      SALES_TABLE               = aws_dynamodb_table.sales.name
+      STOCK_TABLE               = aws_dynamodb_table.stock.name
+      COUPONS_TABLE             = aws_dynamodb_table.coupons.name
+      EVENTS_TABLE              = aws_dynamodb_table.events.name
+      PUBLISHERS_TABLE          = aws_dynamodb_table.publishers.name
+      ROLES_TABLE               = aws_dynamodb_table.roles.name
+    }
+  }
+
+  tags = {
+    Name = "${var.environment}-${var.project_name}-pos"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash
+    ]
+  }
+}
+
+# CloudWatch Logs - pos
+resource "aws_cloudwatch_log_group" "pos" {
+  name              = "/aws/lambda/${aws_lambda_function.pos.function_name}"
+  retention_in_days = var.environment == "prod" ? 30 : 7
+
+  tags = {
+    Name = "${var.environment}-${var.project_name}-pos-logs"
+  }
+}
