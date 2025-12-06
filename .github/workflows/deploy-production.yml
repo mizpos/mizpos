@@ -240,34 +240,20 @@ jobs:
           echo "- **Deployed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
 
   deploy-desktop:
-    name: Invoke Desktop and Android App Deploy for Production
-    runs-on: ubuntu-slim
-    if: |
-      always() &&
-      (github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Invoke Desktop App Deploy Workflow
-        uses: ./.github/workflows/build-desktop.yml
-        with:
-          environment: prod
+    name: Build and Deploy Desktop App for Production
+    if: github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop'
+    uses: ./.github/workflows/build-desktop.yml
+    with:
+      environment: prod
+    secrets: inherit
 
   deploy-android:
-    name: Invoke Desktop and Android App Deploy for Production
-    runs-on: ubuntu-slim
-    if: |
-      always() &&
-      (github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Invoke Android App Deploy Workflow
-        uses: ./.github/workflows/build-android.yml
-        with:
-          environment: prod
+    name: Build and Deploy Android App for Production
+    if: github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop'
+    uses: ./.github/workflows/build-android.yml
+    with:
+      environment: prod
+    secrets: inherit
 
   create-release:
     name: Create Release Tag
