@@ -242,7 +242,6 @@ jobs:
   deploy-desktop:
     name: Invoke Desktop and Android App Deploy for Production
     runs-on: ubuntu-slim
-    needs: [deploy-frontend]
     if: |
       always() &&
       (github.event.inputs.deploy_type == 'all' || github.event.inputs.deploy_type == 'desktop')
