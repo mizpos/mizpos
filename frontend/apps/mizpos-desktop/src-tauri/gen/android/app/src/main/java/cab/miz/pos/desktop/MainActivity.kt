@@ -19,12 +19,14 @@ import java.util.Locale
 
 class MainActivity : TauriActivity() {
     private lateinit var printer: CitizenPrinter
+    private lateinit var terminalAuth: TerminalAuth
     private val BLUETOOTH_PERMISSION_REQUEST_CODE = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         printer = CitizenPrinter(this)
+        terminalAuth = TerminalAuth(this)
         requestBluetoothPermissions()
         hideSystemUI()
     }
@@ -59,6 +61,8 @@ class MainActivity : TauriActivity() {
         super.onWebViewCreate(webView)
         // Add JavaScript interface for printer control
         webView.addJavascriptInterface(PrinterBridge(), "MizPosPrinter")
+        // Add JavaScript interface for terminal authentication
+        webView.addJavascriptInterface(TerminalAuthBridge(), "MizPosTerminalAuth")
     }
 
     private fun requestBluetoothPermissions() {
@@ -334,6 +338,90 @@ class MainActivity : TauriActivity() {
 
                 JSONObject().apply {
                     put("success", true)
+                }.toString()
+            } catch (e: Exception) {
+                JSONObject().apply {
+                    put("success", false)
+                    put("error", e.message ?: "Unknown error")
+                }.toString()
+            }
+        }
+    }
+
+    /**
+     * JavaScript Interface for Terminal Authentication
+     * These methods can be called from JavaScript as:
+     * - window.MizPosTerminalAuth.getTerminalStatus()
+     * - window.MizPosTerminalAuth.saveKeyPair(terminalId, privateKey, publicKey)
+     * - window.MizPosTerminalAuth.getPrivateKey()
+     * - window.MizPosTerminalAuth.clearKeychain()
+     */
+    inner class TerminalAuthBridge {
+        @JavascriptInterface
+        fun getTerminalStatus(): String {
+            return try {
+                val status = terminalAuth.getTerminalStatus()
+                JSONObject().apply {
+                    put("success", true)
+                    put("status", status["status"])
+                    put("terminal_id", status["terminal_id"])
+                    put("public_key", status["public_key"])
+                    put("error", status["error"])
+                }.toString()
+            } catch (e: Exception) {
+                JSONObject().apply {
+                    put("success", false)
+                    put("error", e.message ?: "Unknown error")
+                }.toString()
+            }
+        }
+
+        @JavascriptInterface
+        fun saveKeyPair(terminalId: String, privateKeyBase64: String, publicKeyBase64: String): String {
+            return try {
+                val success = terminalAuth.saveKeyPair(terminalId, privateKeyBase64, publicKeyBase64)
+                JSONObject().apply {
+                    put("success", success)
+                    if (!success) put("error", "Failed to save key pair")
+                }.toString()
+            } catch (e: Exception) {
+                JSONObject().apply {
+                    put("success", false)
+                    put("error", e.message ?: "Unknown error")
+                }.toString()
+            }
+        }
+
+        @JavascriptInterface
+        fun getPrivateKey(): String {
+            return try {
+                val privateKeyBytes = terminalAuth.getPrivateKeyBytes()
+                if (privateKeyBytes != null) {
+                    JSONObject().apply {
+                        put("success", true)
+                        put("private_key", android.util.Base64.encodeToString(privateKeyBytes, android.util.Base64.NO_WRAP))
+                    }.toString()
+                } else {
+                    JSONObject().apply {
+                        put("success", false)
+                        put("error", "No private key found")
+                    }.toString()
+                }
+            } catch (e: Exception) {
+                JSONObject().apply {
+                    put("success", false)
+                    put("error", e.message ?: "Unknown error")
+                }.toString()
+            }
+        }
+
+        @JavascriptInterface
+        fun clearKeychain(): String {
+            return try {
+                val success = terminalAuth.clearKeychain()
+                JSONObject().apply {
+                    put("success", success)
+                    if (!success) put("error", "Failed to clear keychain")
                 }.toString()
             } catch (e: Exception) {
                 JSONObject().apply {

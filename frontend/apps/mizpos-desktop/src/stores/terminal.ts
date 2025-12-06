@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import nacl from "tweetnacl";
+import { decodeBase64, encodeBase64 } from "tweetnacl-util";
 import { create } from "zustand";
 
 /** 端末の状態 */
@@ -38,6 +40,48 @@ interface CheckTerminalResponse {
   registered: boolean;
   status: string | null;
 }
+
+/** Android JavaScript Interface の型定義 */
+interface AndroidTerminalAuth {
+  getTerminalStatus: () => string;
+  saveKeyPair: (
+    terminalId: string,
+    privateKeyBase64: string,
+    publicKeyBase64: string
+  ) => string;
+  getPrivateKey: () => string;
+  clearKeychain: () => string;
+}
+
+/** Android JavaScript Interface のレスポンス型 */
+interface AndroidTerminalAuthResponse {
+  success: boolean;
+  status?: string;
+  terminal_id?: string;
+  public_key?: string;
+  private_key?: string;
+  error?: string;
+}
+
+declare global {
+  interface Window {
+    MizPosTerminalAuth?: AndroidTerminalAuth;
+  }
+}
+
+/** Androidかどうかを判定 */
+const isAndroid = (): boolean => {
+  return typeof window !== "undefined" && !!window.MizPosTerminalAuth;
+};
+
+/** UUIDを生成 */
+const generateUUID = (): string => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 interface TerminalState {
   /** 端末の状態 */
@@ -80,8 +124,28 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
   initialize: async () => {
     try {
-      // Tauriから端末の状態を取得
-      const result = await invoke<TerminalAuthResult>("get_terminal_status");
+      let result: TerminalAuthResult;
+
+      if (isAndroid()) {
+        // Android: JavaScript Interface を使用
+        const response = JSON.parse(
+          window.MizPosTerminalAuth!.getTerminalStatus()
+        ) as AndroidTerminalAuthResponse;
+
+        if (!response.success) {
+          throw new Error(response.error || "Failed to get terminal status");
+        }
+
+        result = {
+          status: response.status || "uninitialized",
+          terminal_id: response.terminal_id || null,
+          public_key: response.public_key || null,
+          error: response.error || null,
+        };
+      } else {
+        // Desktop: Tauriコマンドを使用
+        result = await invoke<TerminalAuthResult>("get_terminal_status");
+      }
 
       if (result.status === "initialized") {
         set({
@@ -118,10 +182,41 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
   initializeTerminal: async (deviceName: string) => {
     try {
-      const payload = await invoke<RegistrationQrPayload>(
-        "initialize_terminal",
-        { deviceName }
-      );
+      let payload: RegistrationQrPayload;
+
+      if (isAndroid()) {
+        // Android: JavaScriptでキーペア生成し、Kotlinに保存
+        const keyPair = nacl.sign.keyPair();
+        const terminalId = generateUUID();
+        const privateKeyBase64 = encodeBase64(keyPair.secretKey.slice(0, 32)); // Ed25519の秘密鍵は先頭32バイト
+        const publicKeyBase64 = encodeBase64(keyPair.publicKey);
+
+        const response = JSON.parse(
+          window.MizPosTerminalAuth!.saveKeyPair(
+            terminalId,
+            privateKeyBase64,
+            publicKeyBase64
+          )
+        ) as AndroidTerminalAuthResponse;
+
+        if (!response.success) {
+          throw new Error(response.error || "Failed to save key pair");
+        }
+
+        payload = {
+          v: 1,
+          terminal_id: terminalId,
+          public_key: publicKeyBase64,
+          device_name: deviceName,
+          os: "android",
+          created_at: `${Math.floor(Date.now() / 1000)}Z`,
+        };
+      } else {
+        // Desktop: Tauriコマンドを使用
+        payload = await invoke<RegistrationQrPayload>("initialize_terminal", {
+          deviceName,
+        });
+      }
 
       set({
         status: "initialized",
@@ -143,12 +238,26 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
   generateQrData: async (deviceName: string) => {
     try {
-      const jsonData = await invoke<string>("generate_registration_qr", {
-        deviceName,
-      });
-      const payload = JSON.parse(jsonData) as RegistrationQrPayload;
+      let payload: RegistrationQrPayload;
+
+      if (isAndroid()) {
+        // Android: 既存のペイロードを使用するか、新規生成
+        const existingPayload = get().qrPayload;
+        if (existingPayload) {
+          payload = existingPayload;
+        } else {
+          payload = await get().initializeTerminal(deviceName);
+        }
+      } else {
+        // Desktop: Tauriコマンドを使用
+        const jsonData = await invoke<string>("generate_registration_qr", {
+          deviceName,
+        });
+        payload = JSON.parse(jsonData) as RegistrationQrPayload;
+      }
+
       set({ qrPayload: payload });
-      return jsonData;
+      return JSON.stringify(payload);
     } catch (error) {
       console.error("Failed to generate QR data:", error);
       throw error;
@@ -157,9 +266,43 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
   createAuthSignature: async () => {
     try {
-      const signatureData =
-        await invoke<SignatureData>("create_auth_signature");
-      return signatureData;
+      if (isAndroid()) {
+        // Android: JavaScript Interface から秘密鍵を取得して署名
+        const response = JSON.parse(
+          window.MizPosTerminalAuth!.getPrivateKey()
+        ) as AndroidTerminalAuthResponse;
+
+        if (!response.success || !response.private_key) {
+          throw new Error(response.error || "Failed to get private key");
+        }
+
+        const { terminalId } = get();
+        if (!terminalId) {
+          throw new Error("Terminal not initialized");
+        }
+
+        const timestamp = Math.floor(Date.now() / 1000);
+        const message = `${terminalId}:${timestamp}`;
+        const messageBytes = new TextEncoder().encode(message);
+
+        // 秘密鍵を復元してフルキーペアを再構築
+        const seedBytes = decodeBase64(response.private_key);
+        const keyPair = nacl.sign.keyPair.fromSeed(seedBytes);
+
+        // 署名を生成
+        const signature = nacl.sign.detached(messageBytes, keyPair.secretKey);
+
+        return {
+          terminal_id: terminalId,
+          timestamp,
+          signature: encodeBase64(signature),
+        };
+      } else {
+        // Desktop: Tauriコマンドを使用
+        const signatureData =
+          await invoke<SignatureData>("create_auth_signature");
+        return signatureData;
+      }
     } catch (error) {
       console.error("Failed to create auth signature:", error);
       throw error;
@@ -203,7 +346,20 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
   clearKeychain: async () => {
     try {
-      await invoke("clear_terminal_keychain");
+      if (isAndroid()) {
+        // Android: JavaScript Interface を使用
+        const response = JSON.parse(
+          window.MizPosTerminalAuth!.clearKeychain()
+        ) as AndroidTerminalAuthResponse;
+
+        if (!response.success) {
+          throw new Error(response.error || "Failed to clear keychain");
+        }
+      } else {
+        // Desktop: Tauriコマンドを使用
+        await invoke("clear_terminal_keychain");
+      }
+
       set({
         status: "uninitialized",
         terminalId: null,
