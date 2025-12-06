@@ -109,7 +109,7 @@ function DownloadPage() {
   const getDownloadUrl = (
     filename: string,
     platform: string,
-    arch?: "x64" | "arm64"
+    arch?: "x64" | "arm64",
   ): string => {
     const envPath = env;
 
@@ -267,7 +267,11 @@ function DownloadPage() {
                 {item.files.map((file) => (
                   <a
                     key={`${file.filename}-${file.arch || "default"}`}
-                    href={getDownloadUrl(file.filename, item.platform, file.arch)}
+                    href={getDownloadUrl(
+                      file.filename,
+                      item.platform,
+                      file.arch,
+                    )}
                     download
                     className={css({
                       display: "flex",
