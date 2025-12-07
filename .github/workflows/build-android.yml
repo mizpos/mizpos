@@ -203,3 +203,31 @@ jobs:
           echo "- **Environment**: ${{ needs.setup-env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Download URL**: ${{ needs.setup-env.outputs.cdn-domain }}/android/${{ needs.setup-env.outputs.environment }}/mizpos-latest.apk" >> $GITHUB_STEP_SUMMARY
           echo "- **Built at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  increment-version:
+    name: Increment Android Version
+    needs: [setup-env, build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Increment Version and Update Build Info
+        run: |
+          chmod +x scripts/version-manager.sh
+          ENV="${{ needs.setup-env.outputs.environment }}"
+          NEW_VERSION=$(./scripts/version-manager.sh increment "mizpos-desktop" "$ENV" patch)
+          ./scripts/version-manager.sh set-build-info "mizpos-desktop" "$ENV" "${{ github.sha }}"
+          echo "New version: $NEW_VERSION"
+          echo "## Android App Version Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Version**: $NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: $ENV" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
