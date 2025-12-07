@@ -47,6 +47,7 @@ interface RegistrationQrPayload {
 function TerminalsPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [hideRevoked, setHideRevoked] = useState(true);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scannedData, setScannedData] = useState<RegistrationQrPayload | null>(
     null,
@@ -146,11 +147,20 @@ function TerminalsPage() {
   };
 
   // 検索フィルタ
-  const filteredTerminals = terminals.filter(
-    (t) =>
+  const filteredTerminals = terminals.filter((t) => {
+    // 無効な端末を隠す
+    if (hideRevoked && t.status !== "active") {
+      return false;
+    }
+    // 検索フィルタ
+    return (
       t.device_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.terminal_id.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+      t.terminal_id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
+  // 無効な端末の数
+  const revokedCount = terminals.filter((t) => t.status !== "active").length;
 
   // OS アイコン
   const getOsIcon = (os: string) => {
@@ -229,8 +239,16 @@ function TerminalsPage() {
         </div>
       )}
 
-      {/* 検索 */}
-      <div className={css({ marginBottom: "16px" })}>
+      {/* 検索・フィルター */}
+      <div
+        className={css({
+          marginBottom: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          flexWrap: "wrap",
+        })}
+      >
         <div
           className={css({
             display: "flex",
@@ -240,6 +258,7 @@ function TerminalsPage() {
             padding: "8px 16px",
             borderRadius: "8px",
             maxWidth: "400px",
+            flex: 1,
           })}
         >
           <IconSearch size={18} color="#999" />
@@ -257,6 +276,39 @@ function TerminalsPage() {
             })}
           />
         </div>
+
+        <label
+          className={css({
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "14px",
+            color: "#666",
+            cursor: "pointer",
+          })}
+        >
+          <input
+            type="checkbox"
+            checked={hideRevoked}
+            onChange={(e) => setHideRevoked(e.target.checked)}
+            className={css({
+              width: "16px",
+              height: "16px",
+              cursor: "pointer",
+            })}
+          />
+          無効な端末を隠す
+          {revokedCount > 0 && (
+            <span
+              className={css({
+                fontSize: "12px",
+                color: "#999",
+              })}
+            >
+              ({revokedCount}件)
+            </span>
+          )}
+        </label>
       </div>
 
       {/* 一覧テーブル */}
