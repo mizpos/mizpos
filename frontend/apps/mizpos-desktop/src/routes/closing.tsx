@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
+import { confirm } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
@@ -417,13 +418,18 @@ function ClosingPage() {
   const handleClose = useCallback(async () => {
     if (!session) return;
 
-    const confirmed = window.confirm(
-      "閉局処理を実行しますか？\n\n" +
-        "この操作を行うと：\n" +
+    const confirmed = await confirm(
+      "この操作を行うと：\n" +
         "・閉局レポートが保存されます\n" +
         "・端末登録が無効化されます\n" +
         "・再度利用するには端末の再登録が必要です\n\n" +
         "この操作は取り消せません。",
+      {
+        title: "閉局処理を実行しますか？",
+        kind: "warning",
+        okLabel: "閉局する",
+        cancelLabel: "キャンセル",
+      },
     );
 
     if (!confirmed) return;

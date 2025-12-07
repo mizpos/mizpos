@@ -29,6 +29,7 @@ ed25519-dalek = { version = "2", features = ["rand_core"] }
 rand = "0.8"
 base64 = "0.22"
 uuid = { version = "1", features = ["v4"] }
+tauri-plugin-dialog = "2.4.2"
 
 # Desktop only dependencies (USB printer support)
 [target.'cfg(not(target_os = "android"))'.dependencies]
