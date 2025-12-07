@@ -140,9 +140,9 @@ function LoginPage() {
 
   useEffect(() => {
     if (session) {
-      // イベント紐づけ済みならPOS画面へ、なければイベント選択画面へ
+      // イベント紐づけ済みなら開局画面へ、なければイベント選択画面へ
       if (session.eventId) {
-        navigate({ to: "/pos" });
+        navigate({ to: "/opening" });
       } else {
         navigate({ to: "/select-event" });
       }

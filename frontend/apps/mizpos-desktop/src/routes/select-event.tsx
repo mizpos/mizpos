@@ -138,14 +138,14 @@ function SelectEventPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  // イベント紐づけ済みなら直接POS画面へ
+  // イベント紐づけ済みなら開局画面へ
   useEffect(() => {
     if (!session) {
       navigate({ to: "/login" });
       return;
     }
     if (session.eventId) {
-      navigate({ to: "/pos" });
+      navigate({ to: "/opening" });
     }
   }, [session, navigate]);
 
