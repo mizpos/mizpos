@@ -346,6 +346,119 @@ class MainActivity : TauriActivity() {
                 }.toString()
             }
         }
+
+        @JavascriptInterface
+        fun printClosingReport(jsonData: String): String {
+            return try {
+                if (!printer.isConnected()) {
+                    return JSONObject().apply {
+                        put("success", false)
+                        put("error", "Printer not connected")
+                    }.toString()
+                }
+
+                val data = JSONObject(jsonData)
+                val paperWidth = data.optInt("paper_width", CitizenPrinter.PAPER_58MM)
+                printer.init(paperWidth)
+
+                // ヘッダー
+                printer.printDoubleReverse("　閉局レポート　")
+                printer.printLine("")
+
+                // イベント名
+                val eventName = data.optString("event_name", "")
+                if (eventName.isNotEmpty()) {
+                    printer.printBoldLine(eventName)
+                }
+
+                // 基本情報
+                printer.printSeparator(paperWidth)
+                printer.printRow("レポートID:", data.optString("id", ""), paperWidth)
+                printer.printRow("端末ID:", data.optString("terminal_id", ""), paperWidth)
+                val staffName = data.optString("staff_name", "")
+                val staffId = data.optString("staff_id", "")
+                printer.printRow("担当者:", "$staffName ($staffId)", paperWidth)
+                printer.printRow("閉局日時:", data.optString("closed_at", ""), paperWidth)
+                printer.printSeparator(paperWidth)
+
+                // 売上サマリー
+                printer.printBoldLine("【売上サマリー】")
+                val transactionCount = data.optInt("transaction_count", 0)
+                printer.printRow("取引件数:", "${transactionCount}件", paperWidth)
+                val expectedTotal = data.optInt("expected_total", 0)
+                printer.printRow("売上合計(税込):", formatPrice(expectedTotal), paperWidth)
+                printer.printSeparator(paperWidth)
+
+                // 金種別カウント
+                printer.printBoldLine("【現金内訳】")
+                if (data.has("denominations")) {
+                    val denominations = data.getJSONArray("denominations")
+                    for (i in 0 until denominations.length()) {
+                        val d = denominations.getJSONObject(i)
+                        val denomination = d.optInt("denomination", 0)
+                        val count = d.optInt("count", 0)
+                        if (count > 0) {
+                            val subtotal = denomination * count
+                            printer.printRow("${denomination}円 x $count", formatPrice(subtotal), paperWidth)
+                        }
+                    }
+                }
+                val cashTotal = data.optInt("cash_total", 0)
+                printer.printRowBold("現金合計:", formatPrice(cashTotal), paperWidth)
+                printer.printSeparator(paperWidth)
+
+                // 商品券等
+                if (data.has("vouchers")) {
+                    val vouchers = data.getJSONArray("vouchers")
+                    if (vouchers.length() > 0) {
+                        printer.printBoldLine("【商品券等】")
+                        for (i in 0 until vouchers.length()) {
+                            val v = vouchers.getJSONObject(i)
+                            val voucherType = v.optString("type", "")
+                            val amount = v.optInt("amount", 0)
+                            val memo = v.optString("memo", "")
+                            val label = if (memo.isNotEmpty()) "$voucherType ($memo)" else voucherType
+                            printer.printRow(label, formatPrice(amount), paperWidth)
+                        }
+                        val voucherTotal = data.optInt("voucher_total", 0)
+                        printer.printRowBold("商品券等合計:", formatPrice(voucherTotal), paperWidth)
+                        printer.printSeparator(paperWidth)
+                    }
+                }
+
+                // 合計と差異
+                printer.printBoldLine("【精算】")
+                val grandTotal = data.optInt("grand_total", 0)
+                printer.printRowBold("実査合計:", formatPrice(grandTotal), paperWidth)
+                printer.printRow("売上合計:", formatPrice(expectedTotal), paperWidth)
+
+                val difference = data.optInt("difference", 0)
+                val diffStr = if (difference >= 0) {
+                    "+${formatPrice(difference)}"
+                } else {
+                    "-${formatPrice(-difference)}"
+                }
+                printer.printRowBold("差異:", diffStr, paperWidth)
+
+                printer.printLine("")
+                printer.printSeparator(paperWidth)
+
+                // フッター
+                printer.printCentered("このレポートは閉局処理の記録です")
+
+                printer.feed(3)
+                printer.cut()
+
+                JSONObject().apply {
+                    put("success", true)
+                }.toString()
+            } catch (e: Exception) {
+                JSONObject().apply {
+                    put("success", false)
+                    put("error", e.message ?: "Unknown error")
+                }.toString()
+            }
+        }
     }
 
     /**

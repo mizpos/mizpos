@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
@@ -9,6 +8,11 @@ import {
   getTodaySalesTotal,
   saveClosingReport,
 } from "../lib/db";
+import {
+  type ClosingReportPrintData,
+  getPlatform,
+  UnifiedPrinter,
+} from "../lib/printer";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
 import { useTerminalStore } from "../stores/terminal";
@@ -463,8 +467,18 @@ function ClosingPage() {
       // TODO: サーバーに送信（必要に応じて）
 
       // プリンターが設定されている場合は閉局レポートを印刷
-      if (settings.printer?.vendorId && settings.printer.deviceId) {
+      if (settings.printer) {
         try {
+          const platform = await getPlatform();
+          const printer = new UnifiedPrinter({
+            platform,
+            vendorId: settings.printer.vendorId,
+            deviceId: settings.printer.deviceId,
+            bluetoothAddress: settings.printer.bluetoothAddress,
+            name: settings.printer.name,
+            paperWidth: settings.printer.paperWidth,
+          });
+
           const closedAtStr = report.closedAt.toLocaleString("ja-JP", {
             year: "numeric",
             month: "2-digit",
@@ -473,32 +487,33 @@ function ClosingPage() {
             minute: "2-digit",
           });
 
-          await invoke("print_closing_report", {
-            vendorId: settings.printer.vendorId,
-            deviceId: settings.printer.deviceId,
-            report: {
-              id: report.id,
-              terminal_id: report.terminalId,
-              staff_id: report.staffId,
-              staff_name: report.staffName,
-              event_name: settings.eventName,
-              denominations: report.denominations,
-              cash_total: report.cashTotal,
-              vouchers: report.vouchers.map((v) => ({
-                type: v.type,
-                amount: v.amount,
-                memo: v.memo,
-              })),
-              voucher_total: report.voucherTotal,
-              grand_total: report.grandTotal,
-              expected_total: report.expectedTotal,
-              difference: report.difference,
-              transaction_count: salesTotal.transactionCount,
-              closed_at: closedAtStr,
-            },
-            paperWidth: settings.printer.paperWidth,
-          });
-          console.log("Closing report printed successfully");
+          const printData: ClosingReportPrintData = {
+            id: report.id,
+            terminal_id: report.terminalId,
+            staff_id: report.staffId,
+            staff_name: report.staffName,
+            event_name: settings.eventName,
+            denominations: report.denominations,
+            cash_total: report.cashTotal,
+            vouchers: report.vouchers.map((v) => ({
+              type: v.type,
+              amount: v.amount,
+              memo: v.memo,
+            })),
+            voucher_total: report.voucherTotal,
+            grand_total: report.grandTotal,
+            expected_total: report.expectedTotal,
+            difference: report.difference,
+            transaction_count: salesTotal.transactionCount,
+            closed_at: closedAtStr,
+          };
+
+          const result = await printer.printClosingReport(printData);
+          if (result.success) {
+            console.log("Closing report printed successfully");
+          } else {
+            console.error("Failed to print closing report:", result.error);
+          }
         } catch (printError) {
           console.error("Failed to print closing report:", printError);
           // 印刷エラーは致命的ではないので続行
