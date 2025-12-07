@@ -401,24 +401,26 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     /// Print QR code
-    /// size: 1-16 (default: 4)
+    /// size: 1-16 (default: 6)
+    /// Based on Citizen SDK ESCPOSPrinter.printQRCode implementation
     pub fn qr_code(&mut self, data: &str, size: Option<u8>) -> Result<(), String> {
-        let size = size.unwrap_or(4).clamp(1, 16);
+        let size = size.unwrap_or(6).clamp(1, 16);
 
-        // Select model 2
-        self.raw(QR_MODEL_2)?;
-
-        // Set size
+        // CellWidthCommand: Set module size
+        // GS ( k pL pH cn fn n
+        // pL pH = 3, cn = 49 (0x31), fn = 67 (0x43), n = size (1-16)
         let mut size_cmd = QR_SIZE_PREFIX.to_vec();
         size_cmd.push(size);
         self.raw(&size_cmd)?;
 
-        // Set error correction level M
-        self.raw(QR_ERROR_M)?;
+        // ECCCommand: Set error correction level L
+        // GS ( k pL pH cn fn n
+        // pL pH = 3, cn = 49 (0x31), fn = 69 (0x45), n = 48 (L)
+        self.raw(QR_ERROR_L)?;
 
-        // Store data in symbol storage area
-        // Command: GS ( k pL pH cn fn [data]
-        // cn=49 (0x31), fn=80 (0x50)
+        // DataHeadCommand: Store QR Code data
+        // GS ( k pL pH cn fn m d1...dk
+        // (pL + pH*256) = dataLen + 3, cn = 49 (0x31), fn = 80 (0x50), m = 48 (0x30)
         let data_bytes = data.as_bytes();
         let len = data_bytes.len() + 3; // +3 for cn, fn, m
         let pl = (len & 0xFF) as u8;
@@ -428,8 +430,13 @@ impl<D: Driver> JpPrinter<D> {
         store_cmd.extend_from_slice(data_bytes);
         self.raw(&store_cmd)?;
 
-        // Print QR code
+        // PrintCommand: Print QR Code
+        // GS ( k pL pH cn fn m
+        // pL pH = 3, cn = 49 (0x31), fn = 81 (0x51), m = 48 (0x30)
         self.raw(QR_PRINT)?;
+
+        // Line feed after QR code
+        self.feed(1)?;
 
         Ok(())
     }
