@@ -15,7 +15,7 @@ const defaultSettings: AppSettings = {
   eventName: "イベント名",
   circleName: "",
   venueAddress: "",
-  terminalId: "001",
+  terminalId: "", // Keychain から同期されるので空にする
   taxRate: 10,
   printer: undefined,
   isTrainingMode: false,

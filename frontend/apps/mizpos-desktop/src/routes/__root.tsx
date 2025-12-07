@@ -14,6 +14,14 @@ function RootLayout() {
   useEffect(() => {
     const init = async () => {
       await Promise.all([initAuth(), initSettings(), initTerminal()]);
+
+      // Keychain の端末ID を Settings に同期
+      const terminalId = useTerminalStore.getState().terminalId;
+      const settingsTerminalId = useSettingsStore.getState().settings.terminalId;
+      if (terminalId && !settingsTerminalId) {
+        await useSettingsStore.getState().updateSettings({ terminalId });
+      }
+
       setIsInitialized(true);
     };
     init();

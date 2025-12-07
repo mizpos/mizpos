@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import nacl from "tweetnacl";
 import { decodeBase64, encodeBase64 } from "tweetnacl-util";
 import { create } from "zustand";
+import { useSettingsStore } from "./settings";
 
 /** 端末の状態 */
 export type TerminalStatus =
@@ -234,6 +235,11 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         error: null,
       });
 
+      // Settings Store にも端末IDを保存（永続化）
+      await useSettingsStore.getState().updateSettings({
+        terminalId: payload.terminal_id,
+      });
+
       return payload;
     } catch (error) {
       console.error("Failed to initialize terminal:", error);
@@ -392,6 +398,11 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         qrPayload: null,
         isRegisteredOnServer: false,
         error: null,
+      });
+
+      // Settings Store の端末IDもクリア
+      await useSettingsStore.getState().updateSettings({
+        terminalId: "",
       });
     } catch (error) {
       console.error("Failed to clear keychain:", error);
