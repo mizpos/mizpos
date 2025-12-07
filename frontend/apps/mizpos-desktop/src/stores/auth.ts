@@ -50,9 +50,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const s = await getStore();
       const savedSession = await s.get<Session>("session");
+      console.log("[Auth] Initialize - savedSession:", savedSession);
       if (savedSession) {
         // セッションの有効期限をチェック
         const now = Math.floor(Date.now() / 1000);
+        console.log(
+          "[Auth] Session check - expiresAt:",
+          savedSession.expiresAt,
+          "now:",
+          now,
+          "valid:",
+          savedSession.expiresAt > now,
+        );
         if (savedSession.expiresAt > now) {
           set({
             session: {
@@ -61,13 +70,16 @@ export const useAuthStore = create<AuthState>((set) => ({
             },
             isLoading: false,
           });
+          console.log("[Auth] Session restored successfully");
         } else {
           // 期限切れの場合はセッションを削除
+          console.log("[Auth] Session expired, deleting");
           await s.delete("session");
           await s.save();
           set({ isLoading: false });
         }
       } else {
+        console.log("[Auth] No saved session found");
         set({ isLoading: false });
       }
     } catch (error) {
@@ -143,6 +155,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const s = await getStore();
       await s.set("session", session);
       await s.save();
+      console.log("[Auth] Session saved to store:", session);
 
       set({ session, isLoading: false });
 
