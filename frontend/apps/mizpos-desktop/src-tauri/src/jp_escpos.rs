@@ -450,38 +450,39 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     /// Print text with padding to fill line (for reverse style)
+    /// Uses full-width spaces for proper alignment with double-size text
     pub fn jp_textln_padded(&mut self, txt: &str, style: TextStyle) -> Result<(), String> {
-        // 表示幅を正しく計算（全角=2, 半角=1）
-        let text_width = str_width(txt);
-        let line_width = if style.double_width {
-            self.paper_width.chars_jp()
+        // 2倍モード時は全角文字数でライン幅を計算
+        // 58mm: chars_jp() = 16 (2倍全角で8文字分)
+        // 80mm: chars_jp() = 24 (2倍全角で12文字分)
+        let line_chars = if style.double_width {
+            self.paper_width.chars_jp() / 2  // 2倍全角文字数
         } else {
-            self.paper_width.chars()
+            self.paper_width.chars_jp()  // 通常全角文字数
         };
 
-        // 2倍モードではスペースも2倍幅になるので、パディング計算を調整
-        let raw_padding = line_width.saturating_sub(text_width);
-        let effective_padding = if style.double_width {
-            raw_padding / 2
-        } else {
-            raw_padding
-        };
+        // テキストの文字数（全角として）
+        let text_chars = txt.chars().count();
+
+        // 残りスペースを全角スペースでパディング
+        let padding_chars = line_chars.saturating_sub(text_chars);
 
         let padded = match style.align {
             Align::Center => {
-                let left_pad = effective_padding / 2;
-                let right_pad = effective_padding - left_pad;
-                format!("{}{}{}", " ".repeat(left_pad), txt, " ".repeat(right_pad))
+                let left_pad = padding_chars / 2;
+                let right_pad = padding_chars - left_pad;
+                // 全角スペース（U+3000）を使用
+                format!("{}{}{}", "　".repeat(left_pad), txt, "　".repeat(right_pad))
             }
             Align::Right => {
-                format!("{}{}", " ".repeat(effective_padding), txt)
+                format!("{}{}", "　".repeat(padding_chars), txt)
             }
             Align::Left => {
-                format!("{}{}", txt, " ".repeat(effective_padding))
+                format!("{}{}", txt, "　".repeat(padding_chars))
             }
         };
 
-        // Override align to left since we manually padded
+        // パディング済みなので左揃えで出力
         let mut left_style = style;
         left_style.align = Align::Left;
         self.jp_textln(&padded, left_style)
