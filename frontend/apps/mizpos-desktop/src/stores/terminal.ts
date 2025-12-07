@@ -333,7 +333,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       const response = await fetch(
-        `${apiBaseUrl}/accounts/terminals/check/${terminalId}`,
+        `${apiBaseUrl}/pos/terminals/check/${terminalId}`,
       );
 
       if (!response.ok) {

@@ -356,7 +356,7 @@ export function CheckoutModal({
     setCouponError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/accounts/coupons/apply`, {
+      const response = await fetch(`${API_BASE_URL}/pos/coupons/apply`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -463,7 +463,7 @@ export function CheckoutModal({
             saleBody.subtotal = subtotal;
           }
 
-          const response = await fetch(`${API_BASE_URL}/accounts/pos/sales`, {
+          const response = await fetch(`${API_BASE_URL}/pos/sales`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
