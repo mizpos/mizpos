@@ -307,7 +307,7 @@ function ClosingPage() {
   const navigate = useNavigate();
   const { session, logout } = useAuthStore();
   const { settings } = useSettingsStore();
-  const { clearKeychain } = useTerminalStore();
+  const { revokeTerminal } = useTerminalStore();
 
   // 金種カウント状態
   const [denominationCounts, setDenominationCounts] = useState<
@@ -355,7 +355,7 @@ function ClosingPage() {
   // 現金合計
   const cashTotal = DENOMINATIONS.reduce(
     (sum, d) => sum + d * (denominationCounts[d] || 0),
-    0
+    0,
   );
 
   // 商品券等合計
@@ -372,10 +372,11 @@ function ClosingPage() {
   // 金種カウント変更
   const handleDenominationChange = useCallback(
     (denomination: number, value: string) => {
-      const count = value === "" ? 0 : Math.max(0, Number.parseInt(value, 10) || 0);
+      const count =
+        value === "" ? 0 : Math.max(0, Number.parseInt(value, 10) || 0);
       setDenominationCounts((prev) => ({ ...prev, [denomination]: count }));
     },
-    []
+    [],
   );
 
   // 商品券追加
@@ -404,11 +405,11 @@ function ClosingPage() {
                     ? Math.max(0, Number.parseInt(String(value), 10) || 0)
                     : value,
               }
-            : v
-        )
+            : v,
+        ),
       );
     },
-    []
+    [],
   );
 
   // 閉局処理
@@ -421,7 +422,7 @@ function ClosingPage() {
         "・閉局レポートが保存されます\n" +
         "・端末登録が無効化されます\n" +
         "・再度利用するには端末の再登録が必要です\n\n" +
-        "この操作は取り消せません。"
+        "この操作は取り消せません。",
     );
 
     if (!confirmed) return;
@@ -457,8 +458,8 @@ function ClosingPage() {
       // 今日のデータをクリア
       await clearTodayData();
 
-      // 端末登録を無効化（Keychainクリア）
-      await clearKeychain();
+      // 端末登録を無効化（サーバーへのrevoke + Keychainクリア）
+      await revokeTerminal();
 
       // ログアウト
       await logout();
@@ -467,7 +468,10 @@ function ClosingPage() {
       navigate({ to: "/register-terminal" });
     } catch (error) {
       console.error("Failed to close:", error);
-      alert("閉局処理に失敗しました: " + (error instanceof Error ? error.message : "不明なエラー"));
+      alert(
+        "閉局処理に失敗しました: " +
+          (error instanceof Error ? error.message : "不明なエラー"),
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -481,7 +485,7 @@ function ClosingPage() {
     grandTotal,
     expectedTotal,
     difference,
-    clearKeychain,
+    revokeTerminal,
     logout,
     navigate,
   ]);
@@ -598,7 +602,10 @@ function ClosingPage() {
             <h2 className={sectionStyles.title}>商品券等</h2>
             <div className={voucherStyles.list}>
               {voucherCounts.map((voucher, index) => (
-                <div key={index} className={voucherStyles.row}>
+                <div
+                  key={`voucher-${index}-${voucher.type}`}
+                  className={voucherStyles.row}
+                >
                   <select
                     value={voucher.type}
                     onChange={(e) =>

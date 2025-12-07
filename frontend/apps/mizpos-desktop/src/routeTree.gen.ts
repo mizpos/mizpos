@@ -14,6 +14,7 @@ import { Route as SelectEventRouteImport } from './routes/select-event'
 import { Route as RegisterTerminalRouteImport } from './routes/register-terminal'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ClosingRouteImport } from './routes/closing'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -41,6 +42,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClosingRoute = ClosingRouteImport.update({
+  id: '/closing',
+  path: '/closing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,6 +55,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/closing': typeof ClosingRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/register-terminal': typeof RegisterTerminalRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/closing': typeof ClosingRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/register-terminal': typeof RegisterTerminalRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/closing': typeof ClosingRoute
   '/login': typeof LoginRoute
   '/pos': typeof PosRoute
   '/register-terminal': typeof RegisterTerminalRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/closing'
     | '/login'
     | '/pos'
     | '/register-terminal'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/closing'
     | '/login'
     | '/pos'
     | '/register-terminal'
@@ -92,6 +103,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/closing'
     | '/login'
     | '/pos'
     | '/register-terminal'
@@ -101,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClosingRoute: typeof ClosingRoute
   LoginRoute: typeof LoginRoute
   PosRoute: typeof PosRoute
   RegisterTerminalRoute: typeof RegisterTerminalRoute
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/closing': {
+      id: '/closing'
+      path: '/closing'
+      fullPath: '/closing'
+      preLoaderRoute: typeof ClosingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -157,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClosingRoute: ClosingRoute,
   LoginRoute: LoginRoute,
   PosRoute: PosRoute,
   RegisterTerminalRoute: RegisterTerminalRoute,

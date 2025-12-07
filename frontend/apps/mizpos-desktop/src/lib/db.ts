@@ -294,18 +294,14 @@ export async function getTodaySalesTotal(): Promise<{
 /**
  * 閉局レポートを保存
  */
-export async function saveClosingReport(
-  report: ClosingReport,
-): Promise<void> {
+export async function saveClosingReport(report: ClosingReport): Promise<void> {
   await db.closingReports.put(report);
 }
 
 /**
  * 閉局レポートを取得
  */
-export async function getClosingReports(
-  limit = 100,
-): Promise<ClosingReport[]> {
+export async function getClosingReports(limit = 100): Promise<ClosingReport[]> {
   return db.closingReports.orderBy("closedAt").reverse().limit(limit).toArray();
 }
 

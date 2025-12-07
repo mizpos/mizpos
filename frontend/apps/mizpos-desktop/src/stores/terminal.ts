@@ -112,6 +112,8 @@ interface TerminalState {
   checkServerRegistration: () => Promise<boolean>;
   /** Keychainをクリア */
   clearKeychain: () => Promise<void>;
+  /** 端末登録を無効化（サーバーにrevokeリクエスト + Keychainクリア） */
+  revokeTerminal: () => Promise<void>;
 }
 
 export const useTerminalStore = create<TerminalState>((set, get) => ({
@@ -406,6 +408,48 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       });
     } catch (error) {
       console.error("Failed to clear keychain:", error);
+      throw error;
+    }
+  },
+
+  revokeTerminal: async () => {
+    const { terminalId } = get();
+    if (!terminalId) {
+      console.warn("No terminal ID to revoke");
+      return;
+    }
+
+    try {
+      // サーバーに無効化リクエストを送信
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      try {
+        const signatureData = await get().createAuthSignature();
+        await fetch(`${apiBaseUrl}/pos/terminals/revoke`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            terminal_id: terminalId,
+            signature: signatureData.signature,
+            timestamp: signatureData.timestamp,
+          }),
+        });
+        console.log("Terminal revoked on server");
+      } catch (serverError) {
+        // サーバー通信失敗は無視（オフラインでも閉局できるようにする）
+        console.warn("Failed to revoke terminal on server:", serverError);
+      }
+
+      // ローカルのKeychainをクリア
+      await get().clearKeychain();
+
+      set({
+        status: "revoked",
+        isRegisteredOnServer: false,
+      });
+    } catch (error) {
+      console.error("Failed to revoke terminal:", error);
       throw error;
     }
   },
