@@ -220,30 +220,42 @@ class TerminalAuth(private val context: Context) {
         return if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
             keyStore.getKey(KEYSTORE_ALIAS, null) as SecretKey
         } else {
-            val keyGenerator = KeyGenerator.getInstance(
-                KeyProperties.KEY_ALGORITHM_AES,
-                "AndroidKeyStore"
-            )
+            generateAesKey(useStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+        }
+    }
 
-            val builder = KeyGenParameterSpec.Builder(
-                KEYSTORE_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
+    /**
+     * AES鍵を生成（StrongBox失敗時はフォールバック）
+     */
+    private fun generateAesKey(useStrongBox: Boolean): SecretKey {
+        val keyGenerator = KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,
+            "AndroidKeyStore"
+        )
 
-            // Android 9以上ではStrongBox使用を試みる
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                try {
-                    builder.setIsStrongBoxBacked(true)
-                } catch (e: Exception) {
-                    Log.w(TAG, "StrongBox not available, using regular TEE")
-                }
-            }
+        val builder = KeyGenParameterSpec.Builder(
+            KEYSTORE_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
 
+        if (useStrongBox) {
+            builder.setIsStrongBoxBacked(true)
+        }
+
+        return try {
             keyGenerator.init(builder.build())
             keyGenerator.generateKey()
+        } catch (e: Exception) {
+            if (useStrongBox) {
+                Log.w(TAG, "StrongBox key generation failed, falling back to TEE: ${e.message}")
+                // StrongBoxなしで再試行
+                generateAesKey(useStrongBox = false)
+            } else {
+                throw e
+            }
         }
     }
 
