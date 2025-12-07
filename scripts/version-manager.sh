@@ -50,7 +50,7 @@ download_versions() {
     local bucket=$1
     local temp_file=$(mktemp)
 
-    if aws s3 cp "s3://${bucket}/${VERSION_FILE}" "$temp_file" 2>/dev/null; then
+    if aws s3 cp "s3://${bucket}/${VERSION_FILE}" "$temp_file" --quiet 2>/dev/null; then
         cat "$temp_file"
     else
         # File doesn't exist yet, return initial version
@@ -66,7 +66,7 @@ upload_versions() {
     local temp_file=$(mktemp)
 
     echo "$content" > "$temp_file"
-    aws s3 cp "$temp_file" "s3://${bucket}/${VERSION_FILE}" --content-type "application/json"
+    aws s3 cp "$temp_file" "s3://${bucket}/${VERSION_FILE}" --content-type "application/json" --quiet
     rm -f "$temp_file"
 }
 
