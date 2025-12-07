@@ -105,6 +105,9 @@ jobs:
           - mizpos-online-sales
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
@@ -163,11 +166,22 @@ jobs:
             --distribution-id ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }} \
             --paths "/*"
 
+      - name: Increment Version and Update Build Info
+        run: |
+          chmod +x scripts/version-manager.sh
+          NEW_VERSION=$(./scripts/version-manager.sh increment "${{ matrix.app }}" dev patch)
+          ./scripts/version-manager.sh set-build-info "${{ matrix.app }}" dev "${{ github.sha }}"
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
+
       - name: Deployment Summary
         run: |
           echo "## Frontend Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **App**: ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ env.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: dev" >> $GITHUB_STEP_SUMMARY
           echo "- **S3 Bucket**: ${{ steps.tf-outputs.outputs.s3_bucket }}" >> $GITHUB_STEP_SUMMARY
           echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Frontend URL**: ${{ steps.tf-outputs.outputs.frontend_url }}" >> $GITHUB_STEP_SUMMARY
