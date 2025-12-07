@@ -72,6 +72,26 @@ impl Default for PaperWidth {
     }
 }
 
+/// 文字の表示幅を計算（全角=2, 半角=1）
+fn char_width(c: char) -> usize {
+    let code = c as u32;
+    // ASCII printable characters (0x20-0x7E)
+    if (0x0020..=0x007E).contains(&code) {
+        return 1;
+    }
+    // Half-width Katakana (U+FF61-U+FF9F)
+    if (0xFF61..=0xFF9F).contains(&code) {
+        return 1;
+    }
+    // Everything else (CJK, full-width, etc.) is width 2
+    2
+}
+
+/// 文字列の表示幅を計算
+fn str_width(s: &str) -> usize {
+    s.chars().map(char_width).sum()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Align {
     Left,
@@ -269,29 +289,30 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     pub fn jp_text(&mut self, txt: &str, style: TextStyle) -> Result<(), String> {
+        // ESC ! でサイズを設定（ANK文字・全体設定用）
+        // 一部のプリンターはFS!だけでは倍角が効かないため、ESC!も送る
+        let is_double = style.double_width || style.double_height;
+        if is_double {
+            self.set_double_size(true)?;
+        }
+
         self.set_align(style.align)?;
         self.set_bold(style.bold)?;
         self.set_underline(style.underline)?;
         self.set_reverse(style.reverse)?;
 
-        // Use ESC ! for double size (works better with reverse)
-        let use_double_size = style.double_width && style.double_height;
-        if use_double_size {
-            self.set_double_size(true)?;
-        }
-
+        // 漢字モードを開始
         self.raw(JP_KANJI_MODE_ON)?;
 
+        // 漢字モード内でサイズを設定（FS ! コマンド）
+        // bit 2: double width, bit 3: double height
         let size_flag = {
             let mut n: u8 = 0x00;
-            // Only use kanji size command if not using ESC !
-            if !use_double_size {
-                if style.double_width {
-                    n |= 0x04;
-                }
-                if style.double_height {
-                    n |= 0x08;
-                }
+            if style.double_width {
+                n |= 0x04;
+            }
+            if style.double_height {
+                n |= 0x08;
             }
             n
         };
@@ -305,6 +326,7 @@ impl<D: Driver> JpPrinter<D> {
         let encoded = self.encode_shift_jis(txt);
         self.raw(&encoded)?;
 
+        // サイズを戻す
         if size_flag != 0x00 {
             let mut cmd = JP_KANJI_SIZE_CMD.to_vec();
             cmd.push(0x00);
@@ -313,10 +335,10 @@ impl<D: Driver> JpPrinter<D> {
 
         self.raw(JP_KANJI_MODE_OFF)?;
 
-        if use_double_size {
+        // スタイルをリセット
+        if is_double {
             self.set_double_size(false)?;
         }
-
         self.set_bold(false)?;
         self.set_underline(false)?;
         self.set_reverse(false)?;
@@ -349,9 +371,10 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     pub fn row(&mut self, left: &str, right: &str, width: usize) -> Result<(), String> {
-        let left_len = left.chars().count();
-        let right_len = right.chars().count();
-        let space_len = width.saturating_sub(left_len + right_len);
+        // 表示幅を正しく計算（全角=2, 半角=1）
+        let left_width = str_width(left);
+        let right_width = str_width(right);
+        let space_len = width.saturating_sub(left_width + right_width);
         let spaces = " ".repeat(space_len);
         let row = format!("{}{}{}", left, spaces, right);
         self.textln(&row)
@@ -364,9 +387,10 @@ impl<D: Driver> JpPrinter<D> {
     /// Print two columns with bold right side
     pub fn row_auto_bold(&mut self, left: &str, right: &str) -> Result<(), String> {
         let total_chars = self.paper_width.chars();
-        let left_len = left.chars().count();
-        let right_len = right.chars().count();
-        let space_len = total_chars.saturating_sub(left_len + right_len);
+        // 表示幅を正しく計算（全角=2, 半角=1）
+        let left_width = str_width(left);
+        let right_width = str_width(right);
+        let space_len = total_chars.saturating_sub(left_width + right_width);
         let spaces = " ".repeat(space_len);
 
         // Print left part normally
@@ -377,24 +401,26 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     /// Print QR code
-    /// size: 1-16 (default: 4)
+    /// size: 1-16 (default: 6)
+    /// Based on Citizen SDK ESCPOSPrinter.printQRCode implementation
     pub fn qr_code(&mut self, data: &str, size: Option<u8>) -> Result<(), String> {
-        let size = size.unwrap_or(4).clamp(1, 16);
+        let size = size.unwrap_or(6).clamp(1, 16);
 
-        // Select model 2
-        self.raw(QR_MODEL_2)?;
-
-        // Set size
+        // CellWidthCommand: Set module size
+        // GS ( k pL pH cn fn n
+        // pL pH = 3, cn = 49 (0x31), fn = 67 (0x43), n = size (1-16)
         let mut size_cmd = QR_SIZE_PREFIX.to_vec();
         size_cmd.push(size);
         self.raw(&size_cmd)?;
 
-        // Set error correction level M
-        self.raw(QR_ERROR_M)?;
+        // ECCCommand: Set error correction level L
+        // GS ( k pL pH cn fn n
+        // pL pH = 3, cn = 49 (0x31), fn = 69 (0x45), n = 48 (L)
+        self.raw(QR_ERROR_L)?;
 
-        // Store data in symbol storage area
-        // Command: GS ( k pL pH cn fn [data]
-        // cn=49 (0x31), fn=80 (0x50)
+        // DataHeadCommand: Store QR Code data
+        // GS ( k pL pH cn fn m d1...dk
+        // (pL + pH*256) = dataLen + 3, cn = 49 (0x31), fn = 80 (0x50), m = 48 (0x30)
         let data_bytes = data.as_bytes();
         let len = data_bytes.len() + 3; // +3 for cn, fn, m
         let pl = (len & 0xFF) as u8;
@@ -404,8 +430,13 @@ impl<D: Driver> JpPrinter<D> {
         store_cmd.extend_from_slice(data_bytes);
         self.raw(&store_cmd)?;
 
-        // Print QR code
+        // PrintCommand: Print QR Code
+        // GS ( k pL pH cn fn m
+        // pL pH = 3, cn = 49 (0x31), fn = 81 (0x51), m = 48 (0x30)
         self.raw(QR_PRINT)?;
+
+        // Line feed after QR code
+        self.feed(1)?;
 
         Ok(())
     }
@@ -419,32 +450,39 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     /// Print text with padding to fill line (for reverse style)
+    /// Uses full-width spaces for proper alignment with double-size text
     pub fn jp_textln_padded(&mut self, txt: &str, style: TextStyle) -> Result<(), String> {
-        let char_count = txt.chars().count();
-        let line_width = if style.double_width || (style.double_width && style.double_height) {
-            self.paper_width.chars_jp()
+        // 2倍モード時は全角文字数でライン幅を計算
+        // 58mm: chars_jp() = 16 (2倍全角で8文字分)
+        // 80mm: chars_jp() = 24 (2倍全角で12文字分)
+        let line_chars = if style.double_width {
+            self.paper_width.chars_jp() / 2  // 2倍全角文字数
         } else {
-            self.paper_width.chars()
+            self.paper_width.chars_jp()  // 通常全角文字数
         };
+
+        // テキストの文字数（全角として）
+        let text_chars = txt.chars().count();
+
+        // 残りスペースを全角スペースでパディング
+        let padding_chars = line_chars.saturating_sub(text_chars);
 
         let padded = match style.align {
             Align::Center => {
-                let padding = line_width.saturating_sub(char_count);
-                let left_pad = padding / 2;
-                let right_pad = padding - left_pad;
-                format!("{}{}{}", " ".repeat(left_pad), txt, " ".repeat(right_pad))
+                let left_pad = padding_chars / 2;
+                let right_pad = padding_chars - left_pad;
+                // 全角スペース（U+3000）を使用
+                format!("{}{}{}", "　".repeat(left_pad), txt, "　".repeat(right_pad))
             }
             Align::Right => {
-                let padding = line_width.saturating_sub(char_count);
-                format!("{}{}", " ".repeat(padding), txt)
+                format!("{}{}", "　".repeat(padding_chars), txt)
             }
             Align::Left => {
-                let padding = line_width.saturating_sub(char_count);
-                format!("{}{}", txt, " ".repeat(padding))
+                format!("{}{}", txt, "　".repeat(padding_chars))
             }
         };
 
-        // Override align to left since we manually padded
+        // パディング済みなので左揃えで出力
         let mut left_style = style;
         left_style.align = Align::Left;
         self.jp_textln(&padded, left_style)

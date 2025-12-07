@@ -140,6 +140,47 @@ export interface VoucherCount {
 }
 
 /**
+ * 開局レポート
+ */
+export interface OpeningReport {
+  id: string;
+  terminalId: string;
+  staffId: string;
+  staffName: string;
+  eventId?: string;
+
+  // 金種別カウント
+  denominations: DenominationCount[];
+  cashTotal: number;
+
+  openedAt: Date;
+}
+
+/**
+ * 両替記録
+ */
+export interface ExchangeRecord {
+  id: string;
+  terminalId: string;
+  staffId: string;
+  staffName: string;
+  eventId?: string;
+
+  // 両替前
+  fromDenominations: DenominationCount[];
+  fromTotal: number;
+
+  // 両替後
+  toDenominations: DenominationCount[];
+  toTotal: number;
+
+  // メモ
+  memo?: string;
+
+  exchangedAt: Date;
+}
+
+/**
  * 閉局レポート
  */
 export interface ClosingReport {
@@ -159,6 +200,9 @@ export interface ClosingReport {
 
   // 合計
   grandTotal: number;
+
+  // 開局時レジ金
+  openingCashTotal: number;
 
   // 売上との差異
   expectedTotal: number;

@@ -7,8 +7,35 @@ import {
   type UnifiedPrinterConfig,
 } from "../lib/printer";
 import { useSettingsStore } from "../stores/settings";
-import type { Transaction } from "../types";
+import type { PaymentMethod, Transaction } from "../types";
 import { Button } from "./ui";
+
+/**
+ * 支払い方法を日本語表示名に変換
+ */
+function getPaymentMethodDisplayName(
+  method: PaymentMethod,
+  voucherConfigs?: Array<{ type: string; name: string }>,
+): string {
+  switch (method) {
+    case "cash":
+      return "現金";
+    case "oya_cashless":
+      return "大家キャッシュレス";
+    case "voucher_department": {
+      const config = voucherConfigs?.find(
+        (c) => c.type === "voucher_department",
+      );
+      return config?.name ?? "百貨店商品券";
+    }
+    case "voucher_event": {
+      const config = voucherConfigs?.find((c) => c.type === "voucher_event");
+      return config?.name ?? "イベント主催者発行商品券";
+    }
+    default:
+      return method;
+  }
+}
 
 interface ReceiptModalProps {
   transaction: Transaction;
@@ -101,11 +128,6 @@ const contentStyles = {
     fontWeight: 700,
     fontFamily: "monospace",
     color: "#4ade80",
-  }),
-  cashlessLabel: css({
-    fontSize: "16px",
-    fontWeight: 600,
-    color: "#60a5fa",
   }),
   error: css({
     background: "#7f1d1d",
@@ -220,7 +242,10 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
         })),
         total: transaction.total,
         payments: transaction.payments.map((p) => ({
-          method: p.method === "cash" ? "現金" : "大家キャッシュレス",
+          method: getPaymentMethodDisplayName(
+            p.method,
+            settings.voucherConfigs,
+          ),
           amount: p.amount,
         })),
         tax_rate: transaction.taxRate,
@@ -281,14 +306,27 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
               </span>
             </div>
 
-            {cashPayment && (
-              <div className={contentStyles.divider}>
-                <div className={contentStyles.detailRow}>
-                  <span className={contentStyles.label}>お預かり</span>
+            <div className={contentStyles.divider}>
+              {/* 支払い情報を表示 */}
+              {transaction.payments.map((payment, index) => (
+                <div
+                  key={`${payment.method}-${index}`}
+                  className={contentStyles.detailRow}
+                >
+                  <span className={contentStyles.label}>
+                    {getPaymentMethodDisplayName(
+                      payment.method,
+                      settings.voucherConfigs,
+                    )}
+                  </span>
                   <span className={contentStyles.amount}>
-                    ¥{cashPayment.amount.toLocaleString()}
+                    ¥{payment.amount.toLocaleString()}
                   </span>
                 </div>
+              ))}
+
+              {/* 現金支払いがある場合はおつりを表示 */}
+              {cashPayment && change > 0 && (
                 <div
                   className={`${contentStyles.detailRow} ${contentStyles.detailRowLast}`}
                 >
@@ -297,21 +335,8 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
                     ¥{change.toLocaleString()}
                   </span>
                 </div>
-              </div>
-            )}
-
-            {!cashPayment && (
-              <div className={contentStyles.divider}>
-                <div
-                  className={`${contentStyles.detailRow} ${contentStyles.detailRowLast}`}
-                >
-                  <span className={contentStyles.label}>支払方法</span>
-                  <span className={contentStyles.cashlessLabel}>
-                    大家キャッシュレス
-                  </span>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {printError && (

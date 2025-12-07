@@ -1,12 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { confirm } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
 import {
   clearTodayData,
+  getTodayOpeningReport,
   getTodaySalesTotal,
   saveClosingReport,
 } from "../lib/db";
+import {
+  type ClosingReportPrintData,
+  getPlatform,
+  UnifiedPrinter,
+} from "../lib/printer";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
 import { useTerminalStore } from "../stores/terminal";
@@ -326,23 +333,32 @@ function ClosingPage() {
     voucherAmount: 0,
   });
 
+  // 開局時のレジ金
+  const [openingCashTotal, setOpeningCashTotal] = useState(0);
+
   // 処理中フラグ
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 売上データを取得
+  // 売上データと開局レポートを取得
   useEffect(() => {
-    const loadSalesData = async () => {
+    const loadData = async () => {
       try {
-        const data = await getTodaySalesTotal();
-        setSalesTotal(data);
+        const [salesData, openingReport] = await Promise.all([
+          getTodaySalesTotal(),
+          getTodayOpeningReport(),
+        ]);
+        setSalesTotal(salesData);
+        if (openingReport) {
+          setOpeningCashTotal(openingReport.cashTotal);
+        }
       } catch (error) {
-        console.error("Failed to load sales data:", error);
+        console.error("Failed to load data:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    loadSalesData();
+    loadData();
   }, []);
 
   // 未ログイン時はリダイレクト
@@ -364,9 +380,9 @@ function ClosingPage() {
   // レジ金合計
   const grandTotal = cashTotal + voucherTotal;
 
-  // 差異（レジ金 - 売上）
-  // 売上は決済時の「お預かり」金額ベースなので、おつりを引いた純売上と比較
-  const expectedTotal = salesTotal.totalAmount;
+  // 差異（閉局時レジ金 - (開局時レジ金 + 売上)）
+  // 期待値 = 開局時レジ金 + 売上合計
+  const expectedTotal = openingCashTotal + salesTotal.totalAmount;
   const difference = grandTotal - expectedTotal;
 
   // 金種カウント変更
@@ -416,13 +432,18 @@ function ClosingPage() {
   const handleClose = useCallback(async () => {
     if (!session) return;
 
-    const confirmed = window.confirm(
-      "閉局処理を実行しますか？\n\n" +
-        "この操作を行うと：\n" +
+    const confirmed = await confirm(
+      "この操作を行うと：\n" +
         "・閉局レポートが保存されます\n" +
         "・端末登録が無効化されます\n" +
         "・再度利用するには端末の再登録が必要です\n\n" +
         "この操作は取り消せません。",
+      {
+        title: "閉局処理を実行しますか？",
+        kind: "warning",
+        okLabel: "閉局する",
+        cancelLabel: "キャンセル",
+      },
     );
 
     if (!confirmed) return;
@@ -445,6 +466,7 @@ function ClosingPage() {
         vouchers: voucherCounts,
         voucherTotal,
         grandTotal,
+        openingCashTotal,
         expectedTotal,
         difference,
         closedAt: new Date(),
@@ -454,6 +476,60 @@ function ClosingPage() {
       await saveClosingReport(report);
 
       // TODO: サーバーに送信（必要に応じて）
+
+      // プリンターが設定されている場合は閉局レポートを印刷
+      if (settings.printer) {
+        try {
+          const platform = await getPlatform();
+          const printer = new UnifiedPrinter({
+            platform,
+            vendorId: settings.printer.vendorId,
+            deviceId: settings.printer.deviceId,
+            bluetoothAddress: settings.printer.bluetoothAddress,
+            name: settings.printer.name,
+            paperWidth: settings.printer.paperWidth,
+          });
+
+          const closedAtStr = report.closedAt.toLocaleString("ja-JP", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          const printData: ClosingReportPrintData = {
+            id: report.id,
+            terminal_id: report.terminalId,
+            staff_id: report.staffId,
+            staff_name: report.staffName,
+            event_name: settings.eventName,
+            denominations: report.denominations,
+            cash_total: report.cashTotal,
+            vouchers: report.vouchers.map((v) => ({
+              type: v.type,
+              amount: v.amount,
+              memo: v.memo,
+            })),
+            voucher_total: report.voucherTotal,
+            grand_total: report.grandTotal,
+            expected_total: report.expectedTotal,
+            difference: report.difference,
+            transaction_count: salesTotal.transactionCount,
+            closed_at: closedAtStr,
+          };
+
+          const result = await printer.printClosingReport(printData);
+          if (result.success) {
+            console.log("Closing report printed successfully");
+          } else {
+            console.error("Failed to print closing report:", result.error);
+          }
+        } catch (printError) {
+          console.error("Failed to print closing report:", printError);
+          // 印刷エラーは致命的ではないので続行
+        }
+      }
 
       // 今日のデータをクリア
       await clearTodayData();
@@ -477,14 +553,16 @@ function ClosingPage() {
     }
   }, [
     session,
-    settings.terminalId,
+    settings,
     denominationCounts,
     cashTotal,
     voucherCounts,
     voucherTotal,
     grandTotal,
+    openingCashTotal,
     expectedTotal,
     difference,
+    salesTotal,
     revokeTerminal,
     logout,
     navigate,
@@ -683,13 +761,27 @@ function ClosingPage() {
                 </span>
               </div>
               <div className={summaryStyles.row}>
-                <span className={summaryStyles.label}>レジ金合計</span>
+                <span className={summaryStyles.label}>閉局時レジ金合計</span>
                 <span className={summaryStyles.value}>
                   ¥{grandTotal.toLocaleString()}
                 </span>
               </div>
               <div className={summaryStyles.row}>
-                <span className={summaryStyles.label}>売上合計（期待値）</span>
+                <span className={summaryStyles.label}>開局時レジ金</span>
+                <span className={summaryStyles.value}>
+                  ¥{openingCashTotal.toLocaleString()}
+                </span>
+              </div>
+              <div className={summaryStyles.row}>
+                <span className={summaryStyles.label}>売上合計</span>
+                <span className={summaryStyles.value}>
+                  ¥{salesTotal.totalAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className={summaryStyles.row}>
+                <span className={summaryStyles.label}>
+                  期待値（開局時 + 売上）
+                </span>
                 <span className={summaryStyles.value}>
                   ¥{expectedTotal.toLocaleString()}
                 </span>

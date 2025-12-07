@@ -42,6 +42,7 @@ interface MizPosPrinterBridge {
   welcomePrint(terminalId: string): string;
   welcomePrintWithWidth(terminalId: string, paperWidth: number): string;
   printReceipt(jsonData: string): string;
+  printClosingReport(jsonData: string): string;
 }
 
 declare global {
@@ -275,6 +276,54 @@ export function bluetoothPrintReceipt(data: ReceiptData): PrinterResult {
   return parseAndroidResult<PrinterResult>(result);
 }
 
+/**
+ * 閉局レポートデータ
+ */
+export interface ClosingReportPrintData {
+  id: string;
+  terminal_id: string;
+  staff_id: string;
+  staff_name: string;
+  event_name?: string;
+  denominations: Array<{ denomination: number; count: number }>;
+  cash_total: number;
+  vouchers: Array<{ type: string; amount: number; memo?: string }>;
+  voucher_total: number;
+  grand_total: number;
+  expected_total: number;
+  difference: number;
+  transaction_count: number;
+  closed_at: string;
+  paper_width?: number;
+}
+
+export function bluetoothPrintClosingReport(
+  data: ClosingReportPrintData,
+): PrinterResult {
+  if (!window.MizPosPrinter) {
+    return { success: false, error: "Bluetooth not available" };
+  }
+  const result = window.MizPosPrinter.printClosingReport(JSON.stringify(data));
+  return parseAndroidResult<PrinterResult>(result);
+}
+
+/**
+ * USB プリンターで閉局レポートを印刷
+ */
+export async function usbPrintClosingReport(
+  vendorId: number,
+  deviceId: number,
+  report: ClosingReportPrintData,
+  paperWidth?: number,
+): Promise<void> {
+  return invoke("print_closing_report", {
+    vendorId,
+    deviceId,
+    report,
+    paperWidth,
+  });
+}
+
 // ===================
 // Unified Printer API
 // ===================
@@ -458,6 +507,37 @@ export class UnifiedPrinter {
 
     try {
       await usbPrintFullReceipt(
+        this.config.vendorId,
+        this.config.deviceId,
+        data,
+        this.config.paperWidth,
+      );
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
+  }
+
+  /**
+   * 閉局レポートを印刷
+   */
+  async printClosingReport(
+    data: ClosingReportPrintData,
+  ): Promise<PrinterResult> {
+    if (this.config.platform === "android") {
+      return bluetoothPrintClosingReport({
+        ...data,
+        paper_width: this.config.paperWidth,
+      });
+    }
+
+    // Desktop USB
+    if (!this.config.vendorId || !this.config.deviceId) {
+      return { success: false, error: "Printer not configured" };
+    }
+
+    try {
+      await usbPrintClosingReport(
         this.config.vendorId,
         this.config.deviceId,
         data,

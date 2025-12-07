@@ -189,6 +189,7 @@ mod desktop_printer {
     }
 
     /// 金額をフォーマット（カンマ区切り + 円）
+    /// 全角￥（U+FFE5）を使用（Shift-JISで半角¥と\は同じコードのため）
     fn format_price(price: u32) -> String {
         let s = price.to_string();
         let mut result = String::new();
@@ -198,7 +199,7 @@ mod desktop_printer {
             }
             result.insert(0, c);
         }
-        format!("¥{}", result)
+        format!("￥{}", result)
     }
 
     /// ISDN + jan2からCコード＋値段の表示文字列を生成
@@ -251,7 +252,7 @@ mod desktop_printer {
         }
 
         // ご明細書（黒背景中央揃え文字２倍サイズ）
-        printer.jp_textln_padded("　　ご明細書　　", TextStyle::default().double().reverse().center())?;
+        printer.jp_textln_padded("ご明細書", TextStyle::default().double().reverse().center())?;
 
         // レシート番号
         printer.jp_textln(&format!("# {}", receipt.receipt_number), TextStyle::default())?;
@@ -322,6 +323,134 @@ mod desktop_printer {
 
         // QRコード（レシート番号）
         printer.qr_code_center(&receipt.receipt_number, Some(6))?;
+
+        printer.feed(3)?;
+        printer.cut()?;
+
+        Ok(())
+    }
+
+    /// 金種カウント
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct DenominationCount {
+        pub denomination: u32,
+        pub count: u32,
+    }
+
+    /// 商品券カウント
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct VoucherCount {
+        #[serde(rename = "type")]
+        pub voucher_type: String,
+        pub amount: u32,
+        pub memo: Option<String>,
+    }
+
+    /// 閉局レポートデータ
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct ClosingReportData {
+        pub id: String,
+        pub terminal_id: String,
+        pub staff_id: String,
+        pub staff_name: String,
+        pub event_name: Option<String>,
+        pub denominations: Vec<DenominationCount>,
+        pub cash_total: u32,
+        pub vouchers: Vec<VoucherCount>,
+        pub voucher_total: u32,
+        pub grand_total: u32,
+        pub expected_total: u32,
+        pub difference: i32,
+        pub transaction_count: u32,
+        pub closed_at: String,
+    }
+
+    /// 閉局レポート印刷
+    #[tauri::command]
+    pub fn print_closing_report(
+        vendor_id: u16,
+        device_id: u16,
+        report: ClosingReportData,
+        paper_width: Option<u8>,
+    ) -> Result<(), String> {
+        let driver = NativeUsbDriver::open(vendor_id, device_id)
+            .map_err(|e| e.to_string())?;
+
+        let width = parse_paper_width(paper_width);
+        let mut printer = JpPrinter::with_paper_width(driver, width);
+        printer.init()?;
+
+        // ヘッダー
+        printer.jp_textln_padded("閉局レポート", TextStyle::default().double().reverse().center())?;
+        printer.textln("")?;
+
+        // イベント名
+        if let Some(ref event_name) = report.event_name {
+            if !event_name.is_empty() {
+                printer.jp_textln(event_name, TextStyle::default().bold().center())?;
+            }
+        }
+
+        // 基本情報
+        printer.separator()?;
+        printer.row_auto("レポートID:", &report.id)?;
+        printer.row_auto("端末ID:", &report.terminal_id)?;
+        printer.row_auto("担当者:", &format!("{} ({})", report.staff_name, report.staff_id))?;
+        printer.row_auto("閉局日時:", &report.closed_at)?;
+        printer.separator()?;
+
+        // 売上サマリー
+        printer.jp_textln("【売上サマリー】", TextStyle::default().bold())?;
+        printer.row_auto("取引件数:", &format!("{}件", report.transaction_count))?;
+        printer.row_auto("売上合計(税込):", &format_price(report.expected_total))?;
+        printer.separator()?;
+
+        // 金種別カウント
+        printer.jp_textln("【現金内訳】", TextStyle::default().bold())?;
+        for d in &report.denominations {
+            if d.count > 0 {
+                let subtotal = d.denomination * d.count;
+                printer.row_auto(
+                    &format!("{}円 x {}", d.denomination, d.count),
+                    &format_price(subtotal),
+                )?;
+            }
+        }
+        printer.row_auto_bold("現金合計:", &format_price(report.cash_total))?;
+        printer.separator()?;
+
+        // 商品券等
+        if !report.vouchers.is_empty() {
+            printer.jp_textln("【商品券等】", TextStyle::default().bold())?;
+            for v in &report.vouchers {
+                let label = if let Some(ref memo) = v.memo {
+                    format!("{} ({})", v.voucher_type, memo)
+                } else {
+                    v.voucher_type.clone()
+                };
+                printer.row_auto(&label, &format_price(v.amount))?;
+            }
+            printer.row_auto_bold("商品券等合計:", &format_price(report.voucher_total))?;
+            printer.separator()?;
+        }
+
+        // 合計と差異
+        printer.jp_textln("【精算】", TextStyle::default().bold())?;
+        printer.row_auto_bold("実査合計:", &format_price(report.grand_total))?;
+        printer.row_auto("売上合計:", &format_price(report.expected_total))?;
+
+        let diff_str = if report.difference >= 0 {
+            format!("+{}", format_price(report.difference as u32))
+        } else {
+            format!("-{}", format_price((-report.difference) as u32))
+        };
+        printer.row_auto_bold("差異:", &diff_str)?;
+
+        printer.textln("")?;
+        printer.separator()?;
+
+        // フッター
+        printer.jp_textln("このレポートは閉局処理の記録です", TextStyle::default().center())?;
 
         printer.feed(3)?;
         printer.cut()?;
@@ -487,6 +616,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             common::get_platform,
             // 端末認証コマンド
@@ -504,6 +634,8 @@ pub fn run() {
             desktop_printer::welcome_print,
             #[cfg(not(target_os = "android"))]
             desktop_printer::print_receipt,
+            #[cfg(not(target_os = "android"))]
+            desktop_printer::print_closing_report,
             // プリンターコマンド（Android）
             #[cfg(target_os = "android")]
             android_printer::get_bluetooth_devices,
