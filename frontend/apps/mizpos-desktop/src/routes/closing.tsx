@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
@@ -455,6 +456,49 @@ function ClosingPage() {
 
       // TODO: サーバーに送信（必要に応じて）
 
+      // プリンターが設定されている場合は閉局レポートを印刷
+      if (settings.printer?.vendorId && settings.printer.deviceId) {
+        try {
+          const closedAtStr = report.closedAt.toLocaleString("ja-JP", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          await invoke("print_closing_report", {
+            vendorId: settings.printer.vendorId,
+            deviceId: settings.printer.deviceId,
+            report: {
+              id: report.id,
+              terminal_id: report.terminalId,
+              staff_id: report.staffId,
+              staff_name: report.staffName,
+              event_name: settings.eventName,
+              denominations: report.denominations,
+              cash_total: report.cashTotal,
+              vouchers: report.vouchers.map((v) => ({
+                type: v.type,
+                amount: v.amount,
+                memo: v.memo,
+              })),
+              voucher_total: report.voucherTotal,
+              grand_total: report.grandTotal,
+              expected_total: report.expectedTotal,
+              difference: report.difference,
+              transaction_count: salesTotal.transactionCount,
+              closed_at: closedAtStr,
+            },
+            paperWidth: settings.printer.paperWidth,
+          });
+          console.log("Closing report printed successfully");
+        } catch (printError) {
+          console.error("Failed to print closing report:", printError);
+          // 印刷エラーは致命的ではないので続行
+        }
+      }
+
       // 今日のデータをクリア
       await clearTodayData();
 
@@ -477,7 +521,7 @@ function ClosingPage() {
     }
   }, [
     session,
-    settings.terminalId,
+    settings,
     denominationCounts,
     cashTotal,
     voucherCounts,
@@ -485,6 +529,7 @@ function ClosingPage() {
     grandTotal,
     expectedTotal,
     difference,
+    salesTotal,
     revokeTerminal,
     logout,
     navigate,
