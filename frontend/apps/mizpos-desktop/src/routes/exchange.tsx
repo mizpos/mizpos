@@ -299,11 +299,14 @@ function ExchangePage() {
   const isMatch = difference === 0;
 
   // 金種カウント変更（両替前）
-  const handleFromChange = useCallback((denomination: number, value: string) => {
-    const count =
-      value === "" ? 0 : Math.max(0, Number.parseInt(value, 10) || 0);
-    setFromCounts((prev) => ({ ...prev, [denomination]: count }));
-  }, []);
+  const handleFromChange = useCallback(
+    (denomination: number, value: string) => {
+      const count =
+        value === "" ? 0 : Math.max(0, Number.parseInt(value, 10) || 0);
+      setFromCounts((prev) => ({ ...prev, [denomination]: count }));
+    },
+    [],
+  );
 
   // 金種カウント変更（両替後）
   const handleToChange = useCallback((denomination: number, value: string) => {
