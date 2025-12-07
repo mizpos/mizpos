@@ -2140,6 +2140,7 @@ name = "mizpos-desktop"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "dirs",
  "ed25519-dalek",
  "encoding_rs",
  "escpos",

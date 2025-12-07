@@ -1,11 +1,14 @@
 //! 端末認証モジュール
 //!
 //! Ed25519キーペアを生成し、OS Keychainに保存、署名を生成する
+//! Keychainが使えない場合はファイルベースのフォールバックを使用
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
@@ -15,6 +18,58 @@ const KEYCHAIN_SERVICE: &str = "com.miz.mizpos";
 const KEYCHAIN_ACCOUNT_PRIVATE_KEY: &str = "terminal-private-key";
 /// 端末IDのアカウント名
 const KEYCHAIN_ACCOUNT_TERMINAL_ID: &str = "terminal-id";
+/// フォールバック用ファイル名
+const FALLBACK_CREDENTIALS_FILE: &str = "terminal_credentials.json";
+
+/// フォールバック用の認証情報
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct FallbackCredentials {
+    terminal_id: String,
+    private_key: String, // Base64
+}
+
+/// フォールバック用のファイルパスを取得
+#[cfg(not(target_os = "android"))]
+fn get_fallback_path() -> Option<PathBuf> {
+    dirs::data_local_dir().map(|p| p.join("com.miz.mizpos").join(FALLBACK_CREDENTIALS_FILE))
+}
+
+/// フォールバックから認証情報を読み込む
+#[cfg(not(target_os = "android"))]
+fn load_from_fallback() -> Option<FallbackCredentials> {
+    let path = get_fallback_path()?;
+    let content = fs::read_to_string(&path).ok()?;
+    serde_json::from_str(&content).ok()
+}
+
+/// フォールバックに認証情報を保存
+#[cfg(not(target_os = "android"))]
+fn save_to_fallback(creds: &FallbackCredentials) -> Result<(), TerminalAuthError> {
+    let path = get_fallback_path()
+        .ok_or_else(|| TerminalAuthError::KeychainError("Cannot determine data directory".to_string()))?;
+
+    // ディレクトリを作成
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| TerminalAuthError::KeychainError(format!("Failed to create directory: {}", e)))?;
+    }
+
+    let content = serde_json::to_string(creds)
+        .map_err(|e| TerminalAuthError::KeychainError(format!("Failed to serialize: {}", e)))?;
+
+    fs::write(&path, content)
+        .map_err(|e| TerminalAuthError::KeychainError(format!("Failed to write file: {}", e)))?;
+
+    Ok(())
+}
+
+/// フォールバックファイルを削除
+#[cfg(not(target_os = "android"))]
+fn clear_fallback() {
+    if let Some(path) = get_fallback_path() {
+        let _ = fs::remove_file(path);
+    }
+}
 
 /// 端末の状態
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,86 +140,123 @@ impl std::fmt::Display for TerminalAuthError {
 
 impl std::error::Error for TerminalAuthError {}
 
-/// Keychainから秘密鍵を読み込む
+/// 秘密鍵をBase64から復元
+#[cfg(not(target_os = "android"))]
+fn decode_private_key(base64_key: &str) -> Result<SigningKey, TerminalAuthError> {
+    let key_bytes = BASE64
+        .decode(base64_key)
+        .map_err(|e| TerminalAuthError::CryptoError(e.to_string()))?;
+
+    if key_bytes.len() != 32 {
+        return Err(TerminalAuthError::InvalidKey);
+    }
+
+    let key_array: [u8; 32] = key_bytes
+        .try_into()
+        .map_err(|_| TerminalAuthError::InvalidKey)?;
+
+    Ok(SigningKey::from_bytes(&key_array))
+}
+
+/// Keychainから秘密鍵を読み込む（フォールバック付き）
 #[cfg(not(target_os = "android"))]
 fn load_private_key_from_keychain() -> Result<Option<SigningKey>, TerminalAuthError> {
-    let entry = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_PRIVATE_KEY)
-        .map_err(|e| TerminalAuthError::KeychainError(e.to_string()))?;
-
-    match entry.get_password() {
-        Ok(base64_key) => {
-            let key_bytes = BASE64
-                .decode(&base64_key)
-                .map_err(|e| TerminalAuthError::CryptoError(e.to_string()))?;
-
-            if key_bytes.len() != 32 {
-                return Err(TerminalAuthError::InvalidKey);
+    // まずKeychainを試す
+    if let Ok(entry) = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_PRIVATE_KEY) {
+        match entry.get_password() {
+            Ok(base64_key) => {
+                return Ok(Some(decode_private_key(&base64_key)?));
             }
-
-            let key_array: [u8; 32] = key_bytes
-                .try_into()
-                .map_err(|_| TerminalAuthError::InvalidKey)?;
-
-            Ok(Some(SigningKey::from_bytes(&key_array)))
+            Err(keyring::Error::NoEntry) => {
+                // Keychainにエントリがない場合はフォールバックを確認
+            }
+            Err(_) => {
+                // Keychainエラーの場合もフォールバックを確認
+            }
         }
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(e) => Err(TerminalAuthError::KeychainError(e.to_string())),
     }
+
+    // フォールバックから読み込む
+    if let Some(creds) = load_from_fallback() {
+        return Ok(Some(decode_private_key(&creds.private_key)?));
+    }
+
+    Ok(None)
 }
 
-/// Keychainに秘密鍵を保存
+/// Keychainに秘密鍵を保存（フォールバック付き）
+/// terminal_idも一緒に渡してフォールバック保存に使用
 #[cfg(not(target_os = "android"))]
-fn save_private_key_to_keychain(signing_key: &SigningKey) -> Result<(), TerminalAuthError> {
-    let entry = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_PRIVATE_KEY)
-        .map_err(|e| TerminalAuthError::KeychainError(e.to_string()))?;
-
+fn save_private_key_to_keychain(signing_key: &SigningKey, terminal_id: &str) -> Result<(), TerminalAuthError> {
     let base64_key = BASE64.encode(signing_key.to_bytes());
 
-    entry
-        .set_password(&base64_key)
-        .map_err(|e| TerminalAuthError::KeychainError(e.to_string()))?;
+    // Keychainへの保存を試みる（失敗しても続行）
+    if let Ok(entry) = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_PRIVATE_KEY) {
+        let _ = entry.set_password(&base64_key);
+    }
+
+    // フォールバックにも保存（Keychainが失敗しても確実に保存）
+    let creds = FallbackCredentials {
+        terminal_id: terminal_id.to_string(),
+        private_key: base64_key,
+    };
+    save_to_fallback(&creds)?;
 
     Ok(())
 }
 
-/// Keychainから端末IDを読み込む
+/// Keychainから端末IDを読み込む（フォールバック付き）
 #[cfg(not(target_os = "android"))]
 fn load_terminal_id_from_keychain() -> Result<Option<String>, TerminalAuthError> {
-    let entry = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_TERMINAL_ID)
-        .map_err(|e| TerminalAuthError::KeychainError(e.to_string()))?;
-
-    match entry.get_password() {
-        Ok(terminal_id) => Ok(Some(terminal_id)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(e) => Err(TerminalAuthError::KeychainError(e.to_string())),
+    // まずKeychainを試す
+    if let Ok(entry) = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_TERMINAL_ID) {
+        match entry.get_password() {
+            Ok(terminal_id) => {
+                return Ok(Some(terminal_id));
+            }
+            Err(keyring::Error::NoEntry) => {
+                // Keychainにエントリがない場合はフォールバックを確認
+            }
+            Err(_) => {
+                // Keychainエラーの場合もフォールバックを確認
+            }
+        }
     }
+
+    // フォールバックから読み込む
+    if let Some(creds) = load_from_fallback() {
+        return Ok(Some(creds.terminal_id));
+    }
+
+    Ok(None)
 }
 
-/// Keychainに端末IDを保存
+/// Keychainに端末IDを保存（フォールバック付き）
 #[cfg(not(target_os = "android"))]
 fn save_terminal_id_to_keychain(terminal_id: &str) -> Result<(), TerminalAuthError> {
-    let entry = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_TERMINAL_ID)
-        .map_err(|e| TerminalAuthError::KeychainError(e.to_string()))?;
-
-    entry
-        .set_password(terminal_id)
-        .map_err(|e| TerminalAuthError::KeychainError(e.to_string()))?;
-
+    // Keychainへの保存を試みる（失敗しても続行）
+    if let Ok(entry) = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_TERMINAL_ID) {
+        let _ = entry.set_password(terminal_id);
+    }
+    // フォールバックは save_private_key_to_keychain で一緒に保存される
     Ok(())
 }
 
-/// Keychainから認証情報を削除
+/// Keychainから認証情報を削除（フォールバック含む）
 #[cfg(not(target_os = "android"))]
 pub fn clear_keychain() -> Result<(), TerminalAuthError> {
-    // 秘密鍵を削除
+    // Keychainから秘密鍵を削除
     if let Ok(entry) = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_PRIVATE_KEY) {
         let _ = entry.delete_credential();
     }
 
-    // 端末IDを削除
+    // Keychainから端末IDを削除
     if let Ok(entry) = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT_TERMINAL_ID) {
         let _ = entry.delete_credential();
     }
+
+    // フォールバックファイルも削除
+    clear_fallback();
 
     Ok(())
 }
@@ -224,8 +316,8 @@ pub fn initialize_terminal(device_name: &str) -> Result<RegistrationQrPayload, T
     // 端末IDを生成
     let terminal_id = Uuid::new_v4().to_string();
 
-    // Keychainに保存
-    save_private_key_to_keychain(&signing_key)?;
+    // Keychainに保存（フォールバックにも同時に保存される）
+    save_private_key_to_keychain(&signing_key, &terminal_id)?;
     save_terminal_id_to_keychain(&terminal_id)?;
 
     // 現在時刻を取得
@@ -249,7 +341,7 @@ pub fn initialize_terminal(device_name: &str) -> Result<RegistrationQrPayload, T
 
 /// 署名を生成
 #[cfg(not(target_os = "android"))]
-pub fn sign_message(message: &str) -> Result<SignatureData, TerminalAuthError> {
+pub fn sign_message(_message: &str) -> Result<SignatureData, TerminalAuthError> {
     let signing_key = load_private_key_from_keychain()?.ok_or(TerminalAuthError::NotInitialized)?;
     let terminal_id = load_terminal_id_from_keychain()?.ok_or(TerminalAuthError::NotInitialized)?;
 
@@ -319,7 +411,7 @@ fn load_private_key_from_keychain() -> Result<Option<SigningKey>, TerminalAuthEr
 }
 
 #[cfg(target_os = "android")]
-fn save_private_key_to_keychain(_signing_key: &SigningKey) -> Result<(), TerminalAuthError> {
+fn save_private_key_to_keychain(_signing_key: &SigningKey, _terminal_id: &str) -> Result<(), TerminalAuthError> {
     Err(TerminalAuthError::KeychainError(
         "Android Keystore not implemented yet".to_string(),
     ))
