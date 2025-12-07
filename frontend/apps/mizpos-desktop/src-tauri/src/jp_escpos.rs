@@ -289,6 +289,13 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     pub fn jp_text(&mut self, txt: &str, style: TextStyle) -> Result<(), String> {
+        // ESC ! でサイズを設定（ANK文字・全体設定用）
+        // 一部のプリンターはFS!だけでは倍角が効かないため、ESC!も送る
+        let is_double = style.double_width || style.double_height;
+        if is_double {
+            self.set_double_size(true)?;
+        }
+
         self.set_align(style.align)?;
         self.set_bold(style.bold)?;
         self.set_underline(style.underline)?;
@@ -328,6 +335,10 @@ impl<D: Driver> JpPrinter<D> {
 
         self.raw(JP_KANJI_MODE_OFF)?;
 
+        // スタイルをリセット
+        if is_double {
+            self.set_double_size(false)?;
+        }
         self.set_bold(false)?;
         self.set_underline(false)?;
         self.set_reverse(false)?;
