@@ -49,7 +49,25 @@ export interface CartItem {
 /**
  * 支払い方法
  */
-export type PaymentMethod = "cash" | "oya_cashless";
+export type PaymentMethod =
+  | "cash"
+  | "oya_cashless"
+  | "voucher_department" // 百貨店商品券
+  | "voucher_event"; // イベント主催者発行商品券
+
+/**
+ * 商品券種別
+ */
+export type VoucherType = "voucher_department" | "voucher_event";
+
+/**
+ * 商品券設定
+ */
+export interface VoucherConfig {
+  type: VoucherType;
+  name: string;
+  allowChange: boolean; // おつりを出すかどうか
+}
 
 /**
  * 支払い情報
@@ -100,4 +118,51 @@ export interface AppSettings {
   taxRate: number;
   printer?: PrinterConfig;
   isTrainingMode?: boolean;
+  /** 商品券設定 */
+  voucherConfigs?: VoucherConfig[];
+}
+
+/**
+ * 金種カウント
+ */
+export interface DenominationCount {
+  denomination: number; // 金種（10000, 5000, ...）
+  count: number; // 個数
+}
+
+/**
+ * 閉局チェック用の商品券等カウント
+ */
+export interface VoucherCount {
+  type: string; // "百貨店商品券", "イベント主催者発行商品券", "外貨" など
+  amount: number; // 日本円換算金額
+  memo?: string; // 備考（外貨の場合は通貨名など）
+}
+
+/**
+ * 閉局レポート
+ */
+export interface ClosingReport {
+  id: string;
+  terminalId: string;
+  staffId: string;
+  staffName: string;
+  eventId?: string;
+
+  // 金種別カウント
+  denominations: DenominationCount[];
+  cashTotal: number;
+
+  // 商品券等
+  vouchers: VoucherCount[];
+  voucherTotal: number;
+
+  // 合計
+  grandTotal: number;
+
+  // 売上との差異
+  expectedTotal: number;
+  difference: number;
+
+  closedAt: Date;
 }

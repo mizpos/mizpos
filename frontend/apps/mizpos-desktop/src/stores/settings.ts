@@ -1,6 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
-import type { AppSettings, PrinterConfig } from "../types";
+import type { AppSettings, PrinterConfig, VoucherConfig } from "../types";
 
 interface SettingsState {
   settings: AppSettings;
@@ -9,7 +9,13 @@ interface SettingsState {
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
   updatePrinter: (printer: PrinterConfig | undefined) => Promise<void>;
   toggleTrainingMode: () => Promise<void>;
+  updateVoucherConfigs: (configs: VoucherConfig[]) => Promise<void>;
 }
+
+const defaultVoucherConfigs: VoucherConfig[] = [
+  { type: "voucher_department", name: "百貨店商品券", allowChange: true },
+  { type: "voucher_event", name: "イベント主催者発行商品券", allowChange: false },
+];
 
 const defaultSettings: AppSettings = {
   eventName: "イベント名",
@@ -19,6 +25,7 @@ const defaultSettings: AppSettings = {
   taxRate: 10,
   printer: undefined,
   isTrainingMode: false,
+  voucherConfigs: defaultVoucherConfigs,
 };
 
 let store: Store | null = null;
@@ -68,5 +75,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   toggleTrainingMode: async () => {
     const currentMode = get().settings.isTrainingMode ?? false;
     await get().updateSettings({ isTrainingMode: !currentMode });
+  },
+
+  updateVoucherConfigs: async (configs: VoucherConfig[]) => {
+    await get().updateSettings({ voucherConfigs: configs });
   },
 }));
