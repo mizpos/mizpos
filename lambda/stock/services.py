@@ -498,16 +498,19 @@ def delete_event(event_id: str) -> bool:
         event_id: イベントID
 
     Returns:
-        削除成功の場合True
+        削除成功の場合True、イベントが存在しない場合False
     """
     try:
         events_table.update_item(
             Key={"event_id": event_id},
             UpdateExpression="SET is_active = :inactive",
             ExpressionAttributeValues={":inactive": False},
+            ConditionExpression="attribute_exists(event_id)",
         )
         return True
-    except ClientError:
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
         return False
 
 
