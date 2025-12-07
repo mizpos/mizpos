@@ -264,7 +264,11 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         payload = JSON.parse(jsonData) as RegistrationQrPayload;
       }
 
-      set({ qrPayload: payload });
+      set({
+        qrPayload: payload,
+        terminalId: payload.terminal_id,
+        publicKey: payload.public_key,
+      });
       return JSON.stringify(payload);
     } catch (error) {
       console.error("Failed to generate QR data:", error);
