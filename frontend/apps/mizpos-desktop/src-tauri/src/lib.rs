@@ -82,7 +82,10 @@ mod desktop_printer {
 
     #[tauri::command]
     pub fn get_usb_devices() -> Result<Vec<DeviceInfo>, String> {
+        use nusb::MaybeFuture;
+
         let device_list = nusb::list_devices()
+            .wait()
             .map_err(|e| e.to_string())?;
 
         let devices: Vec<DeviceInfo> = device_list
