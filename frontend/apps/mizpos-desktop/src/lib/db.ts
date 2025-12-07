@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { Product, Transaction } from "../types";
+import type { ClosingReport, Product, Transaction } from "../types";
 import { type ApiProduct, fetchProducts } from "./api";
 
 /**
@@ -24,6 +24,7 @@ class MizPOSDatabase extends Dexie {
   products!: Table<Product>;
   transactions!: Table<Transaction>;
   salesSummary!: Table<SalesSummary>;
+  closingReports!: Table<ClosingReport>;
 
   constructor() {
     super("mizpos");
@@ -47,6 +48,14 @@ class MizPOSDatabase extends Dexie {
       transactions: "id, staffId, createdAt",
       salesSummary:
         "id, jan, isbn, circleName, [jan+circleName], [isbn+circleName]",
+    });
+    // バージョン5: 閉局レポートテーブルを追加
+    this.version(5).stores({
+      products: "id, jan, jan2, isbn, isBook, name, deletedAt",
+      transactions: "id, staffId, createdAt",
+      salesSummary:
+        "id, jan, isbn, circleName, [jan+circleName], [isbn+circleName]",
+      closingReports: "id, terminalId, staffId, closedAt",
     });
   }
 }
@@ -230,4 +239,91 @@ export async function getSalesSummaryByJan(
   jan: string,
 ): Promise<SalesSummary[]> {
   return db.salesSummary.where("jan").equals(jan).toArray();
+}
+
+/**
+ * 今日の売上合計を取得
+ */
+export async function getTodaySalesTotal(): Promise<{
+  totalAmount: number;
+  transactionCount: number;
+  cashAmount: number;
+  cashlessAmount: number;
+  voucherAmount: number;
+}> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const transactions = await db.transactions
+    .filter((t) => {
+      const txDate = new Date(t.createdAt);
+      return txDate >= today && !t.isTraining;
+    })
+    .toArray();
+
+  let totalAmount = 0;
+  let cashAmount = 0;
+  let cashlessAmount = 0;
+  let voucherAmount = 0;
+
+  for (const tx of transactions) {
+    totalAmount += tx.total;
+    for (const payment of tx.payments) {
+      if (payment.method === "cash") {
+        cashAmount += payment.amount;
+      } else if (payment.method === "oya_cashless") {
+        cashlessAmount += payment.amount;
+      } else if (
+        payment.method === "voucher_department" ||
+        payment.method === "voucher_event"
+      ) {
+        voucherAmount += payment.amount;
+      }
+    }
+  }
+
+  return {
+    totalAmount,
+    transactionCount: transactions.length,
+    cashAmount,
+    cashlessAmount,
+    voucherAmount,
+  };
+}
+
+/**
+ * 閉局レポートを保存
+ */
+export async function saveClosingReport(
+  report: ClosingReport,
+): Promise<void> {
+  await db.closingReports.put(report);
+}
+
+/**
+ * 閉局レポートを取得
+ */
+export async function getClosingReports(
+  limit = 100,
+): Promise<ClosingReport[]> {
+  return db.closingReports.orderBy("closedAt").reverse().limit(limit).toArray();
+}
+
+/**
+ * 今日のデータをクリア（閉局後のリセット用）
+ */
+export async function clearTodayData(): Promise<void> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 今日の取引を削除
+  await db.transactions
+    .filter((t) => {
+      const txDate = new Date(t.createdAt);
+      return txDate >= today;
+    })
+    .delete();
+
+  // 販売サマリーをクリア（全体リセット - 閉局なので）
+  await db.salesSummary.clear();
 }
