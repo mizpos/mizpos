@@ -1,5 +1,11 @@
 import Dexie, { type Table } from "dexie";
-import type { ClosingReport, Product, Transaction } from "../types";
+import type {
+  ClosingReport,
+  ExchangeRecord,
+  OpeningReport,
+  Product,
+  Transaction,
+} from "../types";
 import { type ApiProduct, fetchProducts } from "./api";
 
 /**
@@ -25,6 +31,8 @@ class MizPOSDatabase extends Dexie {
   transactions!: Table<Transaction>;
   salesSummary!: Table<SalesSummary>;
   closingReports!: Table<ClosingReport>;
+  openingReports!: Table<OpeningReport>;
+  exchangeRecords!: Table<ExchangeRecord>;
 
   constructor() {
     super("mizpos");
@@ -56,6 +64,16 @@ class MizPOSDatabase extends Dexie {
       salesSummary:
         "id, jan, isbn, circleName, [jan+circleName], [isbn+circleName]",
       closingReports: "id, terminalId, staffId, closedAt",
+    });
+    // バージョン6: 開局レポート・両替記録テーブルを追加
+    this.version(6).stores({
+      products: "id, jan, jan2, isbn, isBook, name, deletedAt",
+      transactions: "id, staffId, createdAt",
+      salesSummary:
+        "id, jan, isbn, circleName, [jan+circleName], [isbn+circleName]",
+      closingReports: "id, terminalId, staffId, closedAt",
+      openingReports: "id, terminalId, staffId, openedAt",
+      exchangeRecords: "id, terminalId, staffId, exchangedAt",
     });
   }
 }
@@ -322,4 +340,85 @@ export async function clearTodayData(): Promise<void> {
 
   // 販売サマリーをクリア（全体リセット - 閉局なので）
   await db.salesSummary.clear();
+
+  // 今日の開局レポートを削除
+  await db.openingReports
+    .filter((r) => {
+      const openedDate = new Date(r.openedAt);
+      return openedDate >= today;
+    })
+    .delete();
+
+  // 今日の両替記録を削除
+  await db.exchangeRecords
+    .filter((r) => {
+      const exchangedDate = new Date(r.exchangedAt);
+      return exchangedDate >= today;
+    })
+    .delete();
+}
+
+/**
+ * 開局レポートを保存
+ */
+export async function saveOpeningReport(report: OpeningReport): Promise<void> {
+  await db.openingReports.put(report);
+}
+
+/**
+ * 今日の開局レポートを取得
+ */
+export async function getTodayOpeningReport(): Promise<OpeningReport | null> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const reports = await db.openingReports
+    .filter((r) => {
+      const openedDate = new Date(r.openedAt);
+      return openedDate >= today;
+    })
+    .toArray();
+
+  // 最新の開局レポートを返す
+  if (reports.length === 0) return null;
+  return reports.sort(
+    (a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime(),
+  )[0];
+}
+
+/**
+ * 両替記録を保存
+ */
+export async function saveExchangeRecord(
+  record: ExchangeRecord,
+): Promise<void> {
+  await db.exchangeRecords.put(record);
+}
+
+/**
+ * 今日の両替記録を取得
+ */
+export async function getTodayExchangeRecords(): Promise<ExchangeRecord[]> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return db.exchangeRecords
+    .filter((r) => {
+      const exchangedDate = new Date(r.exchangedAt);
+      return exchangedDate >= today;
+    })
+    .toArray();
+}
+
+/**
+ * 両替記録を取得
+ */
+export async function getExchangeRecords(
+  limit = 100,
+): Promise<ExchangeRecord[]> {
+  return db.exchangeRecords
+    .orderBy("exchangedAt")
+    .reverse()
+    .limit(limit)
+    .toArray();
 }

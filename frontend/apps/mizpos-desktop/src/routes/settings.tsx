@@ -690,6 +690,27 @@ function SettingsPage() {
             設定を保存
           </Button>
 
+          {/* 両替処理 */}
+          <Card padding="lg">
+            <h2 className={sectionStyles.title}>両替処理</h2>
+            <div
+              className={css({
+                fontSize: "14px",
+                color: "#94a3b8",
+                marginBottom: "16px",
+              })}
+            >
+              両替した金種を記録します。閉局時の差異確認の参考になります。
+            </div>
+            <Button
+              variant="outline"
+              fullWidth
+              onClick={() => navigate({ to: "/exchange" })}
+            >
+              両替処理へ
+            </Button>
+          </Card>
+
           {/* 閉局ボタン */}
           <Card padding="lg">
             <h2 className={sectionStyles.title}>閉局</h2>

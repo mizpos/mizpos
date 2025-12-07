@@ -221,8 +221,8 @@ function SelectEventPage() {
         });
       }
 
-      // POS画面へ遷移
-      navigate({ to: "/pos" });
+      // 開局画面へ遷移
+      navigate({ to: "/opening" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     }

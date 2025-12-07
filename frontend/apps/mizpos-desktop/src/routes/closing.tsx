@@ -5,6 +5,7 @@ import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
 import {
   clearTodayData,
+  getTodayOpeningReport,
   getTodaySalesTotal,
   saveClosingReport,
 } from "../lib/db";
@@ -332,23 +333,32 @@ function ClosingPage() {
     voucherAmount: 0,
   });
 
+  // 開局時のレジ金
+  const [openingCashTotal, setOpeningCashTotal] = useState(0);
+
   // 処理中フラグ
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 売上データを取得
+  // 売上データと開局レポートを取得
   useEffect(() => {
-    const loadSalesData = async () => {
+    const loadData = async () => {
       try {
-        const data = await getTodaySalesTotal();
-        setSalesTotal(data);
+        const [salesData, openingReport] = await Promise.all([
+          getTodaySalesTotal(),
+          getTodayOpeningReport(),
+        ]);
+        setSalesTotal(salesData);
+        if (openingReport) {
+          setOpeningCashTotal(openingReport.cashTotal);
+        }
       } catch (error) {
-        console.error("Failed to load sales data:", error);
+        console.error("Failed to load data:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    loadSalesData();
+    loadData();
   }, []);
 
   // 未ログイン時はリダイレクト
@@ -370,9 +380,9 @@ function ClosingPage() {
   // レジ金合計
   const grandTotal = cashTotal + voucherTotal;
 
-  // 差異（レジ金 - 売上）
-  // 売上は決済時の「お預かり」金額ベースなので、おつりを引いた純売上と比較
-  const expectedTotal = salesTotal.totalAmount;
+  // 差異（閉局時レジ金 - (開局時レジ金 + 売上)）
+  // 期待値 = 開局時レジ金 + 売上合計
+  const expectedTotal = openingCashTotal + salesTotal.totalAmount;
   const difference = grandTotal - expectedTotal;
 
   // 金種カウント変更
@@ -456,6 +466,7 @@ function ClosingPage() {
         vouchers: voucherCounts,
         voucherTotal,
         grandTotal,
+        openingCashTotal,
         expectedTotal,
         difference,
         closedAt: new Date(),
@@ -548,6 +559,7 @@ function ClosingPage() {
     voucherCounts,
     voucherTotal,
     grandTotal,
+    openingCashTotal,
     expectedTotal,
     difference,
     salesTotal,
@@ -749,13 +761,27 @@ function ClosingPage() {
                 </span>
               </div>
               <div className={summaryStyles.row}>
-                <span className={summaryStyles.label}>レジ金合計</span>
+                <span className={summaryStyles.label}>閉局時レジ金合計</span>
                 <span className={summaryStyles.value}>
                   ¥{grandTotal.toLocaleString()}
                 </span>
               </div>
               <div className={summaryStyles.row}>
-                <span className={summaryStyles.label}>売上合計（期待値）</span>
+                <span className={summaryStyles.label}>開局時レジ金</span>
+                <span className={summaryStyles.value}>
+                  ¥{openingCashTotal.toLocaleString()}
+                </span>
+              </div>
+              <div className={summaryStyles.row}>
+                <span className={summaryStyles.label}>売上合計</span>
+                <span className={summaryStyles.value}>
+                  ¥{salesTotal.totalAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className={summaryStyles.row}>
+                <span className={summaryStyles.label}>
+                  期待値（開局時 + 売上）
+                </span>
                 <span className={summaryStyles.value}>
                   ¥{expectedTotal.toLocaleString()}
                 </span>

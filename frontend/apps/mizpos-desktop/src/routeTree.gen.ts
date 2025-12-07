@@ -13,7 +13,9 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SelectEventRouteImport } from './routes/select-event'
 import { Route as RegisterTerminalRouteImport } from './routes/register-terminal'
 import { Route as PosRouteImport } from './routes/pos'
+import { Route as OpeningRouteImport } from './routes/opening'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ExchangeRouteImport } from './routes/exchange'
 import { Route as ClosingRouteImport } from './routes/closing'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -37,9 +39,19 @@ const PosRoute = PosRouteImport.update({
   path: '/pos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpeningRoute = OpeningRouteImport.update({
+  id: '/opening',
+  path: '/opening',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExchangeRoute = ExchangeRouteImport.update({
+  id: '/exchange',
+  path: '/exchange',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClosingRoute = ClosingRouteImport.update({
@@ -56,7 +68,9 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/closing': typeof ClosingRoute
+  '/exchange': typeof ExchangeRoute
   '/login': typeof LoginRoute
+  '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
   '/register-terminal': typeof RegisterTerminalRoute
   '/select-event': typeof SelectEventRoute
@@ -65,7 +79,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/closing': typeof ClosingRoute
+  '/exchange': typeof ExchangeRoute
   '/login': typeof LoginRoute
+  '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
   '/register-terminal': typeof RegisterTerminalRoute
   '/select-event': typeof SelectEventRoute
@@ -75,7 +91,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/closing': typeof ClosingRoute
+  '/exchange': typeof ExchangeRoute
   '/login': typeof LoginRoute
+  '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
   '/register-terminal': typeof RegisterTerminalRoute
   '/select-event': typeof SelectEventRoute
@@ -86,7 +104,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/closing'
+    | '/exchange'
     | '/login'
+    | '/opening'
     | '/pos'
     | '/register-terminal'
     | '/select-event'
@@ -95,7 +115,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/closing'
+    | '/exchange'
     | '/login'
+    | '/opening'
     | '/pos'
     | '/register-terminal'
     | '/select-event'
@@ -104,7 +126,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/closing'
+    | '/exchange'
     | '/login'
+    | '/opening'
     | '/pos'
     | '/register-terminal'
     | '/select-event'
@@ -114,7 +138,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClosingRoute: typeof ClosingRoute
+  ExchangeRoute: typeof ExchangeRoute
   LoginRoute: typeof LoginRoute
+  OpeningRoute: typeof OpeningRoute
   PosRoute: typeof PosRoute
   RegisterTerminalRoute: typeof RegisterTerminalRoute
   SelectEventRoute: typeof SelectEventRoute
@@ -151,11 +177,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/opening': {
+      id: '/opening'
+      path: '/opening'
+      fullPath: '/opening'
+      preLoaderRoute: typeof OpeningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exchange': {
+      id: '/exchange'
+      path: '/exchange'
+      fullPath: '/exchange'
+      preLoaderRoute: typeof ExchangeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/closing': {
@@ -178,7 +218,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClosingRoute: ClosingRoute,
+  ExchangeRoute: ExchangeRoute,
   LoginRoute: LoginRoute,
+  OpeningRoute: OpeningRoute,
   PosRoute: PosRoute,
   RegisterTerminalRoute: RegisterTerminalRoute,
   SelectEventRoute: SelectEventRoute,
