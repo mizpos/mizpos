@@ -42,6 +42,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get App Version from S3
+        id: version
+        run: |
+          chmod +x scripts/version-manager.sh
+          VERSION=$(./scripts/version-manager.sh get "${{ matrix.app }}" dev)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "App version: $VERSION"
+
       - name: Setup Frontend Environment
         uses: ./.github/actions/setup-frontend
         with:
@@ -67,6 +81,10 @@ jobs:
 
       - name: Build Application
         working-directory: frontend/apps/${{ matrix.app }}
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}-dev
+          VITE_COMMIT_HASH: ${{ github.sha }}
+          VITE_BUILD_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
         run: pnpm panda codegen && pnpm vite build --mode development && pnpm tsc
 
       - name: Upload Build Artifact

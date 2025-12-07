@@ -14,6 +14,7 @@ import {
   type UnifiedPrinterConfig,
   type UsbDevice,
 } from "../lib/printer";
+import { getVersionInfo } from "../lib/version";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
 import type { PrinterConfig } from "../types";
@@ -641,6 +642,32 @@ function SettingsPage() {
           <Button variant="primary" size="xl" fullWidth onClick={handleSave}>
             設定を保存
           </Button>
+
+          {/* バージョン情報 */}
+          <button
+            type="button"
+            onClick={() => {
+              const versionInfo = getVersionInfo();
+              alert(
+                `mizPOS Desktop\n\nVersion: ${versionInfo.version}\nBuild: ${versionInfo.commitHash}\nDate: ${versionInfo.buildDate}`,
+              );
+            }}
+            className={css({
+              width: "100%",
+              marginTop: "24px",
+              padding: "8px",
+              fontSize: "12px",
+              color: "#64748b",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              _hover: {
+                color: "#94a3b8",
+              },
+            })}
+          >
+            mizPOS Desktop v{getVersionInfo().version}
+          </button>
         </div>
       </div>
     </div>

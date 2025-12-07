@@ -154,7 +154,7 @@ function SelectEventPage() {
     const fetchEvents = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/accounts/pos/events`, {
+        const response = await fetch(`${API_BASE_URL}/pos/events`, {
           headers: {
             "Content-Type": "application/json",
             "X-POS-Session": session?.sessionId || "",
@@ -194,17 +194,14 @@ function SelectEventPage() {
 
     try {
       // セッションにイベントIDを紐づけるAPI呼び出し
-      const response = await fetch(
-        `${API_BASE_URL}/accounts/pos/auth/set-event`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-POS-Session": session.sessionId,
-          },
-          body: JSON.stringify({ event_id: selectedEventId }),
+      const response = await fetch(`${API_BASE_URL}/pos/auth/set-event`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-POS-Session": session.sessionId,
         },
-      );
+        body: JSON.stringify({ event_id: selectedEventId }),
+      });
 
       if (!response.ok) {
         throw new Error("イベントの設定に失敗しました");

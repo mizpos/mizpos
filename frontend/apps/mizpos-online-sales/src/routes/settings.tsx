@@ -10,6 +10,7 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserInfo, updateUserInfo } from "../lib/api";
+import { getVersionInfo } from "../lib/version";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -837,6 +838,31 @@ function SettingsPage() {
         >
           商品一覧に戻る
         </Link>
+      </div>
+
+      {/* バージョン情報 */}
+      <div className={css({ marginTop: "40px", textAlign: "center" })}>
+        <button
+          type="button"
+          onClick={() => {
+            const versionInfo = getVersionInfo();
+            alert(
+              `mizPOS Online Sales\n\nVersion: ${versionInfo.version}\nBuild: ${versionInfo.commitHash}\nDate: ${versionInfo.buildDate}`,
+            );
+          }}
+          className={css({
+            fontSize: "12px",
+            color: "#999",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            _hover: {
+              color: "#666",
+            },
+          })}
+        >
+          mizPOS Online Sales v{getVersionInfo().version}
+        </button>
       </div>
     </div>
   );

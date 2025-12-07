@@ -102,7 +102,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const terminalId = useSettingsStore.getState().settings.terminalId;
 
       // APIで認証
-      const response = await fetch(`${API_BASE_URL}/accounts/pos/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/pos/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +167,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // サーバー側のセッションも無効化（ベストエフォート）
       if (session?.sessionId) {
         try {
-          await fetch(`${API_BASE_URL}/accounts/pos/auth/logout`, {
+          await fetch(`${API_BASE_URL}/pos/auth/logout`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

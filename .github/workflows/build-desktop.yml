@@ -126,6 +126,20 @@ jobs:
             librsvg2-dev \
             xdg-utils
 
+      - name: Configure AWS Credentials for Version
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get App Version from S3
+        id: version
+        run: |
+          chmod +x scripts/version-manager.sh
+          VERSION=$(./scripts/version-manager.sh get "mizpos-desktop" "${{ needs.setup-env.outputs.environment }}")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "App version: $VERSION"
+
       - name: Generate API Types
         working-directory: frontend
         run: pnpm generate-api-types
@@ -135,6 +149,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
+          VITE_COMMIT_HASH: ${{ github.sha }}
+          VITE_BUILD_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
         with:
           projectPath: frontend/apps/mizpos-desktop
           includeDebug: ${{ needs.setup-env.outputs.environment == 'dev' && true || false }}
@@ -207,3 +224,29 @@ jobs:
         run: |
           echo "Update manifest generation would go here"
           # TODO: Implement update manifest generation for Tauri updater
+
+  increment-version:
+    name: Increment Desktop Version
+    needs: [setup-env, build]
+    runs-on: ubuntu-latest
+    if: needs.setup-env.outputs.environment == 'prod'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Increment Version and Update Build Info
+        run: |
+          chmod +x scripts/version-manager.sh
+          NEW_VERSION=$(./scripts/version-manager.sh increment "mizpos-desktop" prod patch)
+          ./scripts/version-manager.sh set-build-info "mizpos-desktop" prod "${{ github.sha }}"
+          echo "New version: $NEW_VERSION"
+          echo "## Desktop App Version Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Version**: $NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

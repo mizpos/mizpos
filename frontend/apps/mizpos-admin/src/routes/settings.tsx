@@ -13,6 +13,7 @@ import {
   DEFAULT_STRIPE_ONLINE_FEE_RATE,
   DEFAULT_STRIPE_TERMINAL_FEE_RATE,
 } from "../lib/constants";
+import { getVersionInfo } from "../lib/version";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -580,6 +581,37 @@ function SettingsPage() {
           </Button>
         </div>
       )}
+
+      {/* Version Info (hidden at bottom) */}
+      <div
+        className={css({
+          marginTop: "12",
+          paddingTop: "4",
+          borderTop: "1px solid",
+          borderColor: "gray.100",
+          textAlign: "center",
+        })}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            const versionInfo = getVersionInfo();
+            alert(
+              `mizPOS Admin\n\nVersion: ${versionInfo.version}\nBuild: ${versionInfo.commitHash}\nDate: ${versionInfo.buildDate}`,
+            );
+          }}
+          className={css({
+            fontSize: "xs",
+            color: "gray.400",
+            cursor: "pointer",
+            _hover: {
+              color: "gray.500",
+            },
+          })}
+        >
+          mizPOS Admin v{getVersionInfo().version}
+        </button>
+      </div>
     </PageContainer>
   );
 }

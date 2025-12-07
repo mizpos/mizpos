@@ -114,6 +114,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get App Version from S3
+        id: version
+        run: |
+          chmod +x scripts/version-manager.sh
+          VERSION=$(./scripts/version-manager.sh get "${{ matrix.app }}" prod)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "App version: $VERSION"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -148,6 +162,10 @@ jobs:
 
       - name: Build Application
         working-directory: frontend/apps/${{ matrix.app }}
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
+          VITE_COMMIT_HASH: ${{ github.sha }}
+          VITE_BUILD_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
         run: pnpm panda codegen && pnpm vite build --mode production && pnpm tsc
 
       - name: Generate robots.txt for Production Environment
@@ -172,6 +190,9 @@ jobs:
           - mizpos-admin
           - mizpos-online-sales
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
@@ -235,11 +256,21 @@ jobs:
             --distribution-id ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }} \
             --paths "/*"
 
+      - name: Increment Version and Update Build Info
+        run: |
+          chmod +x scripts/version-manager.sh
+          NEW_VERSION=$(./scripts/version-manager.sh increment "${{ matrix.app }}" prod patch)
+          ./scripts/version-manager.sh set-build-info "${{ matrix.app }}" prod "${{ github.sha }}"
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
+
       - name: Deployment Summary
         run: |
           echo "## Production Frontend Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **App**: ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ env.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
           echo "- **S3 Bucket**: ${{ steps.tf-outputs.outputs.s3_bucket }}" >> $GITHUB_STEP_SUMMARY
           echo "- **CloudFront Distribution**: ${{ steps.tf-outputs.outputs.cloudfront_distribution_id }}" >> $GITHUB_STEP_SUMMARY
