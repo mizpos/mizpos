@@ -14,7 +14,11 @@ interface SettingsState {
 
 const defaultVoucherConfigs: VoucherConfig[] = [
   { type: "voucher_department", name: "百貨店商品券", allowChange: true },
-  { type: "voucher_event", name: "イベント主催者発行商品券", allowChange: false },
+  {
+    type: "voucher_event",
+    name: "イベント主催者発行商品券",
+    allowChange: false,
+  },
 ];
 
 const defaultSettings: AppSettings = {

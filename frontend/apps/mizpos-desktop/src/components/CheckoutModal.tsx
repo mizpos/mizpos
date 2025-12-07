@@ -4,7 +4,12 @@ import { saveTransaction, updateSalesSummary } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 import { type AppliedCoupon, useCartStore } from "../stores/cart";
 import { useSettingsStore } from "../stores/settings";
-import type { Payment, PaymentMethod, Transaction } from "../types";
+import type {
+  Payment,
+  PaymentMethod,
+  Transaction,
+  VoucherType,
+} from "../types";
 import { Button, Modal } from "./ui";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -149,7 +154,7 @@ const paymentMethodStyles = {
   }),
   buttons: css({
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "1fr 1fr 1fr",
     gap: "10px",
   }),
   button: css({
@@ -171,6 +176,11 @@ const paymentMethodStyles = {
     background: "#3b82f6",
     borderColor: "#3b82f6",
   }),
+  buttonVoucher: css({
+    color: "#0f172a",
+    background: "#fbbf24",
+    borderColor: "#fbbf24",
+  }),
   buttonInactive: css({
     color: "#94a3b8",
     background: "#334155",
@@ -179,6 +189,137 @@ const paymentMethodStyles = {
       background: "#475569",
       borderColor: "#475569",
     },
+  }),
+};
+
+// 商品券入力スタイル
+const voucherInputStyles = {
+  container: css({
+    marginBottom: "24px",
+    padding: "20px",
+    background: "#1e293b",
+    borderRadius: "12px",
+  }),
+  selectRow: css({
+    marginBottom: "16px",
+  }),
+  select: css({
+    width: "100%",
+    padding: "14px 16px",
+    fontSize: "15px",
+    fontWeight: 500,
+    color: "#f8fafc",
+    background: "#0f172a",
+    border: "2px solid #334155",
+    borderRadius: "10px",
+    cursor: "pointer",
+    outline: "none",
+    _focus: {
+      borderColor: "#fbbf24",
+    },
+  }),
+  amountLabel: css({
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#94a3b8",
+    marginBottom: "8px",
+  }),
+  amountInput: css({
+    width: "100%",
+    padding: "16px",
+    fontSize: "28px",
+    fontWeight: 700,
+    fontFamily: "monospace",
+    textAlign: "right",
+    color: "#f8fafc",
+    background: "#0f172a",
+    border: "2px solid #334155",
+    borderRadius: "10px",
+    outline: "none",
+    _focus: {
+      borderColor: "#fbbf24",
+    },
+    _placeholder: { color: "#475569" },
+  }),
+  quickGrid: css({
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "8px",
+    marginTop: "12px",
+  }),
+  quickButton: css({
+    padding: "12px 8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    fontFamily: "monospace",
+    color: "#f8fafc",
+    background: "#334155",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+    _hover: { background: "#475569" },
+  }),
+  allowChangeNote: css({
+    marginTop: "12px",
+    fontSize: "12px",
+    color: "#94a3b8",
+    textAlign: "center",
+  }),
+};
+
+// 複数決済の内訳スタイル
+const paymentBreakdownStyles = {
+  container: css({
+    marginBottom: "16px",
+    padding: "16px",
+    background: "#1e293b",
+    borderRadius: "10px",
+  }),
+  title: css({
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#94a3b8",
+    marginBottom: "12px",
+  }),
+  row: css({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px 0",
+    borderBottom: "1px solid #334155",
+    _last: {
+      borderBottom: "none",
+    },
+  }),
+  label: css({
+    fontSize: "14px",
+    color: "#f8fafc",
+  }),
+  amount: css({
+    fontSize: "16px",
+    fontWeight: 600,
+    fontFamily: "monospace",
+    color: "#f8fafc",
+  }),
+  remaining: css({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: "12px",
+    paddingTop: "12px",
+    borderTop: "2px solid #475569",
+  }),
+  remainingLabel: css({
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#f87171",
+  }),
+  remainingAmount: css({
+    fontSize: "20px",
+    fontWeight: 700,
+    fontFamily: "monospace",
+    color: "#f87171",
   }),
 };
 
@@ -293,17 +434,27 @@ const cashlessDisplayStyles = {
   }),
 };
 
+// 支払いモード（単一 or 混合）
+type PaymentMode = "single" | "mixed";
+
 export function CheckoutModal({
   onClose,
   onComplete,
   isTrainingMode = false,
 }: CheckoutModalProps) {
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("single");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [receivedAmount, setReceivedAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
+  // 商品券関連の状態
+  const [selectedVoucherType, setSelectedVoucherType] =
+    useState<VoucherType>("voucher_department");
+  const [voucherAmount, setVoucherAmount] = useState("");
+
   const {
     items,
     appliedCoupon,
@@ -318,6 +469,7 @@ export function CheckoutModal({
   const { settings } = useSettingsStore();
   const { session } = useAuthStore();
   const inputRef = useRef<HTMLInputElement>(null);
+  const voucherInputRef = useRef<HTMLInputElement>(null);
 
   const taxRate = settings.taxRate;
   const subtotal = getSubtotal();
@@ -325,14 +477,103 @@ export function CheckoutModal({
   const taxAmount = getTaxAmount(taxRate);
   const total = getTotal(taxRate);
   const received = receivedAmount ? Number.parseInt(receivedAmount, 10) : 0;
-  const change = received - total;
 
-  // 現金入力にフォーカス
+  // 商品券設定を取得
+  const voucherConfigs = settings.voucherConfigs ?? [
+    {
+      type: "voucher_department" as VoucherType,
+      name: "百貨店商品券",
+      allowChange: true,
+    },
+    {
+      type: "voucher_event" as VoucherType,
+      name: "イベント主催者発行商品券",
+      allowChange: false,
+    },
+  ];
+  const currentVoucherConfig = voucherConfigs.find(
+    (c) => c.type === selectedVoucherType,
+  );
+  const voucherAmountNum = voucherAmount
+    ? Number.parseInt(voucherAmount, 10)
+    : 0;
+
+  // 商品券決済時の残額計算
+  const isVoucherPayment =
+    paymentMethod === "voucher_department" || paymentMethod === "voucher_event";
+  const remainingAfterVoucher = isVoucherPayment
+    ? Math.max(0, total - voucherAmountNum)
+    : 0;
+
+  // おつり計算（商品券でおつりを出す場合も考慮）
+  const voucherChange =
+    isVoucherPayment && currentVoucherConfig?.allowChange
+      ? Math.max(0, voucherAmountNum - total)
+      : 0;
+  const cashChange =
+    paymentMode === "mixed" && remainingAfterVoucher > 0
+      ? received - remainingAfterVoucher
+      : paymentMethod === "cash"
+        ? received - total
+        : 0;
+  const change = isVoucherPayment
+    ? voucherChange > 0
+      ? voucherChange
+      : cashChange
+    : cashChange;
+
+  // 入力フィールドにフォーカス
   useEffect(() => {
     if (paymentMethod === "cash") {
       inputRef.current?.focus();
+    } else if (isVoucherPayment) {
+      voucherInputRef.current?.focus();
     }
-  }, [paymentMethod]);
+  }, [paymentMethod, isVoucherPayment]);
+
+  // 支払い方法切り替え時のリセット
+  const handlePaymentMethodChange = useCallback((method: PaymentMethod) => {
+    setPaymentMethod(method);
+    setReceivedAmount("");
+    setVoucherAmount("");
+    if (method === "voucher_department" || method === "voucher_event") {
+      setSelectedVoucherType(method);
+      setPaymentMode("single");
+    } else {
+      setPaymentMode("single");
+    }
+  }, []);
+
+  // 商品券金額入力
+  const handleVoucherAmountChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value.replace(/\D/g, "");
+      if (value === "" || Number.parseInt(value, 10) <= 10000000) {
+        setVoucherAmount(value);
+        // 残額がある場合は混合モードに切り替え
+        const numValue = value ? Number.parseInt(value, 10) : 0;
+        if (numValue > 0 && numValue < total) {
+          setPaymentMode("mixed");
+        } else {
+          setPaymentMode("single");
+        }
+      }
+    },
+    [total],
+  );
+
+  // 商品券クイック金額
+  const handleVoucherQuickAmount = useCallback(
+    (amount: number) => {
+      setVoucherAmount(String(amount));
+      if (amount < total) {
+        setPaymentMode("mixed");
+      } else {
+        setPaymentMode("single");
+      }
+    },
+    [total],
+  );
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -402,17 +643,46 @@ export function CheckoutModal({
 
   const handleComplete = useCallback(async () => {
     if (!session) return;
+
+    // 決済可能かチェック
     if (paymentMethod === "cash" && change < 0) return;
+    if (isVoucherPayment) {
+      if (voucherAmountNum <= 0) return;
+      // 残額がある場合は現金が必要
+      if (remainingAfterVoucher > 0 && cashChange < 0) return;
+    }
 
     setIsProcessing(true);
 
     try {
-      const payments: Payment[] = [
-        {
+      // 支払い情報を構築
+      const payments: Payment[] = [];
+
+      if (isVoucherPayment) {
+        // 商品券決済
+        payments.push({
+          method: selectedVoucherType,
+          amount: Math.min(voucherAmountNum, total),
+        });
+        // 残額がある場合は現金を追加
+        if (remainingAfterVoucher > 0) {
+          payments.push({
+            method: "cash",
+            amount: received,
+          });
+        }
+      } else if (paymentMethod === "cash") {
+        payments.push({
+          method: "cash",
+          amount: received,
+        });
+      } else {
+        // キャッシュレス
+        payments.push({
           method: paymentMethod,
-          amount: paymentMethod === "cash" ? received : total,
-        },
-      ];
+          amount: total,
+        });
+      }
 
       const transaction: Transaction = {
         id: `txn-${Date.now()}`,
@@ -511,21 +781,71 @@ export function CheckoutModal({
     settings.terminalId,
     appliedCoupon,
     isTrainingMode,
+    isVoucherPayment,
+    voucherAmountNum,
+    remainingAfterVoucher,
+    cashChange,
+    selectedVoucherType,
   ]);
 
   // Enterキーで会計完了
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && paymentMethod === "cash" && change >= 0) {
-        e.preventDefault();
-        handleComplete();
+      if (e.key === "Enter") {
+        // 現金のみの場合
+        if (paymentMethod === "cash" && change >= 0) {
+          e.preventDefault();
+          handleComplete();
+        }
+        // 商品券の場合
+        else if (isVoucherPayment) {
+          if (voucherAmountNum > 0) {
+            // 残額がない or 残額を現金で支払い済み
+            if (remainingAfterVoucher === 0 || cashChange >= 0) {
+              e.preventDefault();
+              handleComplete();
+            }
+          }
+        }
+        // キャッシュレスの場合
+        else if (paymentMethod === "oya_cashless") {
+          e.preventDefault();
+          handleComplete();
+        }
       }
     },
-    [paymentMethod, change, handleComplete],
+    [
+      paymentMethod,
+      change,
+      handleComplete,
+      isVoucherPayment,
+      voucherAmountNum,
+      remainingAfterVoucher,
+      cashChange,
+    ],
   );
 
   const quickAmounts = [1000, 2000, 3000, 5000, 10000];
-  const canComplete = paymentMethod !== "cash" || change >= 0;
+  const voucherQuickAmounts = [500, 1000, 2000, 3000, 5000];
+
+  // 決済可能かどうかの判定
+  const canComplete = (() => {
+    if (paymentMethod === "cash") {
+      return change >= 0;
+    }
+    if (isVoucherPayment) {
+      if (voucherAmountNum <= 0) return false;
+      // おつりを出せる場合、または残額がない
+      if (currentVoucherConfig?.allowChange && voucherAmountNum >= total)
+        return true;
+      // 残額がある場合は現金で支払い済みか確認
+      if (remainingAfterVoucher > 0) return cashChange >= 0;
+      // 商品券で全額支払い
+      return voucherAmountNum >= total;
+    }
+    // キャッシュレス
+    return true;
+  })();
 
   return (
     <Modal
@@ -640,17 +960,24 @@ export function CheckoutModal({
         <div className={paymentMethodStyles.buttons}>
           <button
             type="button"
-            onClick={() => setPaymentMethod("cash")}
+            onClick={() => handlePaymentMethodChange("cash")}
             className={`${paymentMethodStyles.button} ${paymentMethod === "cash" ? paymentMethodStyles.buttonCash : paymentMethodStyles.buttonInactive}`}
           >
             現金
           </button>
           <button
             type="button"
-            onClick={() => setPaymentMethod("oya_cashless")}
+            onClick={() => handlePaymentMethodChange("oya_cashless")}
             className={`${paymentMethodStyles.button} ${paymentMethod === "oya_cashless" ? paymentMethodStyles.buttonCashless : paymentMethodStyles.buttonInactive}`}
           >
-            大家キャッシュレス
+            キャッシュレス
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePaymentMethodChange("voucher_department")}
+            className={`${paymentMethodStyles.button} ${isVoucherPayment ? paymentMethodStyles.buttonVoucher : paymentMethodStyles.buttonInactive}`}
+          >
+            商品券
           </button>
         </div>
       </div>
@@ -708,6 +1035,177 @@ export function CheckoutModal({
             </span>
             <span className={changeDisplayStyles.amount}>
               {change >= 0 ? `¥${change.toLocaleString()}` : "−"}
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* 商品券入力 */}
+      {isVoucherPayment && (
+        <div className={voucherInputStyles.container}>
+          {/* 商品券種別選択 */}
+          <div className={voucherInputStyles.selectRow}>
+            <select
+              value={selectedVoucherType}
+              onChange={(e) =>
+                setSelectedVoucherType(e.target.value as VoucherType)
+              }
+              className={voucherInputStyles.select}
+            >
+              {voucherConfigs.map((config) => (
+                <option key={config.type} value={config.type}>
+                  {config.name}
+                  {config.allowChange ? " (おつり有)" : " (おつり無)"}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 商品券金額入力 */}
+          <div className={voucherInputStyles.amountLabel}>商品券金額</div>
+          <input
+            ref={voucherInputRef}
+            type="text"
+            inputMode="numeric"
+            value={
+              voucherAmount
+                ? `¥${Number.parseInt(voucherAmount, 10).toLocaleString()}`
+                : ""
+            }
+            onChange={handleVoucherAmountChange}
+            onKeyDown={handleKeyDown}
+            placeholder="¥0"
+            className={voucherInputStyles.amountInput}
+          />
+
+          {/* クイック金額ボタン */}
+          <div className={voucherInputStyles.quickGrid}>
+            {voucherQuickAmounts.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => handleVoucherQuickAmount(amount)}
+                className={voucherInputStyles.quickButton}
+              >
+                ¥{amount.toLocaleString()}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => handleVoucherQuickAmount(total)}
+              className={voucherInputStyles.quickButton}
+            >
+              全額
+            </button>
+          </div>
+
+          {/* おつり or 残額表示 */}
+          {voucherAmountNum > 0 && (
+            <>
+              {voucherChange > 0 && currentVoucherConfig?.allowChange && (
+                <div
+                  className={`${changeDisplayStyles.container} ${changeDisplayStyles.valid}`}
+                  style={{ marginTop: "16px", marginBottom: 0 }}
+                >
+                  <span
+                    className={`${changeDisplayStyles.label} ${changeDisplayStyles.labelValid}`}
+                  >
+                    商品券おつり
+                  </span>
+                  <span className={changeDisplayStyles.amount}>
+                    ¥{voucherChange.toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              {remainingAfterVoucher > 0 && (
+                <div
+                  className={paymentBreakdownStyles.container}
+                  style={{ marginTop: "16px" }}
+                >
+                  <div className={paymentBreakdownStyles.title}>支払い内訳</div>
+                  <div className={paymentBreakdownStyles.row}>
+                    <span className={paymentBreakdownStyles.label}>
+                      {currentVoucherConfig?.name}
+                    </span>
+                    <span className={paymentBreakdownStyles.amount}>
+                      ¥{voucherAmountNum.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className={paymentBreakdownStyles.remaining}>
+                    <span className={paymentBreakdownStyles.remainingLabel}>
+                      残額（現金で支払い）
+                    </span>
+                    <span className={paymentBreakdownStyles.remainingAmount}>
+                      ¥{remainingAfterVoucher.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className={voucherInputStyles.allowChangeNote}>
+            {currentVoucherConfig?.allowChange
+              ? "この商品券はおつりを出せます"
+              : "この商品券はおつりを出せません（使い切りのみ）"}
+          </div>
+        </div>
+      )}
+
+      {/* 残額の現金支払い（商品券+現金の混合時） */}
+      {isVoucherPayment && remainingAfterVoucher > 0 && (
+        <>
+          <div className={css({ marginBottom: "16px" })}>
+            <div className={cashInputStyles.label}>現金お預かり金額</div>
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              value={
+                receivedAmount
+                  ? `¥${Number.parseInt(receivedAmount, 10).toLocaleString()}`
+                  : ""
+              }
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="¥0"
+              className={cashInputStyles.input}
+            />
+          </div>
+
+          {/* クイック金額ボタン */}
+          <div className={cashInputStyles.quickGrid}>
+            {quickAmounts.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => handleQuickAmount(amount)}
+                className={cashInputStyles.quickButton}
+              >
+                ¥{amount.toLocaleString()}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => handleQuickAmount(remainingAfterVoucher)}
+              className={`${cashInputStyles.quickButton} ${cashInputStyles.quickButtonExact}`}
+            >
+              ぴったり
+            </button>
+          </div>
+
+          {/* おつり表示 */}
+          <div
+            className={`${changeDisplayStyles.container} ${cashChange >= 0 ? changeDisplayStyles.valid : changeDisplayStyles.invalid}`}
+          >
+            <span
+              className={`${changeDisplayStyles.label} ${cashChange >= 0 ? changeDisplayStyles.labelValid : changeDisplayStyles.labelInvalid}`}
+            >
+              おつり
+            </span>
+            <span className={changeDisplayStyles.amount}>
+              {cashChange >= 0 ? `¥${cashChange.toLocaleString()}` : "−"}
             </span>
           </div>
         </>
