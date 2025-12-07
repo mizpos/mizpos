@@ -22,8 +22,7 @@ get_bucket() {
 }
 
 # Initialize empty version file if it doesn't exist
-init_versions() {
-    cat <<EOF
+init_versions() {    cat <<EOF
 {
   "apps": {
     "mizpos-admin": {
