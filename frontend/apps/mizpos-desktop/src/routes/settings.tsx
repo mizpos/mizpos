@@ -306,22 +306,29 @@ function SettingsPage() {
   }, [selectedPrinter, terminalId]);
 
   const selectUsbPrinter = useCallback((device: UsbDevice) => {
-    setSelectedPrinter({
+    setSelectedPrinter((prev) => ({
       type: "usb",
       vendorId: device.vendor_id,
       deviceId: device.device_id,
       name:
         device.name || `USB Printer (${device.vendor_id}:${device.device_id})`,
-      paperWidth: 58,
-    });
+      paperWidth: prev?.paperWidth ?? 58,
+    }));
   }, []);
 
   const selectBluetoothPrinter = useCallback((device: BluetoothDevice) => {
-    setSelectedPrinter({
+    setSelectedPrinter((prev) => ({
       type: "bluetooth",
       bluetoothAddress: device.address,
       name: device.name || device.address,
-      paperWidth: 58,
+      paperWidth: prev?.paperWidth ?? 58,
+    }));
+  }, []);
+
+  const handlePaperWidthChange = useCallback((width: number) => {
+    setSelectedPrinter((prev) => {
+      if (!prev) return prev;
+      return { ...prev, paperWidth: width };
     });
   }, []);
 
@@ -522,19 +529,59 @@ function SettingsPage() {
 
             {/* 現在の選択 */}
             {selectedPrinter && (
-              <div className={printerStyles.selected}>
-                <div>
-                  <div className={printerStyles.selectedLabel}>
-                    選択中のプリンター
+              <>
+                <div className={printerStyles.selected}>
+                  <div>
+                    <div className={printerStyles.selectedLabel}>
+                      選択中のプリンター
+                    </div>
+                    <div className={printerStyles.selectedName}>
+                      {selectedPrinter.name}
+                    </div>
                   </div>
-                  <div className={printerStyles.selectedName}>
-                    {selectedPrinter.name}
+                  <Badge variant="success" size="sm">
+                    {selectedPrinter.type === "usb" ? "USB" : "Bluetooth"}
+                  </Badge>
+                </div>
+
+                {/* 用紙サイズ選択 */}
+                <div className={css({ marginBottom: "16px" })}>
+                  <div className={printerStyles.sectionLabel}>用紙サイズ</div>
+                  <div
+                    className={css({
+                      display: "flex",
+                      gap: "8px",
+                    })}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handlePaperWidthChange(58)}
+                      className={`${printerStyles.deviceButton} ${selectedPrinter.paperWidth === 58 ? printerStyles.deviceButtonSelected : ""}`}
+                      style={{ flex: 1 }}
+                    >
+                      <span>58mm</span>
+                      {selectedPrinter.paperWidth === 58 && (
+                        <Badge variant="info" size="sm">
+                          選択中
+                        </Badge>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePaperWidthChange(80)}
+                      className={`${printerStyles.deviceButton} ${selectedPrinter.paperWidth === 80 ? printerStyles.deviceButtonSelected : ""}`}
+                      style={{ flex: 1 }}
+                    >
+                      <span>80mm</span>
+                      {selectedPrinter.paperWidth === 80 && (
+                        <Badge variant="info" size="sm">
+                          選択中
+                        </Badge>
+                      )}
+                    </button>
                   </div>
                 </div>
-                <Badge variant="success" size="sm">
-                  {selectedPrinter.type === "usb" ? "USB" : "Bluetooth"}
-                </Badge>
-              </div>
+              </>
             )}
 
             {/* プリンターなし選択 */}
