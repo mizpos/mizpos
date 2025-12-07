@@ -134,6 +134,7 @@ jobs:
 
       - name: Get App Version from S3
         id: version
+        shell: bash
         run: |
           chmod +x scripts/version-manager.sh
           VERSION=$(./scripts/version-manager.sh get "mizpos-desktop" "${{ needs.setup-env.outputs.environment }}")

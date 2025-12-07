@@ -105,6 +105,8 @@ resource "aws_iam_role_policy" "lambda_accounts" {
           "${aws_dynamodb_table.users.arn}/index/*",
           aws_dynamodb_table.roles.arn,
           "${aws_dynamodb_table.roles.arn}/index/*",
+          aws_dynamodb_table.terminals.arn,
+          "${aws_dynamodb_table.terminals.arn}/index/*",
           aws_dynamodb_table.pos_employees.arn,
           "${aws_dynamodb_table.pos_employees.arn}/index/*",
           aws_dynamodb_table.pos_sessions.arn,
