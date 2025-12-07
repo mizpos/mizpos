@@ -253,3 +253,22 @@ jobs:
           echo "- **New Version**: $NEW_VERSION" >> $GITHUB_STEP_SUMMARY
           echo "- **Environment**: $ENV" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  invalidate-cloudfront:
+    name: Invalidate CloudFront Cache
+    needs: [setup-env, build]
+    runs-on: ubuntu-latest
+    if: always() && needs.build.result == 'success'
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ needs.setup-env.outputs.cdn-distribution-id }} \
+            --paths "/desktop/*"
+          echo "CloudFront cache invalidated for Desktop builds"
