@@ -401,40 +401,60 @@ def _convert_event_dates(event: dict) -> dict:
     return result
 
 
-def get_event(event_id: str) -> dict | None:
+def get_event(event_id: str, include_inactive: bool = False) -> dict | None:
     """イベント詳細を取得
 
     Args:
         event_id: イベントID
+        include_inactive: 論理削除されたイベントも含めるか（デフォルトFalse）
 
     Returns:
-        イベント情報（存在しない場合はNone）
+        イベント情報（存在しない場合またはis_active=FalseでNone）
     """
     response = events_table.get_item(Key={"event_id": event_id})
     item = response.get("Item")
     if not item:
         return None
     event = dynamo_to_dict(item)
+    # 論理削除されたイベントは取得しない（include_inactive=Falseの場合）
+    if not include_inactive and not event.get("is_active", True):
+        return None
     return _convert_event_dates(event)
 
 
-def list_events(publisher_id: str | None = None) -> list[dict]:
+def list_events(
+    publisher_id: str | None = None, include_inactive: bool = False
+) -> list[dict]:
     """イベント一覧を取得
 
     Args:
         publisher_id: サークルID（指定した場合はそのサークルのイベントのみ取得）
+        include_inactive: 論理削除されたイベントも含めるか（デフォルトFalse）
 
     Returns:
-        イベントのリスト
+        イベントのリスト（デフォルトではis_active=Trueのみ）
     """
-    if publisher_id:
-        # 特定のサークルのイベントのみ取得
+    filter_expr = "is_active = :active"
+    expr_values: dict = {":active": True}
+
+    if not include_inactive:
+        if publisher_id:
+            filter_expr = "publisher_id = :pid AND is_active = :active"
+            expr_values[":pid"] = publisher_id
+    else:
+        if publisher_id:
+            filter_expr = "publisher_id = :pid"
+            expr_values = {":pid": publisher_id}
+        else:
+            filter_expr = None
+            expr_values = None
+
+    if filter_expr:
         response = events_table.scan(
-            FilterExpression="publisher_id = :pid",
-            ExpressionAttributeValues={":pid": publisher_id},
+            FilterExpression=filter_expr,
+            ExpressionAttributeValues=expr_values,
         )
     else:
-        # 全イベントを取得
         response = events_table.scan()
 
     items = response.get("Items", [])
@@ -498,16 +518,19 @@ def delete_event(event_id: str) -> bool:
         event_id: イベントID
 
     Returns:
-        削除成功の場合True
+        削除成功の場合True、イベントが存在しない場合False
     """
     try:
         events_table.update_item(
             Key={"event_id": event_id},
             UpdateExpression="SET is_active = :inactive",
             ExpressionAttributeValues={":inactive": False},
+            ConditionExpression="attribute_exists(event_id)",
         )
         return True
-    except ClientError:
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
         return False
 
 
