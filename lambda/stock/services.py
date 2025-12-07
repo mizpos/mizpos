@@ -49,6 +49,7 @@ def timestamp_to_date_str(timestamp: int | None) -> str | None:
     except (ValueError, OSError):
         return None
 
+
 # 環境変数
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 STOCK_TABLE = os.environ.get("STOCK_TABLE", f"{ENVIRONMENT}-mizpos-stock")
@@ -455,7 +456,9 @@ def update_event(event_id: str, update_data: dict) -> dict | None:
     # 日付文字列をUnix timestampに変換
     converted_data = dict(update_data)
     if "start_date" in converted_data and converted_data["start_date"]:
-        converted_data["start_date"] = date_str_to_timestamp(converted_data["start_date"])
+        converted_data["start_date"] = date_str_to_timestamp(
+            converted_data["start_date"]
+        )
     if "end_date" in converted_data and converted_data["end_date"]:
         converted_data["end_date"] = date_str_to_timestamp(converted_data["end_date"])
 
