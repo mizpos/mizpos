@@ -72,6 +72,26 @@ impl Default for PaperWidth {
     }
 }
 
+/// 文字の表示幅を計算（全角=2, 半角=1）
+fn char_width(c: char) -> usize {
+    let code = c as u32;
+    // ASCII printable characters (0x20-0x7E)
+    if (0x0020..=0x007E).contains(&code) {
+        return 1;
+    }
+    // Half-width Katakana (U+FF61-U+FF9F)
+    if (0xFF61..=0xFF9F).contains(&code) {
+        return 1;
+    }
+    // Everything else (CJK, full-width, etc.) is width 2
+    2
+}
+
+/// 文字列の表示幅を計算
+fn str_width(s: &str) -> usize {
+    s.chars().map(char_width).sum()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Align {
     Left,
@@ -274,24 +294,18 @@ impl<D: Driver> JpPrinter<D> {
         self.set_underline(style.underline)?;
         self.set_reverse(style.reverse)?;
 
-        // Use ESC ! for double size (works better with reverse)
-        let use_double_size = style.double_width && style.double_height;
-        if use_double_size {
-            self.set_double_size(true)?;
-        }
-
+        // 漢字モードを開始
         self.raw(JP_KANJI_MODE_ON)?;
 
+        // 漢字モード内でサイズを設定（FS ! コマンド）
+        // bit 2: double width, bit 3: double height
         let size_flag = {
             let mut n: u8 = 0x00;
-            // Only use kanji size command if not using ESC !
-            if !use_double_size {
-                if style.double_width {
-                    n |= 0x04;
-                }
-                if style.double_height {
-                    n |= 0x08;
-                }
+            if style.double_width {
+                n |= 0x04;
+            }
+            if style.double_height {
+                n |= 0x08;
             }
             n
         };
@@ -305,6 +319,7 @@ impl<D: Driver> JpPrinter<D> {
         let encoded = self.encode_shift_jis(txt);
         self.raw(&encoded)?;
 
+        // サイズを戻す
         if size_flag != 0x00 {
             let mut cmd = JP_KANJI_SIZE_CMD.to_vec();
             cmd.push(0x00);
@@ -312,10 +327,6 @@ impl<D: Driver> JpPrinter<D> {
         }
 
         self.raw(JP_KANJI_MODE_OFF)?;
-
-        if use_double_size {
-            self.set_double_size(false)?;
-        }
 
         self.set_bold(false)?;
         self.set_underline(false)?;
@@ -349,9 +360,10 @@ impl<D: Driver> JpPrinter<D> {
     }
 
     pub fn row(&mut self, left: &str, right: &str, width: usize) -> Result<(), String> {
-        let left_len = left.chars().count();
-        let right_len = right.chars().count();
-        let space_len = width.saturating_sub(left_len + right_len);
+        // 表示幅を正しく計算（全角=2, 半角=1）
+        let left_width = str_width(left);
+        let right_width = str_width(right);
+        let space_len = width.saturating_sub(left_width + right_width);
         let spaces = " ".repeat(space_len);
         let row = format!("{}{}{}", left, spaces, right);
         self.textln(&row)
@@ -364,9 +376,10 @@ impl<D: Driver> JpPrinter<D> {
     /// Print two columns with bold right side
     pub fn row_auto_bold(&mut self, left: &str, right: &str) -> Result<(), String> {
         let total_chars = self.paper_width.chars();
-        let left_len = left.chars().count();
-        let right_len = right.chars().count();
-        let space_len = total_chars.saturating_sub(left_len + right_len);
+        // 表示幅を正しく計算（全角=2, 半角=1）
+        let left_width = str_width(left);
+        let right_width = str_width(right);
+        let space_len = total_chars.saturating_sub(left_width + right_width);
         let spaces = " ".repeat(space_len);
 
         // Print left part normally
@@ -420,27 +433,33 @@ impl<D: Driver> JpPrinter<D> {
 
     /// Print text with padding to fill line (for reverse style)
     pub fn jp_textln_padded(&mut self, txt: &str, style: TextStyle) -> Result<(), String> {
-        let char_count = txt.chars().count();
-        let line_width = if style.double_width || (style.double_width && style.double_height) {
+        // 表示幅を正しく計算（全角=2, 半角=1）
+        let text_width = str_width(txt);
+        let line_width = if style.double_width {
             self.paper_width.chars_jp()
         } else {
             self.paper_width.chars()
         };
 
+        // 2倍モードではスペースも2倍幅になるので、パディング計算を調整
+        let raw_padding = line_width.saturating_sub(text_width);
+        let effective_padding = if style.double_width {
+            raw_padding / 2
+        } else {
+            raw_padding
+        };
+
         let padded = match style.align {
             Align::Center => {
-                let padding = line_width.saturating_sub(char_count);
-                let left_pad = padding / 2;
-                let right_pad = padding - left_pad;
+                let left_pad = effective_padding / 2;
+                let right_pad = effective_padding - left_pad;
                 format!("{}{}{}", " ".repeat(left_pad), txt, " ".repeat(right_pad))
             }
             Align::Right => {
-                let padding = line_width.saturating_sub(char_count);
-                format!("{}{}", " ".repeat(padding), txt)
+                format!("{}{}", " ".repeat(effective_padding), txt)
             }
             Align::Left => {
-                let padding = line_width.saturating_sub(char_count);
-                format!("{}{}", txt, " ".repeat(padding))
+                format!("{}{}", txt, " ".repeat(effective_padding))
             }
         };
 

@@ -189,6 +189,7 @@ mod desktop_printer {
     }
 
     /// 金額をフォーマット（カンマ区切り + 円）
+    /// 全角￥（U+FFE5）を使用（Shift-JISで半角¥と\は同じコードのため）
     fn format_price(price: u32) -> String {
         let s = price.to_string();
         let mut result = String::new();
@@ -198,7 +199,7 @@ mod desktop_printer {
             }
             result.insert(0, c);
         }
-        format!("¥{}", result)
+        format!("￥{}", result)
     }
 
     /// ISDN + jan2からCコード＋値段の表示文字列を生成
@@ -251,7 +252,7 @@ mod desktop_printer {
         }
 
         // ご明細書（黒背景中央揃え文字２倍サイズ）
-        printer.jp_textln_padded("　　ご明細書　　", TextStyle::default().double().reverse().center())?;
+        printer.jp_textln_padded("ご明細書", TextStyle::default().double().reverse().center())?;
 
         // レシート番号
         printer.jp_textln(&format!("# {}", receipt.receipt_number), TextStyle::default())?;
