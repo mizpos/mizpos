@@ -407,11 +407,8 @@ function POSPage() {
         e.preventDefault();
         setShowProductSelect(true);
       }
-      // F2 または Enter（空入力時）: 会計
-      if (
-        e.key === "F2" ||
-        (e.key === "Enter" && !barcodeInput && items.length > 0)
-      ) {
+      // F2: 会計（Enter は連続スキャンの妨げになるため F2 のみ対応）
+      if (e.key === "F2") {
         e.preventDefault();
         if (items.length > 0) setShowCheckout(true);
       }
@@ -434,7 +431,6 @@ function POSPage() {
     showProductSelect,
     showCheckout,
     completedTransaction,
-    barcodeInput,
     items.length,
     clear,
   ]);
