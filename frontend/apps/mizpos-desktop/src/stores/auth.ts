@@ -141,7 +141,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       const data: PosLoginResponse = await response.json();
-      console.log("[Auth] Login response from API:", data);
+      console.log(
+        "[Auth] Login response from API:",
+        JSON.stringify(data, null, 2),
+      );
+      console.log("[Auth] event_id from API:", data.event_id);
 
       // 未開局かつスタッフ権限の場合はログインを拒否
       if (data.role !== "manager") {
@@ -175,6 +179,35 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.log("[Auth] Session saved to store:", session);
 
       set({ session, isLoading: false });
+
+      // 従業員にevent_idが紐づいている場合、イベント情報を取得してsettingsを更新
+      if (data.event_id) {
+        try {
+          const eventsResponse = await fetch(`${API_BASE_URL}/pos/events`, {
+            headers: {
+              "Content-Type": "application/json",
+              "X-POS-Session": data.session_id,
+            },
+          });
+          if (eventsResponse.ok) {
+            const eventsData = await eventsResponse.json();
+            const event = eventsData.events?.find(
+              (e: { event_id: string }) => e.event_id === data.event_id,
+            );
+            if (event) {
+              console.log("[Auth] Event data found:", event);
+              // settingsストアを更新
+              useSettingsStore.getState().updateSettings({
+                eventName: event.name || "",
+                venueAddress: event.location || "",
+              });
+            }
+          }
+        } catch (err) {
+          console.error("[Auth] Failed to fetch event info:", err);
+          // イベント情報取得失敗してもログインは成功させる
+        }
+      }
 
       // バックグラウンドで商品データを同期
       syncProducts().catch((err) => {
