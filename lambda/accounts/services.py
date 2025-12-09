@@ -358,14 +358,30 @@ def has_role(
     roles = get_user_roles(user_id)
 
     for role in roles:
-        if role["role_type"] == role_type:
+        if role.get("role_type") == role_type:
+            # scopeフィールドがない場合はrole_typeから推測
+            scope = role.get("scope")
+            if not scope:
+                if role_type == "system_admin":
+                    scope = "system"
+                elif role_type in ["publisher_admin", "publisher_sales"]:
+                    scope = "publisher"
+                elif role_type in ["event_admin", "event_sales"]:
+                    scope = "event"
+
             # scopeに応じた追加チェック
-            if role["scope"] == "system":
+            if scope == "system":
                 return True
-            elif role["scope"] == "publisher" and publisher_id:
+            elif scope == "publisher":
+                # publisher_idが指定されていない場合は、ロールを持っているだけでOK
+                if not publisher_id:
+                    return True
                 if role.get("publisher_id") == publisher_id:
                     return True
-            elif role["scope"] == "event" and event_id:
+            elif scope == "event":
+                # event_idが指定されていない場合は、ロールを持っているだけでOK
+                if not event_id:
+                    return True
                 if role.get("event_id") == event_id:
                     return True
 
