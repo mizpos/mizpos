@@ -38,7 +38,6 @@ export function useUserRoles(): UseUserRolesResult {
       });
       if (error) throw error;
       const rolesData = (data as unknown as { roles: Role[] }).roles || [];
-      console.log("[useUserRoles] userId:", user.userId, "roles:", rolesData);
       return rolesData;
     },
     enabled: !!user?.userId,
@@ -67,11 +66,6 @@ export function useUserRoles(): UseUserRolesResult {
         .map((role) => role.publisher_id as string)
     ),
   ];
-
-  // デバッグ用
-  if (roles.length > 0) {
-    console.log("[useUserRoles] publisherIds:", publisherIds, "isSystemAdmin:", isSystemAdmin);
-  }
 
   // 特定のサークルに対するロールを持っているか
   const hasPublisherRole = (publisherId: string): boolean => {
