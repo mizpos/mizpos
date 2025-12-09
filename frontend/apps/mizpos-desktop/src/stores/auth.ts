@@ -141,6 +141,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       const data: PosLoginResponse = await response.json();
+      console.log("[Auth] Login response from API:", data);
 
       // 未開局かつスタッフ権限の場合はログインを拒否
       if (data.role !== "manager") {
