@@ -752,30 +752,32 @@ function SettingsPage() {
             </Button>
           </Card>
 
-          {/* 閉局ボタン */}
-          <Card padding="lg">
-            <h2 className={sectionStyles.title}>閉局</h2>
-            <div
-              className={css({
-                fontSize: "14px",
-                color: "#94a3b8",
-                marginBottom: "16px",
-              })}
-            >
-              閉局処理を行い、レジ金チェックと端末の無効化を行います。
-              <br />
-              <span className={css({ color: "#f87171" })}>
-                ※閉局後は端末の再登録が必要です
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              fullWidth
-              onClick={() => navigate({ to: "/closing" })}
-            >
-              閉局処理へ
-            </Button>
-          </Card>
+          {/* 閉局ボタン（職長のみ） */}
+          {session?.role === "manager" && (
+            <Card padding="lg">
+              <h2 className={sectionStyles.title}>閉局</h2>
+              <div
+                className={css({
+                  fontSize: "14px",
+                  color: "#94a3b8",
+                  marginBottom: "16px",
+                })}
+              >
+                閉局処理を行い、レジ金チェックと端末の無効化を行います。
+                <br />
+                <span className={css({ color: "#f87171" })}>
+                  ※閉局後は端末の再登録が必要です
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => navigate({ to: "/closing" })}
+              >
+                閉局処理へ
+              </Button>
+            </Card>
+          )}
 
           {/* バージョン情報 */}
           <button

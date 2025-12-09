@@ -367,10 +367,9 @@ function ClosingPage() {
       navigate({ to: "/login" });
       return;
     }
-    // 職長権限がない場合は設定画面へ（権限エラーメッセージ付き）
+    // 職長権限がない場合はPOS画面へ（UIで閉局ボタンは非表示だが、直接URL入力対策）
     if (session.role !== "manager") {
-      alert("閉局処理は職長権限が必要です。");
-      navigate({ to: "/settings" });
+      navigate({ to: "/pos" });
     }
   }, [session, navigate]);
 
