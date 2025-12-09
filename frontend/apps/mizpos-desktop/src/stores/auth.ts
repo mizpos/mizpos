@@ -271,10 +271,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       const s = await getStore();
       const currentSession = await s.get<Session>("session");
       if (currentSession) {
-        const updatedSession = { ...currentSession, eventId: undefined };
+        // eventIdを空文字列にして明示的に「未選択」状態にする
+        // undefinedだとJSONシリアライズで消えてAPIのevent_idが復活する可能性がある
+        const { eventId: _, ...rest } = currentSession;
+        const updatedSession = { ...rest, eventId: "" };
         await s.set("session", updatedSession);
         await s.save();
-        set({ session: updatedSession });
+        set({ session: updatedSession as Session });
       }
     } catch (error) {
       console.error("Failed to clear event ID:", error);
