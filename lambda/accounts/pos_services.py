@@ -343,6 +343,7 @@ def update_pos_employee(
 
     now = datetime.now(timezone.utc).isoformat()
     update_expression = "SET updated_at = :updated"
+    remove_expression_parts = []
     expression_values = {":updated": now}
     expression_names = {}
 
@@ -359,13 +360,21 @@ def update_pos_employee(
         expression_values[":role"] = role
         expression_names["#role"] = "role"
 
+    # event_id: 空文字列の場合は属性を削除、値がある場合は更新
     if event_id is not None:
-        update_expression += ", event_id = :eid"
-        expression_values[":eid"] = event_id
+        if event_id == "":
+            remove_expression_parts.append("event_id")
+        else:
+            update_expression += ", event_id = :eid"
+            expression_values[":eid"] = event_id
 
+    # publisher_id: 空文字列の場合は属性を削除、値がある場合は更新
     if publisher_id is not None:
-        update_expression += ", publisher_id = :pid"
-        expression_values[":pid"] = publisher_id
+        if publisher_id == "":
+            remove_expression_parts.append("publisher_id")
+        else:
+            update_expression += ", publisher_id = :pid"
+            expression_values[":pid"] = publisher_id
 
     if active is not None:
         # 'active' は予約語なので ExpressionAttributeNames を使用
@@ -376,6 +385,10 @@ def update_pos_employee(
     if user_id is not None:
         update_expression += ", user_id = :uid"
         expression_values[":uid"] = user_id
+
+    # REMOVE式を追加
+    if remove_expression_parts:
+        update_expression += " REMOVE " + ", ".join(remove_expression_parts)
 
     update_kwargs = {
         "Key": {"employee_number": employee_number},

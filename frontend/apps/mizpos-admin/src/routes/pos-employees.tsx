@@ -991,11 +991,11 @@ function PosEmployeesPage() {
                 </label>
                 <select
                   id="edit-event-id"
-                  value={editFormData.event_id || ""}
+                  value={editFormData.event_id ?? ""}
                   onChange={(e) =>
                     setEditFormData({
                       ...editFormData,
-                      event_id: e.target.value || undefined,
+                      event_id: e.target.value,
                     })
                   }
                   className={inputClass}
@@ -1025,11 +1025,11 @@ function PosEmployeesPage() {
                 </label>
                 <select
                   id="edit-publisher-id"
-                  value={editFormData.publisher_id || ""}
+                  value={editFormData.publisher_id ?? ""}
                   onChange={(e) =>
                     setEditFormData({
                       ...editFormData,
-                      publisher_id: e.target.value || undefined,
+                      publisher_id: e.target.value,
                     })
                   }
                   className={inputClass}
