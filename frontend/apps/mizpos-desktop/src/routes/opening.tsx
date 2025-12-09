@@ -178,17 +178,19 @@ function OpeningPage() {
         return;
       }
 
-      // 職長権限がない場合はPOSへ（権限エラーメッセージ付き）
-      if (session.role !== "manager") {
-        alert("開局処理は職長権限が必要です。");
-        navigate({ to: "/pos" });
-        return;
-      }
-
       // 開局済みの場合はPOSへ
       const openingReport = await getTodayOpeningReport();
       if (openingReport) {
         navigate({ to: "/pos" });
+        return;
+      }
+
+      // 未開局で職長権限がない場合は、職長を呼ぶよう案内してログイン画面へ
+      if (session.role !== "manager") {
+        alert(
+          "開局処理は職長権限が必要です。\n職長に開局処理を依頼してください。",
+        );
+        navigate({ to: "/login" });
         return;
       }
 

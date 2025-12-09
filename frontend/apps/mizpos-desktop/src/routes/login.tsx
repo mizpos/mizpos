@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
+import { getTodayOpeningReport } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 
 // ページレイアウトスタイル
@@ -139,14 +140,24 @@ function LoginPage() {
   const staffIdRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (session) {
-      // イベント紐づけ済みなら開局画面へ、なければイベント選択画面へ
-      if (session.eventId) {
-        navigate({ to: "/opening" });
-      } else {
-        navigate({ to: "/select-event" });
+    const checkAndNavigate = async () => {
+      if (session) {
+        // イベント紐づけ済みの場合
+        if (session.eventId) {
+          // 開局済みならPOSへ、未開局なら開局画面へ
+          const openingReport = await getTodayOpeningReport();
+          if (openingReport) {
+            navigate({ to: "/pos" });
+          } else {
+            navigate({ to: "/opening" });
+          }
+        } else {
+          navigate({ to: "/select-event" });
+        }
       }
-    }
+    };
+
+    checkAndNavigate();
   }, [session, navigate]);
 
   useEffect(() => {
