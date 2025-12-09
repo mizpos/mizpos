@@ -850,12 +850,14 @@ async def create_pos_employee_endpoint(
     """POS従業員作成
 
     7桁の従業員番号と3〜8桁の数字PINを設定
+    role: manager=職長（返金・開局・閉局可能）, staff=スタッフ（販売のみ）
     """
     try:
         employee = create_pos_employee(
             employee_number=request.employee_number,
             pin=request.pin,
             display_name=request.display_name,
+            role=request.role,
             event_id=request.event_id,
             publisher_id=request.publisher_id,
             user_id=request.user_id,
@@ -897,6 +899,7 @@ async def update_pos_employee_endpoint(
             employee_number=employee_number,
             display_name=request.display_name,
             pin=request.pin,
+            role=request.role,
             event_id=request.event_id,
             publisher_id=request.publisher_id,
             active=request.active,
