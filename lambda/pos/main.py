@@ -22,6 +22,7 @@ from models import (
     PosSessionRefreshRequest,
     PosSetEventRequest,
     TerminalAuthRequest,
+    TerminalRevokeRequest,
 )
 from services.coupon import apply_coupon, get_coupon_by_code
 from services.employee import (
@@ -40,6 +41,8 @@ from services.sync import get_events_for_pos
 from services.terminal import (
     authenticate_terminal,
     check_terminal_registered,
+    revoke_terminal,
+    verify_terminal_signature,
 )
 
 # ロガーの設定
@@ -134,6 +137,36 @@ async def check_terminal_endpoint(terminal_id: str):
         }
     except Exception as e:
         logger.error(f"Error checking terminal: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminals/revoke", response_model=dict)
+async def revoke_terminal_endpoint(request: TerminalRevokeRequest):
+    """端末無効化
+
+    端末署名を検証して端末を無効化（ステータスをrevokedに変更）
+    閉局時に呼び出される
+    """
+    try:
+        # 署名を検証
+        success, terminal, error = verify_terminal_signature(
+            terminal_id=request.terminal_id,
+            timestamp=request.timestamp,
+            signature=request.signature,
+        )
+        if not success:
+            return {"success": False, "error": error or "Invalid signature"}
+
+        # 端末を無効化
+        revoked = revoke_terminal(request.terminal_id)
+        if not revoked:
+            return {"success": False, "error": "Failed to revoke terminal"}
+
+        logger.info(f"Terminal revoked: {request.terminal_id}")
+        return {"success": True, "terminal_id": request.terminal_id}
+
+    except Exception as e:
+        logger.error(f"Error revoking terminal: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

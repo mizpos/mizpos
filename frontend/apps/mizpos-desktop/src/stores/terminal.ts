@@ -112,8 +112,10 @@ interface TerminalState {
   checkServerRegistration: () => Promise<boolean>;
   /** Keychainをクリア */
   clearKeychain: () => Promise<void>;
-  /** 端末登録を無効化（サーバーにrevokeリクエスト + Keychainクリア） */
+  /** 端末登録を無効化（サーバーにrevokeリクエスト + Keychainクリア + 新規ID/鍵生成） */
   revokeTerminal: () => Promise<void>;
+  /** 端末を再生成（新しいID/鍵を生成して初期化状態に戻す） */
+  regenerateTerminal: (deviceName: string) => Promise<RegistrationQrPayload>;
 }
 
 export const useTerminalStore = create<TerminalState>((set, get) => ({
@@ -424,7 +426,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
       try {
         const signatureData = await get().createAuthSignature();
-        await fetch(`${apiBaseUrl}/pos/terminals/revoke`, {
+        const response = await fetch(`${apiBaseUrl}/pos/terminals/revoke`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -435,7 +437,12 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
             timestamp: signatureData.timestamp,
           }),
         });
-        console.log("Terminal revoked on server");
+        const result = await response.json();
+        if (result.success) {
+          console.log("Terminal revoked on server");
+        } else {
+          console.warn("Server revoke returned error:", result.error);
+        }
       } catch (serverError) {
         // サーバー通信失敗は無視（オフラインでも閉局できるようにする）
         console.warn("Failed to revoke terminal on server:", serverError);
@@ -444,13 +451,30 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       // ローカルのKeychainをクリア
       await get().clearKeychain();
 
+      // 状態を更新（uninitializedに戻す）
+      // 次回のregister-terminal画面で新しいID/鍵が自動生成される
       set({
-        status: "revoked",
+        status: "uninitialized",
+        terminalId: null,
+        publicKey: null,
+        qrPayload: null,
         isRegisteredOnServer: false,
+        error: null,
       });
     } catch (error) {
       console.error("Failed to revoke terminal:", error);
       throw error;
     }
+  },
+
+  regenerateTerminal: async (deviceName: string) => {
+    // 既存のキーペアをクリア
+    await get().clearKeychain();
+
+    // 新しいキーペアを生成
+    const payload = await get().initializeTerminal(deviceName);
+
+    console.log("Terminal regenerated with new ID:", payload.terminal_id);
+    return payload;
   },
 }));
