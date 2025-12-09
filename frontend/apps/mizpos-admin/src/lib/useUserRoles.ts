@@ -37,7 +37,9 @@ export function useUserRoles(): UseUserRolesResult {
         params: { path: { user_id: user.userId } },
       });
       if (error) throw error;
-      return (data as unknown as { roles: Role[] }).roles || [];
+      const rolesData = (data as unknown as { roles: Role[] }).roles || [];
+      console.log("[useUserRoles] userId:", user.userId, "roles:", rolesData);
+      return rolesData;
     },
     enabled: !!user?.userId,
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
@@ -52,12 +54,12 @@ export function useUserRoles(): UseUserRolesResult {
   );
 
   // ユーザーが紐づいているサークルIDの一覧
+  // Note: APIレスポンスにscopeが含まれない場合もあるため、role_typeとpublisher_idで判定
   const publisherIds = [
     ...new Set(
       roles
         .filter(
           (role) =>
-            role.scope === "publisher" &&
             role.publisher_id &&
             (role.role_type === "publisher_admin" ||
               role.role_type === "publisher_sales")
@@ -66,12 +68,16 @@ export function useUserRoles(): UseUserRolesResult {
     ),
   ];
 
+  // デバッグ用
+  if (roles.length > 0) {
+    console.log("[useUserRoles] publisherIds:", publisherIds, "isSystemAdmin:", isSystemAdmin);
+  }
+
   // 特定のサークルに対するロールを持っているか
   const hasPublisherRole = (publisherId: string): boolean => {
     if (isSystemAdmin) return true;
     return roles.some(
       (role) =>
-        role.scope === "publisher" &&
         role.publisher_id === publisherId &&
         (role.role_type === "publisher_admin" ||
           role.role_type === "publisher_sales")
@@ -83,7 +89,6 @@ export function useUserRoles(): UseUserRolesResult {
     if (isSystemAdmin) return true;
     return roles.some(
       (role) =>
-        role.scope === "publisher" &&
         role.publisher_id === publisherId &&
         role.role_type === "publisher_admin"
     );

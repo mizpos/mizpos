@@ -6,11 +6,12 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { css } from "styled-system/css";
 import { Card, PageContainer } from "../components/ui";
 import { getAuthenticatedClients } from "../lib/api";
 import { STOCK_LOW_THRESHOLD } from "../lib/constants";
+import { useUserRoles } from "../lib/useUserRoles";
 
 export const Route = createFileRoute("/")({
   component: DashboardPage,
@@ -22,12 +23,19 @@ interface Sale {
   status: "pending" | "completed" | "shipped" | "cancelled";
   created_at: string;
   completed_at?: string;
+  publisher_id?: string;
 }
 
 interface Product {
   product_id: string;
   name: string;
   stock_quantity: number;
+  publisher_id?: string;
+}
+
+interface Publisher {
+  publisher_id: string;
+  name: string;
 }
 
 interface StatCardProps {
@@ -103,6 +111,26 @@ function StatCard({ title, value, change, icon, color }: StatCardProps) {
 }
 
 function DashboardPage() {
+  const { isSystemAdmin, publisherIds, isLoading: rolesLoading } = useUserRoles();
+  const [selectedPublisherId, setSelectedPublisherId] = useState<string | null>(null);
+
+  // サークル一覧を取得（タブ表示用）
+  const { data: publishers = [] } = useQuery({
+    queryKey: ["publishers"],
+    queryFn: async () => {
+      const { stock } = await getAuthenticatedClients();
+      const { data, error } = await stock.GET("/publishers");
+      if (error) throw error;
+      const response = data as unknown as { publishers: Publisher[] };
+      return response.publishers || [];
+    },
+  });
+
+  // サークルユーザーの場合、紐づいているサークルのみフィルタリング
+  const availablePublishers = isSystemAdmin
+    ? publishers
+    : publishers.filter((p) => publisherIds.includes(p.publisher_id));
+
   // 売上データを取得
   const { data: salesData = [], isLoading: salesLoading } = useQuery({
     queryKey: ["dashboard-sales"],
@@ -129,7 +157,32 @@ function DashboardPage() {
     },
   });
 
-  // 統計を計算
+  // サークルでフィルタリングしたデータ
+  const filteredSalesData = useMemo(() => {
+    if (isSystemAdmin && !selectedPublisherId) {
+      return salesData; // システム管理者で「全体」選択時は全データ
+    }
+    const targetPublisherIds = selectedPublisherId
+      ? [selectedPublisherId]
+      : publisherIds;
+    return salesData.filter(
+      (sale) => sale.publisher_id && targetPublisherIds.includes(sale.publisher_id)
+    );
+  }, [salesData, isSystemAdmin, selectedPublisherId, publisherIds]);
+
+  const filteredProductsData = useMemo(() => {
+    if (isSystemAdmin && !selectedPublisherId) {
+      return productsData; // システム管理者で「全体」選択時は全データ
+    }
+    const targetPublisherIds = selectedPublisherId
+      ? [selectedPublisherId]
+      : publisherIds;
+    return productsData.filter(
+      (product) => product.publisher_id && targetPublisherIds.includes(product.publisher_id)
+    );
+  }, [productsData, isSystemAdmin, selectedPublisherId, publisherIds]);
+
+  // 統計を計算（フィルタリングされたデータを使用）
   const stats = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(
@@ -151,7 +204,7 @@ function DashboardPage() {
     );
 
     // 本日の売上
-    const todaySales = salesData.filter((sale) => {
+    const todaySales = filteredSalesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
       return saleDate >= todayStart && sale.status === "completed";
     });
@@ -162,7 +215,7 @@ function DashboardPage() {
     const todayOrderCount = todaySales.length;
 
     // 昨日の売上
-    const yesterdaySales = salesData.filter((sale) => {
+    const yesterdaySales = filteredSalesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
       return (
         saleDate >= yesterdayStart &&
@@ -193,7 +246,7 @@ function DashboardPage() {
         : null;
 
     // 今月の売上
-    const thisMonthSales = salesData.filter((sale) => {
+    const thisMonthSales = filteredSalesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
       return saleDate >= monthStart && sale.status === "completed";
     });
@@ -203,7 +256,7 @@ function DashboardPage() {
     );
 
     // 先月の売上
-    const lastMonthSales = salesData.filter((sale) => {
+    const lastMonthSales = filteredSalesData.filter((sale) => {
       const saleDate = new Date(sale.created_at);
       return (
         saleDate >= lastMonthStart &&
@@ -226,7 +279,7 @@ function DashboardPage() {
         : null;
 
     // 在庫アラート
-    const lowStockProducts = productsData.filter(
+    const lowStockProducts = filteredProductsData.filter(
       (product) => product.stock_quantity <= STOCK_LOW_THRESHOLD,
     );
 
@@ -238,9 +291,14 @@ function DashboardPage() {
       monthlyGrowth,
       lowStockCount: lowStockProducts.length,
     };
-  }, [salesData, productsData]);
+  }, [filteredSalesData, filteredProductsData]);
 
-  const isLoading = salesLoading || productsLoading;
+  const isLoading = salesLoading || productsLoading || rolesLoading;
+
+  // 選択中のサークル名を取得
+  const selectedPublisherName = selectedPublisherId
+    ? availablePublishers.find((p) => p.publisher_id === selectedPublisherId)?.name
+    : null;
 
   return (
     <PageContainer title="ダッシュボード">
@@ -256,6 +314,85 @@ function DashboardPage() {
         </div>
       ) : (
         <>
+          {/* サークル選択タブ（複数サークル紐づきの場合、またはシステム管理者の場合） */}
+          {(availablePublishers.length > 1 || isSystemAdmin) && (
+            <div
+              className={css({
+                display: "flex",
+                gap: "2",
+                marginBottom: "6",
+                flexWrap: "wrap",
+                borderBottom: "1px solid",
+                borderColor: "gray.200",
+                paddingBottom: "4",
+              })}
+            >
+              {isSystemAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPublisherId(null)}
+                  className={css({
+                    padding: "2 4",
+                    borderRadius: "md",
+                    fontSize: "sm",
+                    fontWeight: "medium",
+                    border: "none",
+                    cursor: "pointer",
+                    backgroundColor: selectedPublisherId === null ? "primary.500" : "gray.100",
+                    color: selectedPublisherId === null ? "white" : "gray.700",
+                    _hover: {
+                      backgroundColor: selectedPublisherId === null ? "primary.600" : "gray.200",
+                    },
+                  })}
+                >
+                  全体
+                </button>
+              )}
+              {availablePublishers.map((publisher) => (
+                <button
+                  key={publisher.publisher_id}
+                  type="button"
+                  onClick={() => setSelectedPublisherId(publisher.publisher_id)}
+                  className={css({
+                    padding: "2 4",
+                    borderRadius: "md",
+                    fontSize: "sm",
+                    fontWeight: "medium",
+                    border: "none",
+                    cursor: "pointer",
+                    backgroundColor:
+                      selectedPublisherId === publisher.publisher_id
+                        ? "primary.500"
+                        : "gray.100",
+                    color:
+                      selectedPublisherId === publisher.publisher_id ? "white" : "gray.700",
+                    _hover: {
+                      backgroundColor:
+                        selectedPublisherId === publisher.publisher_id
+                          ? "primary.600"
+                          : "gray.200",
+                    },
+                  })}
+                >
+                  {publisher.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 選択中のサークル表示 */}
+          {selectedPublisherName && (
+            <p
+              className={css({
+                fontSize: "sm",
+                color: "gray.600",
+                marginBottom: "4",
+              })}
+            >
+              「{selectedPublisherName}」のデータを表示中
+            </p>
+          )}
+
           <div
             className={css({
               display: "grid",
