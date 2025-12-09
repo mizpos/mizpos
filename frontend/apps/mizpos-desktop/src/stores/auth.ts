@@ -31,6 +31,7 @@ interface AuthState {
   login: (staffId: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setEventId: (eventId: string) => Promise<void>;
+  clearEventId: () => Promise<void>;
 }
 
 let store: Store | null = null;
@@ -262,6 +263,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (error) {
       console.error("Failed to set event ID:", error);
+    }
+  },
+
+  clearEventId: async () => {
+    try {
+      const s = await getStore();
+      const currentSession = await s.get<Session>("session");
+      if (currentSession) {
+        const updatedSession = { ...currentSession, eventId: undefined };
+        await s.set("session", updatedSession);
+        await s.save();
+        set({ session: updatedSession });
+      }
+    } catch (error) {
+      console.error("Failed to clear event ID:", error);
     }
   },
 }));

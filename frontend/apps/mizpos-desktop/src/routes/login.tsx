@@ -138,6 +138,26 @@ function LoginPage() {
   const { login, isLoading, error, session } = useAuthStore();
   const navigate = useNavigate();
   const staffIdRef = useRef<HTMLInputElement>(null);
+  const [openingInfo, setOpeningInfo] = useState<{
+    isOpened: boolean;
+    staffName?: string;
+    openedAt?: Date;
+  } | null>(null);
+
+  // 開局状態を確認
+  useEffect(() => {
+    getTodayOpeningReport().then((report) => {
+      if (report) {
+        setOpeningInfo({
+          isOpened: true,
+          staffName: report.staffName,
+          openedAt: new Date(report.openedAt),
+        });
+      } else {
+        setOpeningInfo({ isOpened: false });
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const checkAndNavigate = async () => {
@@ -195,6 +215,34 @@ function LoginPage() {
           <h1 className={pageStyles.logo}>mizPOS</h1>
           <p className={pageStyles.subtitle}>スタッフログイン</p>
         </div>
+
+        {/* 開局状態表示 */}
+        {openingInfo && (
+          <div
+            className={css({
+              padding: "12px 16px",
+              marginBottom: "24px",
+              borderRadius: "10px",
+              fontSize: "14px",
+              background: openingInfo.isOpened ? "#14532d" : "#78350f",
+              color: openingInfo.isOpened ? "#86efac" : "#fde68a",
+              textAlign: "center",
+            })}
+          >
+            {openingInfo.isOpened ? (
+              <>
+                開局済み（{openingInfo.staffName}・
+                {openingInfo.openedAt?.toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                ）
+              </>
+            ) : (
+              "未開局"
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className={formStyles.field}>
