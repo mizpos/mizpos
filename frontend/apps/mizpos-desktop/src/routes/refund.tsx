@@ -496,8 +496,8 @@ function RefundPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sale.items.map((item, index) => (
-                      <tr key={`item-${index}`} className={saleStyles.row}>
+                    {sale.items.map((item) => (
+                      <tr key={item.product_id} className={saleStyles.row}>
                         <td className={saleStyles.cell}>
                           {item.product_name || item.product_id}
                           {item.circle_name && (
@@ -518,7 +518,10 @@ function RefundPage() {
                         <td className={saleStyles.cell}>{item.quantity}</td>
                         <td
                           className={saleStyles.cell}
-                          style={{ textAlign: "right", fontFamily: "monospace" }}
+                          style={{
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                          }}
                         >
                           ¥{item.subtotal.toLocaleString()}
                         </td>
