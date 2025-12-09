@@ -287,6 +287,12 @@ function OpeningPage() {
     navigate({ to: "/pos" });
   }, [navigate]);
 
+  // ログインに戻る（ログアウト）
+  const handleBackToLogin = useCallback(async () => {
+    await useAuthStore.getState().logout();
+    navigate({ to: "/login" });
+  }, [navigate]);
+
   if (!session || !session.eventId || isLoading) {
     return null;
   }
@@ -479,6 +485,17 @@ function OpeningPage() {
               レジ金を入力してください（0円での開局はできません）
             </p>
           )}
+
+          {/* ログインに戻るボタン */}
+          <Button
+            variant="ghost"
+            size="lg"
+            fullWidth
+            onClick={handleBackToLogin}
+            className={css({ marginTop: "16px" })}
+          >
+            ← ログインに戻る
+          </Button>
         </div>
       </div>
     </div>
