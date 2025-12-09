@@ -2,11 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Badge, Button, Card, Input } from "../components/ui";
-import {
-  clearTodayOpeningReport,
-  getTodayOpeningReport,
-  syncProducts,
-} from "../lib/db";
+import { syncProducts } from "../lib/db";
 import {
   type BluetoothDevice,
   getBluetoothDevices,
@@ -185,14 +181,6 @@ function SettingsPage() {
     success: boolean;
     error?: string;
   } | null>(null);
-  const [isOpened, setIsOpened] = useState(false);
-
-  // 開局状態を確認
-  useEffect(() => {
-    getTodayOpeningReport().then((report) => {
-      setIsOpened(!!report);
-    });
-  }, []);
 
   useEffect(() => {
     if (!session) {
@@ -261,17 +249,6 @@ function SettingsPage() {
     await updateSettings({ eventName: "" });
     navigate({ to: "/select-event" });
   }, [clearEventId, updateSettings, navigate]);
-
-  const handleClearOpening = useCallback(async () => {
-    if (
-      !confirm("開局を取り消しますか？\n開局処理を再度行う必要があります。")
-    ) {
-      return;
-    }
-    await clearTodayOpeningReport();
-    setIsOpened(false);
-    navigate({ to: "/opening" });
-  }, [navigate]);
 
   const handleSyncProducts = useCallback(async () => {
     setIsSyncing(true);
@@ -436,53 +413,6 @@ function SettingsPage() {
                   )}
                 </div>
               </div>
-
-              {/* 開局状態（職長のみ） */}
-              {session?.role === "manager" && (
-                <div className={sectionStyles.field}>
-                  <span
-                    className={css({
-                      display: "block",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      color: "#94a3b8",
-                      marginBottom: "8px",
-                    })}
-                  >
-                    開局状態
-                  </span>
-                  <div
-                    className={css({
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                    })}
-                  >
-                    <div
-                      className={css({
-                        flex: 1,
-                        padding: "12px 14px",
-                        fontSize: "15px",
-                        color: isOpened ? "#86efac" : "#fbbf24",
-                        background: "#1e293b",
-                        border: "1px solid #334155",
-                        borderRadius: "10px",
-                      })}
-                    >
-                      {isOpened ? "開局済み" : "未開局"}
-                    </div>
-                    {isOpened && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleClearOpening}
-                      >
-                        取り消し
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
 
               <div className={sectionStyles.field}>
                 <span
