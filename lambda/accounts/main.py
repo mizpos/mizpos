@@ -26,6 +26,7 @@ from models import (
     CreatePosEmployeeRequest,
     CreateUserRequest,
     InviteUserRequest,
+    PublisherInviteUserRequest,
     OfflineSalesSyncRequest,
     PosLoginRequest,
     PosSaleRequest,
@@ -102,6 +103,7 @@ from services import (
     get_user_roles as get_user_roles_service,
     get_user_status,
     invite_cognito_user,
+    is_publisher_admin,
     list_users as list_users_service,
     remove_role as remove_role_service,
     resend_confirmation_code,
@@ -275,6 +277,125 @@ async def invite_user(
         raise HTTPException(status_code=500, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error inviting user: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post(
+    "/publishers/{publisher_id}/users/invite",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+)
+async def publisher_invite_user(
+    publisher_id: str,
+    request: PublisherInviteUserRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """サークル管理者用ユーザー招待
+
+    サークル管理者が自サークルにユーザーを招待。
+    招待されたユーザーには自動的にpublisher_salesロールが付与される。
+
+    既存ユーザーの場合: ユーザー情報を返し、ロールを付与
+    新規ユーザーの場合: Cognitoに招待してユーザー作成、ロールを付与
+    """
+    try:
+        current_user_id = await get_user_id_from_auth(current_user)
+
+        # 権限チェック: サークル管理者のみ
+        if not is_publisher_admin(current_user_id, publisher_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Publisher administrator privileges required",
+            )
+
+        # リクエストのpublisher_idとパスのpublisher_idが一致していることを確認
+        if request.publisher_id != publisher_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Publisher ID mismatch",
+            )
+
+        # メールアドレスで既存ユーザーをチェック
+        email_check = users_table.query(
+            IndexName="EmailIndex",
+            KeyConditionExpression="email = :email",
+            ExpressionAttributeValues={":email": request.email},
+        )
+
+        user_item = None
+        is_new_user = False
+
+        # 既存ユーザーがいる場合
+        if email_check.get("Items"):
+            user_item = email_check["Items"][0]
+        else:
+            # 新規ユーザーの場合: Cognitoに招待
+            try:
+                cognito_user_id = invite_cognito_user(
+                    request.email, request.display_name
+                )
+            except UsernameExistsException:
+                # Cognitoには存在するがDynamoDBにはいない場合
+                cognito_user_id = request.email
+
+            user_id = str(uuid.uuid4())
+            now = datetime.now(timezone.utc).isoformat()
+
+            user_item = {
+                "user_id": user_id,
+                "cognito_user_id": cognito_user_id,
+                "email": request.email,
+                "display_name": request.display_name,
+                "created_at": now,
+                "updated_at": now,
+            }
+
+            users_table.put_item(Item=user_item)
+            is_new_user = True
+
+        # publisher_salesロールを付与（既に持っている場合でも上書きはしない）
+        user_id = user_item["user_id"]
+
+        # 既存のロールをチェック
+        existing_roles = get_user_roles_service(user_id)
+        has_publisher_role = any(
+            role.get("publisher_id") == publisher_id
+            and role.get("role_type") in ["publisher_admin", "publisher_sales"]
+            for role in existing_roles
+        )
+
+        role_assigned = False
+        if not has_publisher_role:
+            # publisher_salesロールを付与
+            assign_role_service(
+                user_id=user_id,
+                role_type="publisher_sales",
+                created_by=current_user_id,
+                publisher_id=publisher_id,
+            )
+            role_assigned = True
+
+        return {
+            "user": dynamo_to_dict(user_item),
+            "is_new_user": is_new_user,
+            "role_assigned": role_assigned,
+            "message": (
+                "User invited and role assigned."
+                if is_new_user
+                else (
+                    "Role assigned to existing user."
+                    if role_assigned
+                    else "User already has role for this publisher."
+                )
+            ),
+        }
+
+    except HTTPException:
+        raise
+    except DynamoDBClientError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error in publisher invite user: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

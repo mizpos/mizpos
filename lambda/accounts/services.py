@@ -519,25 +519,43 @@ def get_accessible_user_ids(current_user_id: str) -> list[str]:
 def list_users(current_user_id: str) -> list[dict]:
     """ユーザー一覧を取得（権限フィルタリング付き）
 
+    権限ルール:
+    - システム管理者: すべてのユーザーを表示
+    - サークル管理者: 自分のサークルに所属するユーザーを表示
+
     Args:
         current_user_id: 現在のユーザーID
 
     Returns:
         アクセス可能なユーザーのリスト
     """
-    # すべてのユーザーを取得
-    response = users_table.scan()
-    all_users = [dynamo_to_dict(item) for item in response.get("Items", [])]
+    # システム管理者はすべてのユーザーを見ることができる
+    if is_system_admin(current_user_id):
+        response = users_table.scan()
+        return [dynamo_to_dict(item) for item in response.get("Items", [])]
 
-    # アクセス可能なユーザーIDを取得
-    accessible_user_ids = get_accessible_user_ids(current_user_id)
+    # サークル管理者は自分のサークルに所属するユーザーを見ることができる
+    publisher_ids = get_user_publisher_ids(current_user_id)
+    if publisher_ids:
+        accessible_user_ids = set()
+        for publisher_id in publisher_ids:
+            # サークル管理者権限があるサークルのみ
+            if is_publisher_admin(current_user_id, publisher_id):
+                roles = get_roles_by_publisher(publisher_id)
+                for role in roles:
+                    accessible_user_ids.add(role["user_id"])
 
-    # システム管理者の場合（accessible_user_ids が空リスト）
-    if not accessible_user_ids:
-        return all_users
+        if accessible_user_ids:
+            # アクセス可能なユーザーの詳細を取得
+            users = []
+            for user_id in accessible_user_ids:
+                response = users_table.get_item(Key={"user_id": user_id})
+                if "Item" in response:
+                    users.append(dynamo_to_dict(response["Item"]))
+            return users
 
-    # フィルタリング
-    return [u for u in all_users if u["user_id"] in accessible_user_ids]
+    # 権限がない場合は空リスト
+    return []
 
 
 # 住所管理関数

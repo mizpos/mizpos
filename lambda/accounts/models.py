@@ -20,6 +20,18 @@ class InviteUserRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100)
 
 
+class PublisherInviteUserRequest(BaseModel):
+    """サークル管理者用ユーザー招待リクエスト
+
+    サークル管理者が自サークルにユーザーを招待する際に使用。
+    招待されたユーザーには自動的にpublisher_salesロールが付与される。
+    """
+
+    email: EmailStr
+    display_name: str = Field(..., min_length=1, max_length=100)
+    publisher_id: str = Field(..., min_length=1, description="招待先サークルID")
+
+
 class UpdateUserRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100)
 
