@@ -4,6 +4,7 @@ import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
 import { getTodayOpeningReport } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
+import { useSettingsStore } from "../stores/settings";
 
 // ページレイアウトスタイル
 const pageStyles = {
@@ -136,6 +137,7 @@ function LoginPage() {
   const [staffId, setStaffId] = useState("");
   const [password, setPassword] = useState("");
   const { login, isLoading, error, session } = useAuthStore();
+  const { settings } = useSettingsStore();
   const navigate = useNavigate();
   const staffIdRef = useRef<HTMLInputElement>(null);
   const [openingInfo, setOpeningInfo] = useState<{
@@ -162,6 +164,26 @@ function LoginPage() {
   useEffect(() => {
     const checkAndNavigate = async () => {
       if (session) {
+        // サークル選択が必要かどうかを確認
+        // 紐付けがない（0個）または複数ある場合で、まだ選択されていない場合
+        const needsCircleSelection =
+          (!session.circles ||
+            session.circles.length === 0 ||
+            session.circles.length > 1) &&
+          !settings.circleName;
+
+        if (needsCircleSelection) {
+          navigate({ to: "/select-circle" });
+          return;
+        }
+
+        // サークルが1つだけの場合は自動設定
+        if (session.circles?.length === 1 && !settings.circleName) {
+          await useSettingsStore
+            .getState()
+            .updateSettings({ circleName: session.circles[0].name });
+        }
+
         // 開局済みかどうかを確認
         const openingReport = await getTodayOpeningReport();
 
@@ -187,7 +209,7 @@ function LoginPage() {
     };
 
     checkAndNavigate();
-  }, [session, navigate]);
+  }, [session, settings.circleName, navigate]);
 
   useEffect(() => {
     staffIdRef.current?.focus();
