@@ -162,17 +162,26 @@ function LoginPage() {
   useEffect(() => {
     const checkAndNavigate = async () => {
       if (session) {
-        // イベント紐づけ済みの場合
-        if (session.eventId) {
-          // 開局済みならPOSへ、未開局なら開局画面へ
-          const openingReport = await getTodayOpeningReport();
-          if (openingReport) {
-            navigate({ to: "/pos" });
-          } else {
-            navigate({ to: "/opening" });
+        // 開局済みかどうかを確認
+        const openingReport = await getTodayOpeningReport();
+
+        if (openingReport) {
+          // 開局済みの場合：開局時のイベントIDをセッションにセットしてPOSへ
+          if (session.eventId !== openingReport.eventId) {
+            await useAuthStore
+              .getState()
+              .setEventId(openingReport.eventId || "");
           }
+          navigate({ to: "/pos" });
         } else {
-          navigate({ to: "/select-event" });
+          // 未開局の場合
+          if (session.eventId) {
+            // イベント紐づけ済みなら開局画面へ
+            navigate({ to: "/opening" });
+          } else {
+            // イベント紐づけなしならイベント選択画面へ
+            navigate({ to: "/select-event" });
+          }
         }
       }
     };
