@@ -166,7 +166,7 @@ function OpeningPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 未ログイン時・開局済みの場合はリダイレクト
+  // 未ログイン時・開局済みの場合・権限不足時はリダイレクト
   useEffect(() => {
     const checkStatus = async () => {
       if (!session) {
@@ -175,6 +175,13 @@ function OpeningPage() {
       }
       if (!session.eventId) {
         navigate({ to: "/select-event" });
+        return;
+      }
+
+      // 職長権限がない場合はPOSへ（権限エラーメッセージ付き）
+      if (session.role !== "manager") {
+        alert("開局処理は職長権限が必要です。");
+        navigate({ to: "/pos" });
         return;
       }
 

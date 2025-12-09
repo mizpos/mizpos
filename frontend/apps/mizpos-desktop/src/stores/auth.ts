@@ -15,6 +15,7 @@ interface PosLoginResponse {
   session_id: string;
   employee_number: string;
   display_name: string;
+  role: "manager" | "staff";
   event_id?: string;
   publisher_id?: string;
   circles?: CircleInfo[];
@@ -66,6 +67,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           set({
             session: {
               ...savedSession,
+              role: savedSession.role || "staff",
               loginAt: new Date(savedSession.loginAt),
             },
             isLoading: false,
@@ -144,6 +146,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         sessionId: data.session_id,
         staffId: data.employee_number,
         staffName: data.display_name,
+        role: data.role || "staff",
         eventId: data.event_id,
         publisherId: data.publisher_id,
         circles: data.circles,

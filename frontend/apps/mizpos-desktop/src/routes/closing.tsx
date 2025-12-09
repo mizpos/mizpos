@@ -361,10 +361,16 @@ function ClosingPage() {
     loadData();
   }, []);
 
-  // 未ログイン時はリダイレクト
+  // 未ログイン時・権限不足時はリダイレクト
   useEffect(() => {
     if (!session) {
       navigate({ to: "/login" });
+      return;
+    }
+    // 職長権限がない場合は設定画面へ（権限エラーメッセージ付き）
+    if (session.role !== "manager") {
+      alert("閉局処理は職長権限が必要です。");
+      navigate({ to: "/settings" });
     }
   }, [session, navigate]);
 
