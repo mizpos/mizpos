@@ -690,6 +690,33 @@ function SettingsPage() {
             設定を保存
           </Button>
 
+          {/* 返金処理（職長のみ） */}
+          {session?.role === "manager" && (
+            <Card padding="lg">
+              <h2 className={sectionStyles.title}>返金処理</h2>
+              <div
+                className={css({
+                  fontSize: "14px",
+                  color: "#94a3b8",
+                  marginBottom: "16px",
+                })}
+              >
+                レシート番号を入力して、販売の返金処理を行います。
+                <br />
+                <span className={css({ color: "#fbbf24" })}>
+                  ※職長権限が必要です
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => navigate({ to: "/refund" })}
+              >
+                返金処理へ
+              </Button>
+            </Card>
+          )}
+
           {/* 両替処理 */}
           <Card padding="lg">
             <h2 className={sectionStyles.title}>両替処理</h2>
