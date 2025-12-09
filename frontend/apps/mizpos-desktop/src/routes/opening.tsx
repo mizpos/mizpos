@@ -185,14 +185,9 @@ function OpeningPage() {
         return;
       }
 
-      // 未開局で職長権限がない場合は、職長を呼ぶよう案内してログアウト
+      // 未開局で職長権限がない場合はPOSへ（ログイン時に弾かれるはずだが念のため）
       if (session.role !== "manager") {
-        alert(
-          "開局処理は職長権限が必要です。\n職長に開局処理を依頼してください。",
-        );
-        // ログアウトしてログイン画面へ
-        await useAuthStore.getState().logout();
-        navigate({ to: "/login" });
+        navigate({ to: "/pos" });
         return;
       }
 

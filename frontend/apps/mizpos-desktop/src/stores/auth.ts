@@ -1,6 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
-import { syncProducts } from "../lib/db";
+import { getTodayOpeningReport, syncProducts } from "../lib/db";
 import type { Session } from "../types";
 import { useSettingsStore } from "./settings";
 
@@ -141,6 +141,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       const data: PosLoginResponse = await response.json();
+
+      // 未開局かつスタッフ権限の場合はログインを拒否
+      if (data.role !== "manager") {
+        const openingReport = await getTodayOpeningReport();
+        if (!openingReport) {
+          set({
+            isLoading: false,
+            error:
+              "開局処理が完了していません。職長に開局処理を依頼してください。",
+          });
+          return false;
+        }
+      }
 
       const session: Session = {
         sessionId: data.session_id,
