@@ -21,6 +21,14 @@ class TerminalAuthRequest(BaseModel):
     signature: str = Field(..., description="Base64エンコードされたEd25519署名")
 
 
+class TerminalRevokeRequest(BaseModel):
+    """端末無効化リクエスト"""
+
+    terminal_id: str = Field(..., description="端末ID (UUID)")
+    timestamp: int = Field(..., description="Unix タイムスタンプ")
+    signature: str = Field(..., description="Base64エンコードされたEd25519署名")
+
+
 # ==========================================
 # 従業員認証
 # ==========================================

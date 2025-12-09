@@ -181,3 +181,32 @@ def check_terminal_registered(terminal_id: str) -> tuple[bool, Optional[str]]:
     if terminal:
         return True, terminal.get("status")
     return False, None
+
+
+def revoke_terminal(terminal_id: str) -> bool:
+    """端末を無効化（ステータスをrevokedに変更）
+
+    Args:
+        terminal_id: 端末ID
+
+    Returns:
+        成功したかどうか
+    """
+    now = datetime.now(timezone.utc).isoformat()
+
+    try:
+        terminals_table.update_item(
+            Key={"terminal_id": terminal_id},
+            UpdateExpression="SET #status = :status, revoked_at = :revoked_at",
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={
+                ":status": "revoked",
+                ":revoked_at": now,
+            },
+            ConditionExpression="attribute_exists(terminal_id)",
+        )
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
+        raise
