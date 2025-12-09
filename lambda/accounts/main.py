@@ -496,6 +496,20 @@ async def admin_reset_password(
 # ==========================================
 
 
+@router.get("/me/roles", response_model=dict)
+async def get_my_roles(current_user: dict = Depends(get_current_user)):
+    """現在ログイン中のユーザーのロール一覧取得"""
+    try:
+        current_user_id = await get_user_id_from_auth(current_user)
+        roles = get_user_roles_service(current_user_id)
+        return {"roles": roles, "user_id": current_user_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting my roles: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @router.get("/users/{user_id}/roles", response_model=dict)
 async def get_user_roles(user_id: str, current_user: dict = Depends(get_current_user)):
     """ユーザーのロール一覧取得

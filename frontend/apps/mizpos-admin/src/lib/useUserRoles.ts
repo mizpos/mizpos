@@ -23,33 +23,36 @@ interface UseUserRolesResult {
   hasPublisherAdminRole: (publisherId: string) => boolean;
   canAccessPublishers: boolean;
   canAddPublisher: boolean;
+  mizposUserId: string | null;
 }
 
 export function useUserRoles(): UseUserRolesResult {
   const { user } = useAuth();
 
-  const { data: roles = [], isLoading } = useQuery({
-    queryKey: ["current-user-roles", user?.userId],
+  const { data, isLoading } = useQuery({
+    queryKey: ["current-user-roles"],
     queryFn: async () => {
-      if (!user?.userId) return [];
       const { accounts } = await getAuthenticatedClients();
-      const { data, error } = await accounts.GET("/users/{user_id}/roles", {
-        params: { path: { user_id: user.userId } },
-      });
+      // /me/roles を使用して現在のユーザーのロールを取得
+      // これにより、CognitoのユーザーIDではなくmizposの内部ユーザーIDでロールを検索できる
+      // @ts-expect-error /me/roles はOpenAPI specに定義されていないが、バックエンドで実装済み
+      const { data, error } = await accounts.GET("/me/roles", {});
       if (error) throw error;
-      const rolesData = (data as unknown as { roles: Role[] }).roles || [];
-      return rolesData;
+      return data as unknown as { roles: Role[]; user_id: string };
     },
-    enabled: !!user?.userId,
+    enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
   });
+
+  const roles = data?.roles || [];
+  const mizposUserId = data?.user_id || null;
 
   // システム管理者かどうか
   const isSystemAdmin = roles.some((role) => role.role_type === "system_admin");
 
   // サークル管理者ロールを持っているかどうか（どれか1つでも）
   const isPublisherAdmin = roles.some(
-    (role) => role.role_type === "publisher_admin"
+    (role) => role.role_type === "publisher_admin",
   );
 
   // ユーザーが紐づいているサークルIDの一覧
@@ -61,9 +64,9 @@ export function useUserRoles(): UseUserRolesResult {
           (role) =>
             role.publisher_id &&
             (role.role_type === "publisher_admin" ||
-              role.role_type === "publisher_sales")
+              role.role_type === "publisher_sales"),
         )
-        .map((role) => role.publisher_id as string)
+        .map((role) => role.publisher_id as string),
     ),
   ];
 
@@ -74,7 +77,7 @@ export function useUserRoles(): UseUserRolesResult {
       (role) =>
         role.publisher_id === publisherId &&
         (role.role_type === "publisher_admin" ||
-          role.role_type === "publisher_sales")
+          role.role_type === "publisher_sales"),
     );
   };
 
@@ -84,7 +87,7 @@ export function useUserRoles(): UseUserRolesResult {
     return roles.some(
       (role) =>
         role.publisher_id === publisherId &&
-        role.role_type === "publisher_admin"
+        role.role_type === "publisher_admin",
     );
   };
 
@@ -104,5 +107,6 @@ export function useUserRoles(): UseUserRolesResult {
     hasPublisherAdminRole,
     canAccessPublishers,
     canAddPublisher,
+    mizposUserId,
   };
 }

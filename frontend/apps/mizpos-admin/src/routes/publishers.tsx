@@ -63,7 +63,11 @@ const initialFormState: CreatePublisherForm = {
 function PublishersPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { canAccessPublishers, canAddPublisher, isLoading: rolesLoading } = useUserRoles();
+  const {
+    canAccessPublishers,
+    canAddPublisher,
+    isLoading: rolesLoading,
+  } = useUserRoles();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editPublisher, setEditPublisher] = useState<Publisher | null>(null);
@@ -72,55 +76,7 @@ function PublishersPage() {
   const [formData, setFormData] =
     useState<CreatePublisherForm>(initialFormState);
 
-  // システム管理者以外はアクセス不可
-  useEffect(() => {
-    if (!rolesLoading && !canAccessPublishers) {
-      navigate({ to: "/" });
-    }
-  }, [rolesLoading, canAccessPublishers, navigate]);
-
-  // ロール読み込み中またはアクセス権限がない場合
-  if (rolesLoading) {
-    return (
-      <PageContainer title="サークル/出版社管理">
-        <div
-          className={css({
-            textAlign: "center",
-            padding: "8",
-            color: "gray.500",
-          })}
-        >
-          権限を確認中...
-        </div>
-      </PageContainer>
-    );
-  }
-
-  if (!canAccessPublishers) {
-    return (
-      <PageContainer title="サークル/出版社管理">
-        <div
-          className={css({
-            textAlign: "center",
-            padding: "8",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "4",
-          })}
-        >
-          <IconLock size={48} className={css({ color: "gray.400" })} />
-          <p className={css({ color: "gray.600", fontSize: "lg" })}>
-            このページにアクセスする権限がありません
-          </p>
-          <p className={css({ color: "gray.500", fontSize: "sm" })}>
-            システム管理者のみがサークル管理にアクセスできます
-          </p>
-        </div>
-      </PageContainer>
-    );
-  }
-
+  // すべてのフックは早期リターンの前に呼び出す必要がある
   const { data: publishers = [], isLoading } = useQuery({
     queryKey: ["publishers"],
     queryFn: async () => {
@@ -132,6 +88,7 @@ function PublishersPage() {
       const data = await response.json();
       return (data.publishers || []) as Publisher[];
     },
+    enabled: canAccessPublishers, // 権限がある場合のみ実行
   });
 
   const createMutation = useMutation({
@@ -194,6 +151,55 @@ function PublishersPage() {
       queryClient.invalidateQueries({ queryKey: ["publishers"] });
     },
   });
+
+  // システム管理者以外はアクセス不可
+  useEffect(() => {
+    if (!rolesLoading && !canAccessPublishers) {
+      navigate({ to: "/" });
+    }
+  }, [rolesLoading, canAccessPublishers, navigate]);
+
+  // ロール読み込み中またはアクセス権限がない場合
+  if (rolesLoading) {
+    return (
+      <PageContainer title="サークル/出版社管理">
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
+          })}
+        >
+          権限を確認中...
+        </div>
+      </PageContainer>
+    );
+  }
+
+  if (!canAccessPublishers) {
+    return (
+      <PageContainer title="サークル/出版社管理">
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4",
+          })}
+        >
+          <IconLock size={48} className={css({ color: "gray.400" })} />
+          <p className={css({ color: "gray.600", fontSize: "lg" })}>
+            このページにアクセスする権限がありません
+          </p>
+          <p className={css({ color: "gray.500", fontSize: "sm" })}>
+            システム管理者のみがサークル管理にアクセスできます
+          </p>
+        </div>
+      </PageContainer>
+    );
+  }
 
   const filteredPublishers = publishers.filter(
     (publisher) =>

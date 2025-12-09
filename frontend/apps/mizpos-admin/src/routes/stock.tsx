@@ -1,4 +1,4 @@
-import { IconAdjustments, IconPlus, IconSearch } from "@tabler/icons-react";
+import { IconAdjustments, IconSearch } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -38,7 +38,7 @@ function StockPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [adjustmentModal, setAdjustmentModal] = useState<AdjustmentForm | null>(
-    null
+    null,
   );
 
   const { data: products = [], isLoading } = useQuery({
@@ -75,7 +75,7 @@ function StockPage() {
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const columns = [
