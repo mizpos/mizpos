@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Badge, Button, Card, Input } from "../components/ui";
-import { syncProducts } from "../lib/db";
+import { getTodayOpeningReport, syncProducts } from "../lib/db";
 import {
   type BluetoothDevice,
   getBluetoothDevices,
@@ -181,12 +181,20 @@ function SettingsPage() {
     success: boolean;
     error?: string;
   } | null>(null);
+  const [isOpened, setIsOpened] = useState(false);
 
   useEffect(() => {
     if (!session) {
       navigate({ to: "/login" });
     }
   }, [session, navigate]);
+
+  // 開局状態を確認
+  useEffect(() => {
+    getTodayOpeningReport().then((report) => {
+      setIsOpened(!!report);
+    });
+  }, []);
 
   useEffect(() => {
     getPlatform().then(setPlatform);
@@ -402,15 +410,17 @@ function SettingsPage() {
                   >
                     {settings.eventName || "未設定"}
                   </div>
-                  {session?.role === "manager" && session?.eventId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleClearEvent}
-                    >
-                      解除
-                    </Button>
-                  )}
+                  {session?.role === "manager" &&
+                    session?.eventId &&
+                    !isOpened && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearEvent}
+                      >
+                        解除
+                      </Button>
+                    )}
                 </div>
               </div>
 
