@@ -252,11 +252,6 @@ function OpeningPage() {
     }
   }, [session, settings, denominationCounts, cashTotal, navigate]);
 
-  // 戻る
-  const handleBack = useCallback(() => {
-    navigate({ to: "/select-event" });
-  }, [navigate]);
-
   if (!session || !session.eventId || isLoading) {
     return null;
   }
@@ -265,9 +260,6 @@ function OpeningPage() {
     <div className={pageStyles.container}>
       {/* ヘッダー */}
       <header className={pageStyles.header}>
-        <Button variant="ghost" size="sm" onClick={handleBack}>
-          ← 戻る
-        </Button>
         <h1 className={pageStyles.title}>開局処理</h1>
       </header>
 
@@ -358,10 +350,23 @@ function OpeningPage() {
             size="xl"
             fullWidth
             onClick={handleOpen}
-            disabled={isProcessing}
+            disabled={isProcessing || cashTotal <= 0}
           >
             {isProcessing ? "処理中..." : "開局する"}
           </Button>
+
+          {cashTotal <= 0 && (
+            <p
+              className={css({
+                textAlign: "center",
+                fontSize: "14px",
+                color: "#f87171",
+                marginTop: "8px",
+              })}
+            >
+              レジ金を入力してください（0円での開局はできません）
+            </p>
+          )}
         </div>
       </div>
     </div>
