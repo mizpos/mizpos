@@ -38,7 +38,7 @@ function StockPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [adjustmentModal, setAdjustmentModal] = useState<AdjustmentForm | null>(
-    null,
+    null
   );
 
   const { data: products = [], isLoading } = useQuery({
@@ -75,7 +75,7 @@ function StockPage() {
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
+      product.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [
@@ -196,11 +196,6 @@ function StockPage() {
             })}
           />
         </div>
-
-        <Button>
-          <IconPlus size={18} />
-          商品追加
-        </Button>
       </div>
 
       {isLoading ? (

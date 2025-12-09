@@ -1,13 +1,14 @@
 import {
   IconEdit,
+  IconLock,
   IconPlus,
   IconSearch,
   IconTrash,
   IconUsers,
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
@@ -18,6 +19,7 @@ import {
   DEFAULT_STRIPE_ONLINE_FEE_RATE,
   DEFAULT_STRIPE_TERMINAL_FEE_RATE,
 } from "../lib/constants";
+import { useUserRoles } from "../lib/useUserRoles";
 
 export const Route = createFileRoute("/publishers")({
   component: PublishersPage,
@@ -60,6 +62,8 @@ const initialFormState: CreatePublisherForm = {
 
 function PublishersPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { canAccessPublishers, canAddPublisher, isLoading: rolesLoading } = useUserRoles();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editPublisher, setEditPublisher] = useState<Publisher | null>(null);
@@ -67,6 +71,55 @@ function PublishersPage() {
     useState<Publisher | null>(null);
   const [formData, setFormData] =
     useState<CreatePublisherForm>(initialFormState);
+
+  // システム管理者以外はアクセス不可
+  useEffect(() => {
+    if (!rolesLoading && !canAccessPublishers) {
+      navigate({ to: "/" });
+    }
+  }, [rolesLoading, canAccessPublishers, navigate]);
+
+  // ロール読み込み中またはアクセス権限がない場合
+  if (rolesLoading) {
+    return (
+      <PageContainer title="サークル/出版社管理">
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            color: "gray.500",
+          })}
+        >
+          権限を確認中...
+        </div>
+      </PageContainer>
+    );
+  }
+
+  if (!canAccessPublishers) {
+    return (
+      <PageContainer title="サークル/出版社管理">
+        <div
+          className={css({
+            textAlign: "center",
+            padding: "8",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "4",
+          })}
+        >
+          <IconLock size={48} className={css({ color: "gray.400" })} />
+          <p className={css({ color: "gray.600", fontSize: "lg" })}>
+            このページにアクセスする権限がありません
+          </p>
+          <p className={css({ color: "gray.500", fontSize: "sm" })}>
+            システム管理者のみがサークル管理にアクセスできます
+          </p>
+        </div>
+      </PageContainer>
+    );
+  }
 
   const { data: publishers = [], isLoading } = useQuery({
     queryKey: ["publishers"],
@@ -304,10 +357,12 @@ function PublishersPage() {
           />
         </div>
 
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <IconPlus size={18} />
-          サークル追加
-        </Button>
+        {canAddPublisher && (
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <IconPlus size={18} />
+            サークル追加
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

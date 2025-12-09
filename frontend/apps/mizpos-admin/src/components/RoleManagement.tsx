@@ -35,14 +35,11 @@ const ROLE_TYPE_LABELS: Record<string, string> = {
   system_admin: "システム管理者",
   publisher_admin: "サークル管理者",
   publisher_sales: "販売担当",
-  event_admin: "イベント管理者",
-  event_sales: "イベント販売担当",
 };
 
 const ROLE_SCOPE_LABELS: Record<string, string> = {
   system: "システム全体",
   publisher: "サークル",
-  event: "イベント",
 };
 
 export function RoleManagement({ userId }: RoleManagementProps) {
@@ -128,7 +125,7 @@ export function RoleManagement({ userId }: RoleManagementProps) {
         "/users/{user_id}/roles/{role_id}",
         {
           params: { path: { user_id: userId, role_id: roleId } },
-        },
+        }
       );
       if (error) throw error;
     },
@@ -311,7 +308,7 @@ export function RoleManagement({ userId }: RoleManagementProps) {
                     window.confirm(
                       `ロール「${
                         ROLE_TYPE_LABELS[role.role_type] || role.role_type
-                      }」を削除しますか？`,
+                      }」を削除しますか？`
                     )
                   ) {
                     removeRoleMutation.mutate(role.role_id);
@@ -365,8 +362,6 @@ export function RoleManagement({ userId }: RoleManagementProps) {
                 <option value="system_admin">システム管理者</option>
                 <option value="publisher_admin">サークル管理者</option>
                 <option value="publisher_sales">販売担当（サークル）</option>
-                <option value="event_admin">イベント管理者</option>
-                <option value="event_sales">イベント販売担当</option>
               </select>
               <p
                 className={css({
@@ -381,10 +376,6 @@ export function RoleManagement({ userId }: RoleManagementProps) {
                   "サークルの管理とメンバーのロール付与が可能です"}
                 {roleFormData.role_type === "publisher_sales" &&
                   "サークルの商品販売が可能です"}
-                {roleFormData.role_type === "event_admin" &&
-                  "イベントの管理が可能です"}
-                {roleFormData.role_type === "event_sales" &&
-                  "イベントの販売業務が可能です"}
               </p>
             </div>
 
