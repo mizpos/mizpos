@@ -156,7 +156,6 @@ function SettingsPage() {
   const { settings, updateSettings, updatePrinter } = useSettingsStore();
   const navigate = useNavigate();
 
-  const [eventName, setEventName] = useState(settings.eventName);
   const [circleName, setCircleName] = useState(settings.circleName || "");
   const [venueAddress, setVenueAddress] = useState(settings.venueAddress || "");
   const [terminalId, setTerminalId] = useState(settings.terminalId);
@@ -218,7 +217,6 @@ function SettingsPage() {
 
   const handleSave = useCallback(async () => {
     await updateSettings({
-      eventName,
       circleName,
       venueAddress,
       terminalId,
@@ -227,7 +225,6 @@ function SettingsPage() {
     await updatePrinter(selectedPrinter);
     navigate({ to: "/pos" });
   }, [
-    eventName,
     circleName,
     venueAddress,
     terminalId,
@@ -363,12 +360,29 @@ function SettingsPage() {
             <h2 className={sectionStyles.title}>基本設定</h2>
             <div className={css({ marginTop: "20px" })}>
               <div className={sectionStyles.field}>
-                <Input
-                  label="イベント名"
-                  value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
-                  placeholder="例: コミックマーケット C104"
-                />
+                <span
+                  className={css({
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#94a3b8",
+                    marginBottom: "8px",
+                  })}
+                >
+                  イベント名
+                </span>
+                <div
+                  className={css({
+                    padding: "12px 14px",
+                    fontSize: "15px",
+                    color: "#f8fafc",
+                    background: "#1e293b",
+                    border: "1px solid #334155",
+                    borderRadius: "10px",
+                  })}
+                >
+                  {settings.eventName || "未設定"}
+                </div>
               </div>
 
               <div className={sectionStyles.field}>
