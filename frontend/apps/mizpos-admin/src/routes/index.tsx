@@ -111,8 +111,14 @@ function StatCard({ title, value, change, icon, color }: StatCardProps) {
 }
 
 function DashboardPage() {
-  const { isSystemAdmin, publisherIds, isLoading: rolesLoading } = useUserRoles();
-  const [selectedPublisherId, setSelectedPublisherId] = useState<string | null>(null);
+  const {
+    isSystemAdmin,
+    publisherIds,
+    isLoading: rolesLoading,
+  } = useUserRoles();
+  const [selectedPublisherId, setSelectedPublisherId] = useState<string | null>(
+    null,
+  );
 
   // サークル一覧を取得（タブ表示用）
   const { data: publishers = [] } = useQuery({
@@ -166,7 +172,8 @@ function DashboardPage() {
       ? [selectedPublisherId]
       : publisherIds;
     return salesData.filter(
-      (sale) => sale.publisher_id && targetPublisherIds.includes(sale.publisher_id)
+      (sale) =>
+        sale.publisher_id && targetPublisherIds.includes(sale.publisher_id),
     );
   }, [salesData, isSystemAdmin, selectedPublisherId, publisherIds]);
 
@@ -178,7 +185,9 @@ function DashboardPage() {
       ? [selectedPublisherId]
       : publisherIds;
     return productsData.filter(
-      (product) => product.publisher_id && targetPublisherIds.includes(product.publisher_id)
+      (product) =>
+        product.publisher_id &&
+        targetPublisherIds.includes(product.publisher_id),
     );
   }, [productsData, isSystemAdmin, selectedPublisherId, publisherIds]);
 
@@ -297,7 +306,8 @@ function DashboardPage() {
 
   // 選択中のサークル名を取得
   const selectedPublisherName = selectedPublisherId
-    ? availablePublishers.find((p) => p.publisher_id === selectedPublisherId)?.name
+    ? availablePublishers.find((p) => p.publisher_id === selectedPublisherId)
+        ?.name
     : null;
 
   return (
@@ -338,10 +348,14 @@ function DashboardPage() {
                     fontWeight: "medium",
                     border: "none",
                     cursor: "pointer",
-                    backgroundColor: selectedPublisherId === null ? "primary.500" : "gray.100",
+                    backgroundColor:
+                      selectedPublisherId === null ? "primary.500" : "gray.100",
                     color: selectedPublisherId === null ? "white" : "gray.700",
                     _hover: {
-                      backgroundColor: selectedPublisherId === null ? "primary.600" : "gray.200",
+                      backgroundColor:
+                        selectedPublisherId === null
+                          ? "primary.600"
+                          : "gray.200",
                     },
                   })}
                 >
@@ -365,7 +379,9 @@ function DashboardPage() {
                         ? "primary.500"
                         : "gray.100",
                     color:
-                      selectedPublisherId === publisher.publisher_id ? "white" : "gray.700",
+                      selectedPublisherId === publisher.publisher_id
+                        ? "white"
+                        : "gray.700",
                     _hover: {
                       backgroundColor:
                         selectedPublisherId === publisher.publisher_id

@@ -49,7 +49,12 @@ const navItems: NavItem[] = [
   { label: "売上管理", href: "/sales", icon: <IconShoppingCart size={20} /> },
   { label: "クーポン管理", href: "/coupons", icon: <IconGift size={20} /> },
   { label: "レポート", href: "/reports", icon: <IconChartBar size={20} /> },
-  { label: "ユーザー管理", href: "/users", icon: <IconUsers size={20} />, requiresSystemAdmin: true },
+  {
+    label: "ユーザー管理",
+    href: "/users",
+    icon: <IconUsers size={20} />,
+    requiresSystemAdmin: true,
+  },
   {
     label: "POS従業員",
     href: "/pos-employees",
@@ -83,7 +88,7 @@ export function Sidebar() {
 
   // システム管理者以外はrequiresSystemAdmin: trueのアイテムを除外
   const visibleNavItems = navItems.filter(
-    (item) => !item.requiresSystemAdmin || isSystemAdmin
+    (item) => !item.requiresSystemAdmin || isSystemAdmin,
   );
 
   const handleSignOut = async () => {

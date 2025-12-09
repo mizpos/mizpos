@@ -165,7 +165,7 @@ function ProductsPage() {
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      product.category.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const columns = [
@@ -246,7 +246,7 @@ function ProductsPage() {
                 const headers = await getAuthHeaders();
                 const response = await fetch(
                   `${API_GATEWAY_BASE}/stock/products/${item.product_id}/barcode`,
-                  { headers }
+                  { headers },
                 );
                 if (!response.ok) throw new Error("Failed to fetch barcode");
                 const data = await response.json();
@@ -723,7 +723,13 @@ interface ProductFormProps {
   isSystemAdmin?: boolean;
 }
 
-function ProductForm({ data, onChange, isNew, allowedPublisherIds = [], isSystemAdmin = false }: ProductFormProps) {
+function ProductForm({
+  data,
+  onChange,
+  isNew,
+  allowedPublisherIds = [],
+  isSystemAdmin = false,
+}: ProductFormProps) {
   // サークル一覧を取得
   const { data: allPublishers = [] } = useQuery({
     queryKey: ["publishers"],
@@ -743,7 +749,12 @@ function ProductForm({ data, onChange, isNew, allowedPublisherIds = [], isSystem
 
   // サークルロールがある場合は、最初のサークルを自動選択
   useEffect(() => {
-    if (isNew && !isSystemAdmin && publishers.length > 0 && !data.publisher_id) {
+    if (
+      isNew &&
+      !isSystemAdmin &&
+      publishers.length > 0 &&
+      !data.publisher_id
+    ) {
       onChange({ ...data, publisher_id: publishers[0].publisher_id });
     }
   }, [isNew, isSystemAdmin, publishers, data, onChange]);
@@ -979,7 +990,9 @@ function ProductForm({ data, onChange, isNew, allowedPublisherIds = [], isSystem
           <select
             id="publisher_id"
             value={(data as CreateProductForm).publisher_id || ""}
-            onChange={(e) => onChange({ ...data, publisher_id: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...data, publisher_id: e.target.value })
+            }
             className={inputClass}
             required={!isSystemAdmin && publishers.length > 0}
           >
@@ -992,7 +1005,10 @@ function ProductForm({ data, onChange, isNew, allowedPublisherIds = [], isSystem
               </option>
             )}
             {publishers.map((publisher) => (
-              <option key={publisher.publisher_id} value={publisher.publisher_id}>
+              <option
+                key={publisher.publisher_id}
+                value={publisher.publisher_id}
+              >
                 {publisher.name} (手数料: {publisher.commission_rate}%)
               </option>
             ))}
