@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card, Input } from "../components/ui";
 import { useAuthStore } from "../stores/auth";
-import { useSettingsStore } from "../stores/settings";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -176,7 +175,6 @@ const errorStyles = {
 function RefundPage() {
   const navigate = useNavigate();
   const { session } = useAuthStore();
-  const { settings } = useSettingsStore();
 
   const [saleId, setSaleId] = useState("");
   const [sale, setSale] = useState<Sale | null>(null);

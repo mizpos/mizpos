@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SelectEventRouteImport } from './routes/select-event'
 import { Route as RegisterTerminalRouteImport } from './routes/register-terminal'
+import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as OpeningRouteImport } from './routes/opening'
 import { Route as LoginRouteImport } from './routes/login'
@@ -32,6 +33,11 @@ const SelectEventRoute = SelectEventRouteImport.update({
 const RegisterTerminalRoute = RegisterTerminalRouteImport.update({
   id: '/register-terminal',
   path: '/register-terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundRoute = RefundRouteImport.update({
+  id: '/refund',
+  path: '/refund',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosRoute = PosRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
+  '/refund': typeof RefundRoute
   '/register-terminal': typeof RegisterTerminalRoute
   '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
+  '/refund': typeof RefundRoute
   '/register-terminal': typeof RegisterTerminalRoute
   '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
+  '/refund': typeof RefundRoute
   '/register-terminal': typeof RegisterTerminalRoute
   '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/opening'
     | '/pos'
+    | '/refund'
     | '/register-terminal'
     | '/select-event'
     | '/settings'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/opening'
     | '/pos'
+    | '/refund'
     | '/register-terminal'
     | '/select-event'
     | '/settings'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/opening'
     | '/pos'
+    | '/refund'
     | '/register-terminal'
     | '/select-event'
     | '/settings'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OpeningRoute: typeof OpeningRoute
   PosRoute: typeof PosRoute
+  RefundRoute: typeof RefundRoute
   RegisterTerminalRoute: typeof RegisterTerminalRoute
   SelectEventRoute: typeof SelectEventRoute
   SettingsRoute: typeof SettingsRoute
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/register-terminal'
       fullPath: '/register-terminal'
       preLoaderRoute: typeof RegisterTerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refund': {
+      id: '/refund'
+      path: '/refund'
+      fullPath: '/refund'
+      preLoaderRoute: typeof RefundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pos': {
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OpeningRoute: OpeningRoute,
   PosRoute: PosRoute,
+  RefundRoute: RefundRoute,
   RegisterTerminalRoute: RegisterTerminalRoute,
   SelectEventRoute: SelectEventRoute,
   SettingsRoute: SettingsRoute,
