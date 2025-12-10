@@ -171,6 +171,7 @@ def create_pos_employee(
     employee_number: str,
     pin: str,
     display_name: str,
+    role: str = "staff",
     event_id: str | None = None,
     publisher_id: str | None = None,
     user_id: str | None = None,
@@ -181,6 +182,7 @@ def create_pos_employee(
         employee_number: 7桁の従業員番号
         pin: 3〜8桁の数字PIN
         display_name: 表示名
+        role: 権限（manager=職長, staff=スタッフ）
         event_id: 紐付くイベントID（オプション）
         publisher_id: 紐付くサークルID（オプション）
         user_id: 紐付くmizposアカウントのユーザーID（オプション）
@@ -203,6 +205,7 @@ def create_pos_employee(
         "employee_number": employee_number,
         "pin_hash": hashed_pin,
         "display_name": display_name,
+        "role": role,
         "active": True,
         "created_at": now,
         "updated_at": now,
@@ -222,6 +225,7 @@ def create_pos_employee(
     return {
         "employee_number": employee_number,
         "display_name": display_name,
+        "role": role,
         "event_id": event_id,
         "publisher_id": publisher_id,
         "user_id": user_id,
@@ -311,6 +315,7 @@ def update_pos_employee(
     employee_number: str,
     display_name: str | None = None,
     pin: str | None = None,
+    role: str | None = None,
     event_id: str | None = None,
     publisher_id: str | None = None,
     active: bool | None = None,
@@ -322,6 +327,7 @@ def update_pos_employee(
         employee_number: 従業員番号
         display_name: 表示名（オプション）
         pin: 新しいPIN（オプション）
+        role: 権限（manager/staff）（オプション）
         event_id: イベントID（オプション）
         publisher_id: サークルID（オプション）
         active: 有効/無効フラグ（オプション）
@@ -337,6 +343,7 @@ def update_pos_employee(
 
     now = datetime.now(timezone.utc).isoformat()
     update_expression = "SET updated_at = :updated"
+    remove_expression_parts = []
     expression_values = {":updated": now}
     expression_names = {}
 
@@ -348,13 +355,26 @@ def update_pos_employee(
         update_expression += ", pin_hash = :ph"
         expression_values[":ph"] = hash_pin(pin, employee_number)
 
-    if event_id is not None:
-        update_expression += ", event_id = :eid"
-        expression_values[":eid"] = event_id
+    if role is not None:
+        update_expression += ", #role = :role"
+        expression_values[":role"] = role
+        expression_names["#role"] = "role"
 
+    # event_id: 空文字列の場合は属性を削除、値がある場合は更新
+    if event_id is not None:
+        if event_id == "":
+            remove_expression_parts.append("event_id")
+        else:
+            update_expression += ", event_id = :eid"
+            expression_values[":eid"] = event_id
+
+    # publisher_id: 空文字列の場合は属性を削除、値がある場合は更新
     if publisher_id is not None:
-        update_expression += ", publisher_id = :pid"
-        expression_values[":pid"] = publisher_id
+        if publisher_id == "":
+            remove_expression_parts.append("publisher_id")
+        else:
+            update_expression += ", publisher_id = :pid"
+            expression_values[":pid"] = publisher_id
 
     if active is not None:
         # 'active' は予約語なので ExpressionAttributeNames を使用
@@ -365,6 +385,10 @@ def update_pos_employee(
     if user_id is not None:
         update_expression += ", user_id = :uid"
         expression_values[":uid"] = user_id
+
+    # REMOVE式を追加
+    if remove_expression_parts:
+        update_expression += " REMOVE " + ", ".join(remove_expression_parts)
 
     update_kwargs = {
         "Key": {"employee_number": employee_number},
@@ -472,6 +496,7 @@ def authenticate_pos_employee(
         "session_id": session_id,
         "employee_number": employee_number,
         "display_name": employee["display_name"],
+        "role": employee.get("role", "staff"),
         "event_id": employee.get("event_id"),
         "publisher_id": employee.get("publisher_id"),
         "circles": circles,

@@ -361,10 +361,15 @@ function ClosingPage() {
     loadData();
   }, []);
 
-  // 未ログイン時はリダイレクト
+  // 未ログイン時・権限不足時はリダイレクト
   useEffect(() => {
     if (!session) {
       navigate({ to: "/login" });
+      return;
+    }
+    // 職長権限がない場合はPOS画面へ（UIで閉局ボタンは非表示だが、直接URL入力対策）
+    if (session.role !== "manager") {
+      navigate({ to: "/pos" });
     }
   }, [session, navigate]);
 

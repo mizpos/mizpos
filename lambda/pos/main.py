@@ -18,6 +18,7 @@ from models import (
     ApplyCouponRequest,
     OfflineSalesSyncRequest,
     PosLoginRequest,
+    PosRefundRequest,
     PosSaleRequest,
     PosSessionRefreshRequest,
     PosSetEventRequest,
@@ -28,9 +29,11 @@ from services.coupon import apply_coupon, get_coupon_by_code
 from services.employee import (
     authenticate_pos_employee,
     get_pending_offline_sales,
+    get_sale_by_id,
     invalidate_session,
     mark_offline_sale_failed,
     mark_offline_sale_synced,
+    process_refund,
     record_pos_sale,
     refresh_pos_session,
     save_offline_sale_to_db,
@@ -320,6 +323,68 @@ async def create_pos_sale(request: Request, sale_request: PosSaleRequest):
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error recording POS sale: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# 返金エンドポイント（セッション認証必要・職長権限必要）
+# ==========================================
+
+
+@router.get("/sales/{sale_id}", response_model=dict)
+async def get_sale(request: Request, sale_id: str):
+    """販売データを取得
+
+    X-POS-Session ヘッダーでセッションIDを指定
+    レシート番号（sale_id）で販売データを取得
+    """
+    session_id = request.headers.get("X-POS-Session")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing POS session")
+
+    session = verify_pos_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    try:
+        sale = get_sale_by_id(sale_id)
+        if not sale:
+            raise HTTPException(status_code=404, detail="販売データが見つかりません")
+        return {"sale": sale}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting sale: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/refunds", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_refund(request: Request, refund_request: PosRefundRequest):
+    """返金を処理
+
+    X-POS-Session ヘッダーでセッションIDを指定
+    職長権限が必要
+    元の販売を返金済みにマークし、在庫を戻す
+    """
+    session_id = request.headers.get("X-POS-Session")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing POS session")
+
+    try:
+        result = process_refund(
+            session_id=session_id,
+            original_sale_id=refund_request.original_sale_id,
+            items=[item.model_dump() for item in refund_request.items],
+            refund_amount=refund_request.refund_amount,
+            reason=refund_request.reason,
+        )
+        return result
+    except ValueError as e:
+        if "職長権限" in str(e):
+            raise HTTPException(status_code=403, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error processing refund: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

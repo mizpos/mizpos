@@ -2,7 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
-import { getTodayOpeningReport, saveOpeningReport } from "../lib/db";
+import {
+  clearTodayOpeningReport,
+  getTodayOpeningReport,
+  saveOpeningReport,
+} from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 import { useSettingsStore } from "../stores/settings";
 import type { DenominationCount, OpeningReport } from "../types";
@@ -166,7 +170,12 @@ function OpeningPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 未ログイン時・開局済みの場合はリダイレクト
+  // 開局済み情報
+  const [existingReport, setExistingReport] = useState<OpeningReport | null>(
+    null,
+  );
+
+  // 未ログイン時・権限不足時はリダイレクト、開局済みの場合は取り消し画面を表示
   useEffect(() => {
     const checkStatus = async () => {
       if (!session) {
@@ -178,11 +187,16 @@ function OpeningPage() {
         return;
       }
 
-      // 開局済みの場合はPOSへ
-      const openingReport = await getTodayOpeningReport();
-      if (openingReport) {
+      // 職長権限がない場合はPOSへ（ログイン時に弾かれるはずだが念のため）
+      if (session.role !== "manager") {
         navigate({ to: "/pos" });
         return;
+      }
+
+      // 開局済みの場合は取り消し画面を表示
+      const openingReport = await getTodayOpeningReport();
+      if (openingReport) {
+        setExistingReport(openingReport);
       }
 
       setIsLoading(false);
@@ -245,8 +259,119 @@ function OpeningPage() {
     }
   }, [session, settings, denominationCounts, cashTotal, navigate]);
 
+  // 開局取り消し処理
+  const handleCancelOpening = useCallback(async () => {
+    if (
+      !confirm("開局を取り消しますか？\n開局処理を再度行う必要があります。")
+    ) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await clearTodayOpeningReport();
+      setExistingReport(null);
+    } catch (error) {
+      console.error("Failed to cancel opening:", error);
+      alert(
+        "開局取り消しに失敗しました: " +
+          (error instanceof Error ? error.message : "不明なエラー"),
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
+
+  // POSへ戻る
+  const handleGoToPos = useCallback(() => {
+    navigate({ to: "/pos" });
+  }, [navigate]);
+
+  // ログインに戻る（ログアウト）
+  const handleBackToLogin = useCallback(async () => {
+    await useAuthStore.getState().logout();
+    navigate({ to: "/login" });
+  }, [navigate]);
+
   if (!session || !session.eventId || isLoading) {
     return null;
+  }
+
+  // 開局済みの場合は取り消し画面を表示
+  if (existingReport) {
+    return (
+      <div className={pageStyles.container}>
+        <header className={pageStyles.header}>
+          <h1 className={pageStyles.title}>開局済み</h1>
+        </header>
+
+        <div className={pageStyles.content}>
+          <div className={pageStyles.contentInner}>
+            <Card padding="lg">
+              <h2 className={sectionStyles.title}>開局情報</h2>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                })}
+              >
+                <div>
+                  <span className={css({ color: "#94a3b8", fontSize: "13px" })}>
+                    開局者
+                  </span>
+                  <div className={css({ fontSize: "16px", fontWeight: 600 })}>
+                    {existingReport.staffName}
+                  </div>
+                </div>
+                <div>
+                  <span className={css({ color: "#94a3b8", fontSize: "13px" })}>
+                    開局時刻
+                  </span>
+                  <div className={css({ fontSize: "16px", fontWeight: 600 })}>
+                    {new Date(existingReport.openedAt).toLocaleString("ja-JP")}
+                  </div>
+                </div>
+                <div>
+                  <span className={css({ color: "#94a3b8", fontSize: "13px" })}>
+                    開局時レジ金
+                  </span>
+                  <div
+                    className={css({
+                      fontSize: "20px",
+                      fontWeight: 700,
+                      color: "#86efac",
+                    })}
+                  >
+                    ¥{existingReport.cashTotal.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <div className={css({ display: "flex", gap: "12px" })}>
+              <Button
+                variant="primary"
+                size="xl"
+                onClick={handleGoToPos}
+                className={css({ flex: 2 })}
+              >
+                POS画面へ
+              </Button>
+              <Button
+                variant="outline"
+                size="xl"
+                onClick={handleCancelOpening}
+                disabled={isProcessing}
+                className={css({ flex: 1 })}
+              >
+                {isProcessing ? "処理中..." : "取り消し"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -360,6 +485,17 @@ function OpeningPage() {
               レジ金を入力してください（0円での開局はできません）
             </p>
           )}
+
+          {/* ログインに戻るボタン */}
+          <Button
+            variant="ghost"
+            size="lg"
+            fullWidth
+            onClick={handleBackToLogin}
+            className={css({ marginTop: "16px" })}
+          >
+            ← ログインに戻る
+          </Button>
         </div>
       </div>
     </div>

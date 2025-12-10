@@ -20,6 +20,18 @@ class InviteUserRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100)
 
 
+class PublisherInviteUserRequest(BaseModel):
+    """サークル管理者用ユーザー招待リクエスト
+
+    サークル管理者が自サークルにユーザーを招待する際に使用。
+    招待されたユーザーには自動的にpublisher_salesロールが付与される。
+    """
+
+    email: EmailStr
+    display_name: str = Field(..., min_length=1, max_length=100)
+    publisher_id: str = Field(..., min_length=1, description="招待先サークルID")
+
+
 class UpdateUserRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100)
 
@@ -165,6 +177,11 @@ class CreatePosEmployeeRequest(BaseModel):
         description="3〜8桁の数字PIN",
     )
     display_name: str = Field(..., min_length=1, max_length=100)
+    role: str = Field(
+        default="staff",
+        pattern="^(manager|staff)$",
+        description="権限: manager=職長（返金・開局・閉局可能）, staff=スタッフ（販売のみ）",
+    )
     event_id: str | None = Field(default=None, description="紐付くイベントID")
     publisher_id: str | None = Field(default=None, description="紐付くサークルID")
     user_id: str | None = Field(
@@ -183,6 +200,11 @@ class UpdatePosEmployeeRequest(BaseModel):
         pattern="^[0-9]+$",
         description="3〜8桁の数字PIN",
     )
+    role: str | None = Field(
+        default=None,
+        pattern="^(manager|staff)$",
+        description="権限: manager=職長（返金・開局・閉局可能）, staff=スタッフ（販売のみ）",
+    )
     event_id: str | None = None
     publisher_id: str | None = None
     active: bool | None = None
@@ -194,6 +216,7 @@ class PosEmployeeResponse(BaseModel):
 
     employee_number: str
     display_name: str
+    role: str = "staff"  # manager=職長, staff=スタッフ
     event_id: str | None = None
     publisher_id: str | None = None
     user_id: str | None = None
@@ -236,6 +259,7 @@ class PosLoginResponse(BaseModel):
     session_id: str
     employee_number: str
     display_name: str
+    role: str = "staff"  # manager=職長, staff=スタッフ
     event_id: str | None = None
     publisher_id: str | None = None
     expires_at: int  # Unix timestamp

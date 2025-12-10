@@ -366,6 +366,21 @@ export async function saveOpeningReport(report: OpeningReport): Promise<void> {
 }
 
 /**
+ * 今日の開局レポートを削除（開局取り消し用）
+ */
+export async function clearTodayOpeningReport(): Promise<void> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  await db.openingReports
+    .filter((r) => {
+      const openedDate = new Date(r.openedAt);
+      return openedDate >= today;
+    })
+    .delete();
+}
+
+/**
  * 今日の開局レポートを取得
  */
 export async function getTodayOpeningReport(): Promise<OpeningReport | null> {

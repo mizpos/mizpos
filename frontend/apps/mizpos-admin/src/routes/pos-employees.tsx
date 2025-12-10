@@ -33,6 +33,7 @@ const API_BASE =
 interface PosEmployee {
   employee_number: string;
   display_name: string;
+  role: "manager" | "staff";
   event_id?: string;
   publisher_id?: string;
   user_id?: string;
@@ -51,6 +52,7 @@ interface CreatePosEmployeeForm {
   employee_number: string;
   pin: string;
   display_name: string;
+  role: "manager" | "staff";
   event_id?: string;
   publisher_id?: string;
   user_id?: string;
@@ -59,6 +61,7 @@ interface CreatePosEmployeeForm {
 interface UpdatePosEmployeeForm {
   display_name?: string;
   pin?: string;
+  role?: "manager" | "staff";
   event_id?: string;
   publisher_id?: string;
   active?: boolean;
@@ -69,6 +72,7 @@ const initialCreateForm: CreatePosEmployeeForm = {
   employee_number: "",
   pin: "",
   display_name: "",
+  role: "staff",
   event_id: "",
   publisher_id: "",
   user_id: "",
@@ -170,6 +174,7 @@ function PosEmployeesPage() {
           employee_number: data.employee_number,
           pin: data.pin,
           display_name: data.display_name,
+          role: data.role,
           event_id: data.event_id || undefined,
           publisher_id: data.publisher_id || undefined,
           user_id: data.user_id || undefined,
@@ -277,6 +282,31 @@ function PosEmployeesPage() {
     { key: "employee_number", header: "従業員番号" },
     { key: "display_name", header: "表示名" },
     {
+      key: "role",
+      header: "権限",
+      render: (item: PosEmployee) => {
+        const roleLabels: Record<string, { label: string; color: string }> = {
+          manager: { label: "職長", color: "purple.600" },
+          staff: { label: "スタッフ", color: "gray.600" },
+        };
+        const roleInfo = roleLabels[item.role] || roleLabels.staff;
+        return (
+          <span
+            className={css({
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "1",
+              fontSize: "sm",
+              color: roleInfo.color,
+              fontWeight: item.role === "manager" ? "600" : "normal",
+            })}
+          >
+            {roleInfo.label}
+          </span>
+        );
+      },
+    },
+    {
       key: "event_id",
       header: "イベント",
       render: (item: PosEmployee) => {
@@ -379,6 +409,7 @@ function PosEmployeesPage() {
               setEditEmployee(item);
               setEditFormData({
                 display_name: item.display_name,
+                role: item.role,
                 event_id: item.event_id,
                 publisher_id: item.publisher_id,
                 user_id: item.user_id,
@@ -647,6 +678,34 @@ function PosEmployeesPage() {
               />
             </div>
             <div>
+              <label htmlFor="create-role" className={labelClass}>
+                権限 *
+              </label>
+              <select
+                id="create-role"
+                value={createFormData.role}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    role: e.target.value as "manager" | "staff",
+                  })
+                }
+                className={inputClass}
+              >
+                <option value="staff">スタッフ（販売のみ）</option>
+                <option value="manager">職長（返金・開局・閉局可能）</option>
+              </select>
+              <p
+                className={css({
+                  fontSize: "xs",
+                  color: "gray.500",
+                  marginTop: "1",
+                })}
+              >
+                職長は返金処理、開局・閉局処理が可能です
+              </p>
+            </div>
+            <div>
               <label htmlFor="create-event-id" className={labelClass}>
                 イベント（オプション）
               </label>
@@ -899,16 +958,44 @@ function PosEmployeesPage() {
                 </p>
               </div>
               <div>
+                <label htmlFor="edit-role" className={labelClass}>
+                  権限
+                </label>
+                <select
+                  id="edit-role"
+                  value={editFormData.role || "staff"}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      role: e.target.value as "manager" | "staff",
+                    })
+                  }
+                  className={inputClass}
+                >
+                  <option value="staff">スタッフ（販売のみ）</option>
+                  <option value="manager">職長（返金・開局・閉局可能）</option>
+                </select>
+                <p
+                  className={css({
+                    fontSize: "xs",
+                    color: "gray.500",
+                    marginTop: "1",
+                  })}
+                >
+                  職長は返金処理、開局・閉局処理が可能です
+                </p>
+              </div>
+              <div>
                 <label htmlFor="edit-event-id" className={labelClass}>
                   イベント
                 </label>
                 <select
                   id="edit-event-id"
-                  value={editFormData.event_id || ""}
+                  value={editFormData.event_id ?? ""}
                   onChange={(e) =>
                     setEditFormData({
                       ...editFormData,
-                      event_id: e.target.value || undefined,
+                      event_id: e.target.value,
                     })
                   }
                   className={inputClass}
@@ -938,11 +1025,11 @@ function PosEmployeesPage() {
                 </label>
                 <select
                   id="edit-publisher-id"
-                  value={editFormData.publisher_id || ""}
+                  value={editFormData.publisher_id ?? ""}
                   onChange={(e) =>
                     setEditFormData({
                       ...editFormData,
-                      publisher_id: e.target.value || undefined,
+                      publisher_id: e.target.value,
                     })
                   }
                   className={inputClass}

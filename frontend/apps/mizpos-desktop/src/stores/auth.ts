@@ -1,6 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
-import { syncProducts } from "../lib/db";
+import { getTodayOpeningReport, syncProducts } from "../lib/db";
 import type { Session } from "../types";
 import { useSettingsStore } from "./settings";
 
@@ -15,6 +15,7 @@ interface PosLoginResponse {
   session_id: string;
   employee_number: string;
   display_name: string;
+  role: "manager" | "staff";
   event_id?: string;
   publisher_id?: string;
   circles?: CircleInfo[];
@@ -30,6 +31,7 @@ interface AuthState {
   login: (staffId: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setEventId: (eventId: string) => Promise<void>;
+  clearEventId: () => Promise<void>;
 }
 
 let store: Store | null = null;
@@ -66,6 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           set({
             session: {
               ...savedSession,
+              role: savedSession.role || "staff",
               loginAt: new Date(savedSession.loginAt),
             },
             isLoading: false,
@@ -139,11 +142,30 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       const data: PosLoginResponse = await response.json();
+      console.log(
+        "[Auth] Login response from API:",
+        JSON.stringify(data, null, 2),
+      );
+      console.log("[Auth] event_id from API:", data.event_id);
+
+      // 未開局かつスタッフ権限の場合はログインを拒否
+      if (data.role !== "manager") {
+        const openingReport = await getTodayOpeningReport();
+        if (!openingReport) {
+          set({
+            isLoading: false,
+            error:
+              "開局処理が完了していません。職長に開局処理を依頼してください。",
+          });
+          return false;
+        }
+      }
 
       const session: Session = {
         sessionId: data.session_id,
         staffId: data.employee_number,
         staffName: data.display_name,
+        role: data.role || "staff",
         eventId: data.event_id,
         publisherId: data.publisher_id,
         circles: data.circles,
@@ -158,6 +180,35 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.log("[Auth] Session saved to store:", session);
 
       set({ session, isLoading: false });
+
+      // 従業員にevent_idが紐づいている場合、イベント情報を取得してsettingsを更新
+      if (data.event_id) {
+        try {
+          const eventsResponse = await fetch(`${API_BASE_URL}/pos/events`, {
+            headers: {
+              "Content-Type": "application/json",
+              "X-POS-Session": data.session_id,
+            },
+          });
+          if (eventsResponse.ok) {
+            const eventsData = await eventsResponse.json();
+            const event = eventsData.events?.find(
+              (e: { event_id: string }) => e.event_id === data.event_id,
+            );
+            if (event) {
+              console.log("[Auth] Event data found:", event);
+              // settingsストアを更新
+              useSettingsStore.getState().updateSettings({
+                eventName: event.name || "",
+                venueAddress: event.location || "",
+              });
+            }
+          }
+        } catch (err) {
+          console.error("[Auth] Failed to fetch event info:", err);
+          // イベント情報取得失敗してもログインは成功させる
+        }
+      }
 
       // バックグラウンドで商品データを同期
       syncProducts().catch((err) => {
@@ -212,6 +263,24 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (error) {
       console.error("Failed to set event ID:", error);
+    }
+  },
+
+  clearEventId: async () => {
+    try {
+      const s = await getStore();
+      const currentSession = await s.get<Session>("session");
+      if (currentSession) {
+        // eventIdを空文字列にして明示的に「未選択」状態にする
+        // undefinedだとJSONシリアライズで消えてAPIのevent_idが復活する可能性がある
+        const { eventId: _, ...rest } = currentSession;
+        const updatedSession = { ...rest, eventId: "" };
+        await s.set("session", updatedSession);
+        await s.save();
+        set({ session: updatedSession as Session });
+      }
+    } catch (error) {
+      console.error("Failed to clear event ID:", error);
     }
   },
 }));

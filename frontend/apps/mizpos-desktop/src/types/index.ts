@@ -7,12 +7,18 @@ export interface Circle {
 }
 
 /**
+ * 従業員権限
+ */
+export type EmployeeRole = "manager" | "staff";
+
+/**
  * ユーザーセッション
  */
 export interface Session {
   sessionId: string;
   staffId: string;
   staffName: string;
+  role: EmployeeRole;
   eventId?: string;
   publisherId?: string;
   circles?: Circle[];

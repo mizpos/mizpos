@@ -8,7 +8,7 @@ import {
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { BarcodeDisplay, TwoTierBarcode } from "../components/BarcodeDisplay";
 import { Button } from "../components/Button";
@@ -18,6 +18,7 @@ import { Table } from "../components/Table";
 import { PageContainer } from "../components/ui";
 import { getAuthenticatedClients, getAuthHeaders } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useUserRoles } from "../lib/useUserRoles";
 
 const API_GATEWAY_BASE =
   import.meta.env.VITE_API_GATEWAY_BASE ||
@@ -73,6 +74,7 @@ interface BarcodeInfo {
 function ProductsPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isSystemAdmin, publisherIds } = useUserRoles();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -379,7 +381,13 @@ function ProductsPage() {
         title="商品追加"
       >
         <form onSubmit={handleCreateSubmit}>
-          <ProductForm data={formData} onChange={setFormData} isNew />
+          <ProductForm
+            data={formData}
+            onChange={setFormData}
+            isNew
+            allowedPublisherIds={publisherIds}
+            isSystemAdmin={isSystemAdmin}
+          />
           <div
             className={css({
               display: "flex",
@@ -419,6 +427,8 @@ function ProductsPage() {
                 setEditProduct({ ...editProduct, ...updated })
               }
               isNew={false}
+              allowedPublisherIds={publisherIds}
+              isSystemAdmin={isSystemAdmin}
             />
             <div
               className={css({
@@ -709,21 +719,45 @@ interface ProductFormProps {
   data: CreateProductForm | Product;
   onChange: (data: CreateProductForm | Product) => void;
   isNew: boolean;
+  allowedPublisherIds?: string[];
+  isSystemAdmin?: boolean;
 }
 
-function ProductForm({ data, onChange, isNew }: ProductFormProps) {
-  const { data: publishers = [] } = useQuery({
+function ProductForm({
+  data,
+  onChange,
+  isNew,
+  allowedPublisherIds = [],
+  isSystemAdmin = false,
+}: ProductFormProps) {
+  // サークル一覧を取得
+  const { data: allPublishers = [] } = useQuery({
     queryKey: ["publishers"],
     queryFn: async (): Promise<Publisher[]> => {
-      // TODO: /publishers エンドポイントが実装されたら有効化
-      // const { stock } = await getAuthenticatedClients();
-      // const { data, error } = await stock.GET("/publishers", {});
-      // if (error) throw error;
-      // const response = data as unknown as { publishers: Publisher[] };
-      // return response.publishers || [];
-      return [];
+      const { stock } = await getAuthenticatedClients();
+      const { data, error } = await stock.GET("/publishers");
+      if (error) throw error;
+      const response = data as unknown as { publishers: Publisher[] };
+      return response.publishers || [];
     },
   });
+
+  // システム管理者は全サークル表示、それ以外は許可されたサークルのみ
+  const publishers = isSystemAdmin
+    ? allPublishers
+    : allPublishers.filter((p) => allowedPublisherIds.includes(p.publisher_id));
+
+  // サークルロールがある場合は、最初のサークルを自動選択
+  useEffect(() => {
+    if (
+      isNew &&
+      !isSystemAdmin &&
+      publishers.length > 0 &&
+      !data.publisher_id
+    ) {
+      onChange({ ...data, publisher_id: publishers[0].publisher_id });
+    }
+  }, [isNew, isSystemAdmin, publishers, data, onChange]);
 
   const inputClass = css({
     width: "100%",
@@ -936,25 +970,56 @@ function ProductForm({ data, onChange, isNew }: ProductFormProps) {
 
       <div className={css({ gridColumn: "span 2" })}>
         <label htmlFor="publisher_id" className={labelClass}>
-          サークル (委託販売用)
+          サークル {!isSystemAdmin && publishers.length > 0 && "*"}
         </label>
-        <select
-          id="publisher_id"
-          value={(data as CreateProductForm).publisher_id || ""}
-          onChange={(e) => onChange({ ...data, publisher_id: e.target.value })}
-          className={inputClass}
-        >
-          <option value="">-- 選択してください --</option>
-          {publishers.map((publisher) => (
-            <option key={publisher.publisher_id} value={publisher.publisher_id}>
-              {publisher.name} (手数料: {publisher.commission_rate}%)
-            </option>
-          ))}
-        </select>
+        {publishers.length === 0 ? (
+          <p
+            className={css({
+              fontSize: "sm",
+              color: "gray.500",
+              padding: "2",
+              backgroundColor: "gray.50",
+              borderRadius: "md",
+            })}
+          >
+            {isSystemAdmin
+              ? "サークルが登録されていません"
+              : "あなたにサークルが紐づいていません。管理者に連絡してください。"}
+          </p>
+        ) : (
+          <select
+            id="publisher_id"
+            value={(data as CreateProductForm).publisher_id || ""}
+            onChange={(e) =>
+              onChange({ ...data, publisher_id: e.target.value })
+            }
+            className={inputClass}
+            required={!isSystemAdmin && publishers.length > 0}
+          >
+            {isSystemAdmin && (
+              <option value="">-- 選択してください（任意） --</option>
+            )}
+            {!isSystemAdmin && publishers.length > 0 && (
+              <option value="" disabled>
+                -- サークルを選択してください --
+              </option>
+            )}
+            {publishers.map((publisher) => (
+              <option
+                key={publisher.publisher_id}
+                value={publisher.publisher_id}
+              >
+                {publisher.name} (手数料: {publisher.commission_rate}%)
+              </option>
+            ))}
+          </select>
+        )}
         <p
           className={css({ fontSize: "xs", color: "gray.500", marginTop: "1" })}
         >
-          委託販売の手数料計算に使用されます
+          {!isSystemAdmin && publishers.length > 0
+            ? "あなたが所属するサークルの中から選択してください"
+            : "委託販売の手数料計算に使用されます"}
         </p>
       </div>
 

@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SelectEventRouteImport } from './routes/select-event'
+import { Route as SelectCircleRouteImport } from './routes/select-circle'
 import { Route as RegisterTerminalRouteImport } from './routes/register-terminal'
+import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as OpeningRouteImport } from './routes/opening'
 import { Route as LoginRouteImport } from './routes/login'
@@ -29,9 +31,19 @@ const SelectEventRoute = SelectEventRouteImport.update({
   path: '/select-event',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SelectCircleRoute = SelectCircleRouteImport.update({
+  id: '/select-circle',
+  path: '/select-circle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterTerminalRoute = RegisterTerminalRouteImport.update({
   id: '/register-terminal',
   path: '/register-terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundRoute = RefundRouteImport.update({
+  id: '/refund',
+  path: '/refund',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosRoute = PosRouteImport.update({
@@ -72,7 +84,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
+  '/refund': typeof RefundRoute
   '/register-terminal': typeof RegisterTerminalRoute
+  '/select-circle': typeof SelectCircleRoute
   '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
 }
@@ -83,7 +97,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
+  '/refund': typeof RefundRoute
   '/register-terminal': typeof RegisterTerminalRoute
+  '/select-circle': typeof SelectCircleRoute
   '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
 }
@@ -95,7 +111,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/opening': typeof OpeningRoute
   '/pos': typeof PosRoute
+  '/refund': typeof RefundRoute
   '/register-terminal': typeof RegisterTerminalRoute
+  '/select-circle': typeof SelectCircleRoute
   '/select-event': typeof SelectEventRoute
   '/settings': typeof SettingsRoute
 }
@@ -108,7 +126,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/opening'
     | '/pos'
+    | '/refund'
     | '/register-terminal'
+    | '/select-circle'
     | '/select-event'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
@@ -119,7 +139,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/opening'
     | '/pos'
+    | '/refund'
     | '/register-terminal'
+    | '/select-circle'
     | '/select-event'
     | '/settings'
   id:
@@ -130,7 +152,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/opening'
     | '/pos'
+    | '/refund'
     | '/register-terminal'
+    | '/select-circle'
     | '/select-event'
     | '/settings'
   fileRoutesById: FileRoutesById
@@ -142,7 +166,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OpeningRoute: typeof OpeningRoute
   PosRoute: typeof PosRoute
+  RefundRoute: typeof RefundRoute
   RegisterTerminalRoute: typeof RegisterTerminalRoute
+  SelectCircleRoute: typeof SelectCircleRoute
   SelectEventRoute: typeof SelectEventRoute
   SettingsRoute: typeof SettingsRoute
 }
@@ -163,11 +189,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SelectEventRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/select-circle': {
+      id: '/select-circle'
+      path: '/select-circle'
+      fullPath: '/select-circle'
+      preLoaderRoute: typeof SelectCircleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register-terminal': {
       id: '/register-terminal'
       path: '/register-terminal'
       fullPath: '/register-terminal'
       preLoaderRoute: typeof RegisterTerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refund': {
+      id: '/refund'
+      path: '/refund'
+      fullPath: '/refund'
+      preLoaderRoute: typeof RefundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pos': {
@@ -222,7 +262,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OpeningRoute: OpeningRoute,
   PosRoute: PosRoute,
+  RefundRoute: RefundRoute,
   RegisterTerminalRoute: RegisterTerminalRoute,
+  SelectCircleRoute: SelectCircleRoute,
   SelectEventRoute: SelectEventRoute,
   SettingsRoute: SettingsRoute,
 }

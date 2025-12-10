@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
 import { Badge, Button, Card, Input } from "../components/ui";
-import { syncProducts } from "../lib/db";
+import { getTodayOpeningReport, syncProducts } from "../lib/db";
 import {
   type BluetoothDevice,
   getBluetoothDevices,
@@ -152,11 +152,10 @@ const printerStyles = {
 };
 
 function SettingsPage() {
-  const { session } = useAuthStore();
+  const { session, clearEventId } = useAuthStore();
   const { settings, updateSettings, updatePrinter } = useSettingsStore();
   const navigate = useNavigate();
 
-  const [eventName, setEventName] = useState(settings.eventName);
   const [circleName, setCircleName] = useState(settings.circleName || "");
   const [venueAddress, setVenueAddress] = useState(settings.venueAddress || "");
   const [terminalId, setTerminalId] = useState(settings.terminalId);
@@ -182,12 +181,20 @@ function SettingsPage() {
     success: boolean;
     error?: string;
   } | null>(null);
+  const [isOpened, setIsOpened] = useState(false);
 
   useEffect(() => {
     if (!session) {
       navigate({ to: "/login" });
     }
   }, [session, navigate]);
+
+  // 開局状態を確認
+  useEffect(() => {
+    getTodayOpeningReport().then((report) => {
+      setIsOpened(!!report);
+    });
+  }, []);
 
   useEffect(() => {
     getPlatform().then(setPlatform);
@@ -218,7 +225,6 @@ function SettingsPage() {
 
   const handleSave = useCallback(async () => {
     await updateSettings({
-      eventName,
       circleName,
       venueAddress,
       terminalId,
@@ -227,7 +233,6 @@ function SettingsPage() {
     await updatePrinter(selectedPrinter);
     navigate({ to: "/pos" });
   }, [
-    eventName,
     circleName,
     venueAddress,
     terminalId,
@@ -241,6 +246,17 @@ function SettingsPage() {
   const handleBack = useCallback(() => {
     navigate({ to: "/pos" });
   }, [navigate]);
+
+  const handleClearEvent = useCallback(async () => {
+    if (
+      !confirm("イベント選択を解除しますか？\nイベント選択画面に戻ります。")
+    ) {
+      return;
+    }
+    await clearEventId();
+    await updateSettings({ eventName: "" });
+    navigate({ to: "/select-event" });
+  }, [clearEventId, updateSettings, navigate]);
 
   const handleSyncProducts = useCallback(async () => {
     setIsSyncing(true);
@@ -363,12 +379,49 @@ function SettingsPage() {
             <h2 className={sectionStyles.title}>基本設定</h2>
             <div className={css({ marginTop: "20px" })}>
               <div className={sectionStyles.field}>
-                <Input
-                  label="イベント名"
-                  value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
-                  placeholder="例: コミックマーケット C104"
-                />
+                <span
+                  className={css({
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#94a3b8",
+                    marginBottom: "8px",
+                  })}
+                >
+                  イベント名
+                </span>
+                <div
+                  className={css({
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  })}
+                >
+                  <div
+                    className={css({
+                      flex: 1,
+                      padding: "12px 14px",
+                      fontSize: "15px",
+                      color: "#f8fafc",
+                      background: "#1e293b",
+                      border: "1px solid #334155",
+                      borderRadius: "10px",
+                    })}
+                  >
+                    {settings.eventName || "未設定"}
+                  </div>
+                  {session?.role === "manager" &&
+                    session?.eventId &&
+                    !isOpened && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearEvent}
+                      >
+                        解除
+                      </Button>
+                    )}
+                </div>
               </div>
 
               <div className={sectionStyles.field}>
@@ -690,6 +743,33 @@ function SettingsPage() {
             設定を保存
           </Button>
 
+          {/* 返金処理（職長のみ） */}
+          {session?.role === "manager" && (
+            <Card padding="lg">
+              <h2 className={sectionStyles.title}>返金処理</h2>
+              <div
+                className={css({
+                  fontSize: "14px",
+                  color: "#94a3b8",
+                  marginBottom: "16px",
+                })}
+              >
+                レシート番号を入力して、販売の返金処理を行います。
+                <br />
+                <span className={css({ color: "#fbbf24" })}>
+                  ※職長権限が必要です
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => navigate({ to: "/refund" })}
+              >
+                返金処理へ
+              </Button>
+            </Card>
+          )}
+
           {/* 両替処理 */}
           <Card padding="lg">
             <h2 className={sectionStyles.title}>両替処理</h2>
@@ -711,30 +791,32 @@ function SettingsPage() {
             </Button>
           </Card>
 
-          {/* 閉局ボタン */}
-          <Card padding="lg">
-            <h2 className={sectionStyles.title}>閉局</h2>
-            <div
-              className={css({
-                fontSize: "14px",
-                color: "#94a3b8",
-                marginBottom: "16px",
-              })}
-            >
-              閉局処理を行い、レジ金チェックと端末の無効化を行います。
-              <br />
-              <span className={css({ color: "#f87171" })}>
-                ※閉局後は端末の再登録が必要です
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              fullWidth
-              onClick={() => navigate({ to: "/closing" })}
-            >
-              閉局処理へ
-            </Button>
-          </Card>
+          {/* 閉局ボタン（職長のみ） */}
+          {session?.role === "manager" && (
+            <Card padding="lg">
+              <h2 className={sectionStyles.title}>閉局</h2>
+              <div
+                className={css({
+                  fontSize: "14px",
+                  color: "#94a3b8",
+                  marginBottom: "16px",
+                })}
+              >
+                閉局処理を行い、レジ金チェックと端末の無効化を行います。
+                <br />
+                <span className={css({ color: "#f87171" })}>
+                  ※閉局後は端末の再登録が必要です
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => navigate({ to: "/closing" })}
+              >
+                閉局処理へ
+              </Button>
+            </Card>
+          )}
 
           {/* バージョン情報 */}
           <button

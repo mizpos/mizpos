@@ -1,4 +1,4 @@
-import { IconAdjustments, IconPlus, IconSearch } from "@tabler/icons-react";
+import { IconAdjustments, IconSearch } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -196,11 +196,6 @@ function StockPage() {
             })}
           />
         </div>
-
-        <Button>
-          <IconPlus size={18} />
-          商品追加
-        </Button>
       </div>
 
       {isLoading ? (

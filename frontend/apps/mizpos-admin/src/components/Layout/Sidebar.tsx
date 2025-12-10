@@ -21,12 +21,14 @@ import {
 import { Link, useRouterState } from "@tanstack/react-router";
 import { css } from "styled-system/css";
 import { useAuth } from "../../lib/auth";
+import { useUserRoles } from "../../lib/useUserRoles";
 import { useLayout } from "./context";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  requiresSystemAdmin?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -37,6 +39,7 @@ const navItems: NavItem[] = [
     label: "サークル管理",
     href: "/publishers",
     icon: <IconBuildingStore size={20} />,
+    requiresSystemAdmin: true,
   },
   {
     label: "イベント管理",
@@ -46,7 +49,12 @@ const navItems: NavItem[] = [
   { label: "売上管理", href: "/sales", icon: <IconShoppingCart size={20} /> },
   { label: "クーポン管理", href: "/coupons", icon: <IconGift size={20} /> },
   { label: "レポート", href: "/reports", icon: <IconChartBar size={20} /> },
-  { label: "ユーザー管理", href: "/users", icon: <IconUsers size={20} /> },
+  {
+    label: "ユーザー管理",
+    href: "/users",
+    icon: <IconUsers size={20} />,
+    requiresSystemAdmin: true,
+  },
   {
     label: "POS従業員",
     href: "/pos-employees",
@@ -69,6 +77,7 @@ export function Sidebar() {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
   const { user, signOut } = useAuth();
+  const { isSystemAdmin } = useUserRoles();
   const {
     isSidebarOpen,
     isSidebarCollapsed,
@@ -76,6 +85,11 @@ export function Sidebar() {
     closeSidebar,
     toggleCollapse,
   } = useLayout();
+
+  // システム管理者以外はrequiresSystemAdmin: trueのアイテムを除外
+  const visibleNavItems = navItems.filter(
+    (item) => !item.requiresSystemAdmin || isSystemAdmin,
+  );
 
   const handleSignOut = async () => {
     if (window.confirm("ログアウトしますか？")) {
@@ -224,7 +238,7 @@ export function Sidebar() {
               gap: "1",
             })}
           >
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = currentPath === item.href;
               return (
                 <li key={item.href}>

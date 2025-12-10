@@ -179,6 +179,7 @@ def authenticate_pos_employee(
         "session_id": session_id,
         "employee_number": employee_number,
         "display_name": employee["display_name"],
+        "role": employee.get("role", "staff"),
         "event_id": employee.get("event_id"),
         "publisher_id": employee.get("publisher_id"),
         "circles": circles,
@@ -500,3 +501,172 @@ def record_pos_sale(
         result["discount_amount"] = coupon_info["discount_amount"]
 
     return result
+
+
+# ==========================================
+# 販売データ取得
+# ==========================================
+
+
+def get_sale_by_id(sale_id: str) -> Optional[dict]:
+    """販売IDで販売データを取得"""
+    response = sales_table.scan(
+        FilterExpression="sale_id = :sid",
+        ExpressionAttributeValues={":sid": sale_id},
+    )
+
+    items = response.get("Items", [])
+    if not items:
+        return None
+
+    return dynamo_to_dict(items[0])
+
+
+def get_employee_role(session_id: str) -> Optional[str]:
+    """セッションIDから従業員のロールを取得"""
+    session = verify_pos_session(session_id)
+    if not session:
+        return None
+
+    employee_number = session.get("employee_number")
+    if not employee_number:
+        return None
+
+    response = pos_employees_table.get_item(Key={"employee_number": employee_number})
+    if "Item" not in response:
+        return None
+
+    employee = response["Item"]
+    return employee.get("role", "staff")
+
+
+# ==========================================
+# 返金処理
+# ==========================================
+
+
+REFUNDS_TABLE = os.environ.get("REFUNDS_TABLE", f"{ENVIRONMENT}-mizpos-refunds")
+refunds_table = dynamodb.Table(REFUNDS_TABLE)
+
+
+def process_refund(
+    session_id: str,
+    original_sale_id: str,
+    items: list[dict],
+    refund_amount: int,
+    reason: Optional[str] = None,
+    terminal_id: Optional[str] = None,
+) -> dict:
+    """返金を処理する
+
+    Args:
+        session_id: POSセッションID
+        original_sale_id: 元の販売ID（レシート番号）
+        items: 返金アイテムリスト
+        refund_amount: 返金額
+        reason: 返金理由（オプション）
+        terminal_id: 端末ID（オプション）
+
+    Returns:
+        返金処理結果
+
+    Raises:
+        ValueError: セッション無効、権限不足、元販売が見つからない場合
+    """
+    # セッション検証
+    session = verify_pos_session(session_id)
+    if not session:
+        raise ValueError("Invalid or expired session")
+
+    # 権限チェック（職長のみ返金可能）
+    employee_role = get_employee_role(session_id)
+    if employee_role != "manager":
+        raise ValueError("返金処理には職長権限が必要です")
+
+    # 元の販売データを取得
+    original_sale = get_sale_by_id(original_sale_id)
+    if not original_sale:
+        raise ValueError(f"販売データが見つかりません: {original_sale_id}")
+
+    # 既に返金済みかチェック
+    if original_sale.get("status") == "refunded":
+        raise ValueError("この販売は既に返金済みです")
+
+    # 返金レコード作成
+    refund_id = str(uuid.uuid4())
+    now = int(datetime.now(timezone.utc).timestamp())
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    refund_items = []
+    for item in items:
+        product_id = item["product_id"]
+        quantity = item["quantity"]
+        unit_price = item["unit_price"]
+
+        # 在庫を戻す
+        try:
+            stock_table.update_item(
+                Key={"product_id": product_id},
+                UpdateExpression="SET stock = stock + :qty, updated_at = :updated",
+                ExpressionAttributeValues={
+                    ":qty": quantity,
+                    ":updated": now_iso,
+                },
+            )
+        except ClientError:
+            pass  # 在庫更新に失敗しても返金は続行
+
+        refund_item_data = {
+            "product_id": product_id,
+            "quantity": quantity,
+            "unit_price": Decimal(str(unit_price)),
+            "subtotal": Decimal(str(unit_price * quantity)),
+        }
+
+        if item.get("product_name"):
+            refund_item_data["product_name"] = item["product_name"]
+
+        refund_items.append(refund_item_data)
+
+    refund_record = {
+        "refund_id": refund_id,
+        "timestamp": now,
+        "original_sale_id": original_sale_id,
+        "items": refund_items,
+        "refund_amount": Decimal(str(refund_amount)),
+        "reason": reason or "",
+        "employee_number": session["employee_number"],
+        "terminal_id": terminal_id or session.get("terminal_id"),
+        "status": "completed",
+        "created_at": now_iso,
+    }
+
+    if original_sale.get("event_id"):
+        refund_record["event_id"] = original_sale["event_id"]
+
+    # 返金レコードを保存
+    refunds_table.put_item(Item=refund_record)
+
+    # 元の販売を返金済みにマーク
+    sales_table.update_item(
+        Key={
+            "sale_id": original_sale_id,
+            "timestamp": original_sale["timestamp"],
+        },
+        UpdateExpression="SET #status = :status, refund_id = :refund_id, refunded_at = :refunded_at",
+        ExpressionAttributeNames={"#status": "status"},
+        ExpressionAttributeValues={
+            ":status": "refunded",
+            ":refund_id": refund_id,
+            ":refunded_at": now_iso,
+        },
+    )
+
+    return {
+        "refund_id": refund_id,
+        "original_sale_id": original_sale_id,
+        "refund_amount": refund_amount,
+        "items_count": len(refund_items),
+        "status": "completed",
+        "timestamp": now,
+    }

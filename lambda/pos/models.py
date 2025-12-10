@@ -101,6 +101,29 @@ class ApplyCouponRequest(BaseModel):
 
 
 # ==========================================
+# 返金
+# ==========================================
+
+
+class RefundItem(BaseModel):
+    """返金アイテム"""
+
+    product_id: str = Field(..., description="商品ID")
+    quantity: int = Field(..., ge=1, description="返金数量")
+    unit_price: int = Field(..., ge=0, description="単価")
+    product_name: Optional[str] = Field(None, description="商品名")
+
+
+class PosRefundRequest(BaseModel):
+    """返金リクエスト"""
+
+    original_sale_id: str = Field(..., description="元の販売ID（レシート番号）")
+    items: list[RefundItem] = Field(..., min_length=1, description="返金アイテム")
+    refund_amount: int = Field(..., ge=0, description="返金額")
+    reason: Optional[str] = Field(None, max_length=500, description="返金理由")
+
+
+# ==========================================
 # オフライン同期
 # ==========================================
 

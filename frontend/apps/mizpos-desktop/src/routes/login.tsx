@@ -2,7 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
 import { Button, Card } from "../components/ui";
+import { getTodayOpeningReport } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
+import { useSettingsStore } from "../stores/settings";
 
 // ページレイアウトスタイル
 const pageStyles = {
@@ -135,19 +137,79 @@ function LoginPage() {
   const [staffId, setStaffId] = useState("");
   const [password, setPassword] = useState("");
   const { login, isLoading, error, session } = useAuthStore();
+  const { settings } = useSettingsStore();
   const navigate = useNavigate();
   const staffIdRef = useRef<HTMLInputElement>(null);
+  const [openingInfo, setOpeningInfo] = useState<{
+    isOpened: boolean;
+    staffName?: string;
+    openedAt?: Date;
+  } | null>(null);
+
+  // 開局状態を確認
+  useEffect(() => {
+    getTodayOpeningReport().then((report) => {
+      if (report) {
+        setOpeningInfo({
+          isOpened: true,
+          staffName: report.staffName,
+          openedAt: new Date(report.openedAt),
+        });
+      } else {
+        setOpeningInfo({ isOpened: false });
+      }
+    });
+  }, []);
 
   useEffect(() => {
-    if (session) {
-      // イベント紐づけ済みなら開局画面へ、なければイベント選択画面へ
-      if (session.eventId) {
-        navigate({ to: "/opening" });
-      } else {
-        navigate({ to: "/select-event" });
+    const checkAndNavigate = async () => {
+      if (session) {
+        // サークル選択が必要かどうかを確認
+        // 紐付けがない（0個）または複数ある場合で、まだ選択されていない場合
+        const needsCircleSelection =
+          (!session.circles ||
+            session.circles.length === 0 ||
+            session.circles.length > 1) &&
+          !settings.circleName;
+
+        if (needsCircleSelection) {
+          navigate({ to: "/select-circle" });
+          return;
+        }
+
+        // サークルが1つだけの場合は自動設定
+        if (session.circles?.length === 1 && !settings.circleName) {
+          await useSettingsStore
+            .getState()
+            .updateSettings({ circleName: session.circles[0].name });
+        }
+
+        // 開局済みかどうかを確認
+        const openingReport = await getTodayOpeningReport();
+
+        if (openingReport) {
+          // 開局済みの場合：開局時のイベントIDをセッションにセットしてPOSへ
+          if (session.eventId !== openingReport.eventId) {
+            await useAuthStore
+              .getState()
+              .setEventId(openingReport.eventId || "");
+          }
+          navigate({ to: "/pos" });
+        } else {
+          // 未開局の場合
+          if (session.eventId) {
+            // イベント紐づけ済みなら開局画面へ
+            navigate({ to: "/opening" });
+          } else {
+            // イベント紐づけなしならイベント選択画面へ
+            navigate({ to: "/select-event" });
+          }
+        }
       }
-    }
-  }, [session, navigate]);
+    };
+
+    checkAndNavigate();
+  }, [session, settings.circleName, navigate]);
 
   useEffect(() => {
     staffIdRef.current?.focus();
@@ -184,6 +246,34 @@ function LoginPage() {
           <h1 className={pageStyles.logo}>mizPOS</h1>
           <p className={pageStyles.subtitle}>スタッフログイン</p>
         </div>
+
+        {/* 開局状態表示 */}
+        {openingInfo && (
+          <div
+            className={css({
+              padding: "12px 16px",
+              marginBottom: "24px",
+              borderRadius: "10px",
+              fontSize: "14px",
+              background: openingInfo.isOpened ? "#14532d" : "#78350f",
+              color: openingInfo.isOpened ? "#86efac" : "#fde68a",
+              textAlign: "center",
+            })}
+          >
+            {openingInfo.isOpened ? (
+              <>
+                開局済み（{openingInfo.staffName}・
+                {openingInfo.openedAt?.toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                ）
+              </>
+            ) : (
+              "未開局"
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className={formStyles.field}>
