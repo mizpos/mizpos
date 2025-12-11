@@ -35,7 +35,6 @@ export function useUserRoles(): UseUserRolesResult {
       const { accounts } = await getAuthenticatedClients();
       // /me/roles を使用して現在のユーザーのロールを取得
       // これにより、CognitoのユーザーIDではなくmizposの内部ユーザーIDでロールを検索できる
-      // @ts-expect-error /me/roles はOpenAPI specに定義されていないが、バックエンドで実装済み
       const { data, error } = await accounts.GET("/me/roles", {});
       if (error) throw error;
       return data as unknown as { roles: Role[]; user_id: string };
