@@ -256,18 +256,21 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
           ? `TRAINING-${transaction.id}`
           : transaction.id,
         // カード詳細（クレジット決済時）
-        card_details: transaction.cardDetails ? {
-          brand: transaction.cardDetails.brand,
-          last4: transaction.cardDetails.last4,
-          exp_month: transaction.cardDetails.expMonth,
-          exp_year: transaction.cardDetails.expYear,
-          cardholder_name: transaction.cardDetails.cardholderName,
-          funding: transaction.cardDetails.funding,
-          terminal_serial_number: transaction.cardDetails.terminalSerialNumber,
-          transaction_type: transaction.cardDetails.transactionType,
-          payment_type: transaction.cardDetails.paymentType,
-          transaction_at: transaction.cardDetails.transactionAt,
-        } : undefined,
+        card_details: transaction.cardDetails
+          ? {
+              brand: transaction.cardDetails.brand,
+              last4: transaction.cardDetails.last4,
+              exp_month: transaction.cardDetails.expMonth,
+              exp_year: transaction.cardDetails.expYear,
+              cardholder_name: transaction.cardDetails.cardholderName,
+              funding: transaction.cardDetails.funding,
+              terminal_serial_number:
+                transaction.cardDetails.terminalSerialNumber,
+              transaction_type: transaction.cardDetails.transactionType,
+              payment_type: transaction.cardDetails.paymentType,
+              transaction_at: transaction.cardDetails.transactionAt,
+            }
+          : undefined,
         payment_intent_id: transaction.paymentIntentId,
       };
 

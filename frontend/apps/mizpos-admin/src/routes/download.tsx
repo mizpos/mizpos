@@ -429,7 +429,8 @@ function DownloadPage() {
                   marginBottom: "2",
                 })}
               >
-                Stripe Terminal対応のカードリーダーを使用して、クレジットカード決済を行うためのAndroidアプリです。
+                Stripe
+                Terminal対応のカードリーダーを使用して、クレジットカード決済を行うためのAndroidアプリです。
                 POSレジアプリとBluetoothでペアリングして使用します。
               </p>
             </div>
