@@ -806,7 +806,7 @@ export function CheckoutModal({
       try {
         const payments: Payment[] = [
           {
-            method: "oya_cashless",
+            method: "stripe_terminal",
             amount: total,
           },
         ];
@@ -849,7 +849,7 @@ export function CheckoutModal({
             const saleBody: Record<string, unknown> = {
               items: saleItems,
               total_amount: total,
-              payment_method: "oya_cashless",
+              payment_method: "stripe_terminal",
               event_id: session.eventId,
               terminal_id: settings.terminalId,
               payment_intent_id: paymentIntentId,

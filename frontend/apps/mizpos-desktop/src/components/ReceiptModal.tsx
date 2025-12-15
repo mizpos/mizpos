@@ -22,6 +22,8 @@ function getPaymentMethodDisplayName(
       return "現金";
     case "oya_cashless":
       return "大家キャッシュレス";
+    case "stripe_terminal":
+      return "クレジット";
     case "voucher_department": {
       const config = voucherConfigs?.find(
         (c) => c.type === "voucher_department",

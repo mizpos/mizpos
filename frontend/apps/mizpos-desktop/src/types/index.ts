@@ -58,6 +58,7 @@ export interface CartItem {
 export type PaymentMethod =
   | "cash"
   | "oya_cashless"
+  | "stripe_terminal" // Stripe Terminal（クレジットカード）
   | "voucher_department" // 百貨店商品券
   | "voucher_event"; // イベント主催者発行商品券
 

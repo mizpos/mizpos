@@ -289,7 +289,7 @@ export async function getTodaySalesTotal(): Promise<{
     for (const payment of tx.payments) {
       if (payment.method === "cash") {
         cashAmount += payment.amount;
-      } else if (payment.method === "oya_cashless") {
+      } else if (payment.method === "oya_cashless" || payment.method === "stripe_terminal") {
         cashlessAmount += payment.amount;
       } else if (
         payment.method === "voucher_department" ||
