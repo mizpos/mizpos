@@ -261,7 +261,9 @@ class TerminalRegisterReaderRequest(BaseModel):
     registration_code: str = Field(
         ..., min_length=1, description="リーダーの登録コード"
     )
-    label: str = Field(..., min_length=1, max_length=100, description="リーダーの識別名")
+    label: str = Field(
+        ..., min_length=1, max_length=100, description="リーダーの識別名"
+    )
     location_id: str = Field(..., min_length=1, description="StripeロケーションID")
 
 
@@ -273,7 +275,9 @@ class TerminalPaymentIntentRequest(BaseModel):
     description: str | None = Field(default=None, max_length=500, description="説明")
     metadata: dict | None = Field(default=None, description="メタデータ")
     # POS連携用メタデータ
-    sale_id: str | None = Field(default=None, description="販売ID（mizpos-desktop連携用）")
+    sale_id: str | None = Field(
+        default=None, description="販売ID（mizpos-desktop連携用）"
+    )
     pnr: str | None = Field(default=None, description="連携番号（ペアリング用）")
 
 
@@ -286,19 +290,23 @@ class TerminalCaptureRequest(BaseModel):
 class TerminalRefundRequest(BaseModel):
     """Terminal返金リクエスト"""
 
-    payment_intent_id: str = Field(..., min_length=1, description="返金対象PaymentIntentID")
-    amount: int | None = Field(default=None, gt=0, description="返金額（Noneで全額）")
-    reason: str | None = Field(
-        default=None, max_length=500, description="返金理由"
+    payment_intent_id: str = Field(
+        ..., min_length=1, description="返金対象PaymentIntentID"
     )
+    amount: int | None = Field(default=None, gt=0, description="返金額（Noneで全額）")
+    reason: str | None = Field(default=None, max_length=500, description="返金理由")
 
 
 class TerminalLocationRequest(BaseModel):
     """ロケーション作成リクエスト"""
 
     display_name: str = Field(..., min_length=1, max_length=100, description="表示名")
-    address_line1: str = Field(..., min_length=1, max_length=200, description="住所1行目")
+    address_line1: str = Field(
+        ..., min_length=1, max_length=200, description="住所1行目"
+    )
     city: str = Field(..., min_length=1, max_length=100, description="市区町村")
     state: str = Field(..., min_length=1, max_length=100, description="都道府県")
-    country: str = Field(default="JP", min_length=2, max_length=2, description="国コード")
+    country: str = Field(
+        default="JP", min_length=2, max_length=2, description="国コード"
+    )
     postal_code: str = Field(..., min_length=1, max_length=20, description="郵便番号")

@@ -30,7 +30,6 @@ from models import (
     CreateShippingOptionRequest,
     SaleStatus,
     StripeTerminalConfigRequest,
-    TerminalCaptureRequest,
     TerminalConnectionTokenRequest,
     TerminalLocationRequest,
     TerminalPaymentIntentRequest,
@@ -1238,7 +1237,9 @@ async def list_locations():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/terminal/locations", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/terminal/locations", response_model=dict, status_code=status.HTTP_201_CREATED
+)
 async def create_location(
     request: TerminalLocationRequest,
     current_user: dict = Depends(get_current_user),
@@ -1266,7 +1267,9 @@ async def create_location(
 
 @router.get("/terminal/readers", response_model=dict)
 async def list_readers(
-    location_id: str | None = Query(default=None, description="ロケーションIDでフィルタ"),
+    location_id: str | None = Query(
+        default=None, description="ロケーションIDでフィルタ"
+    ),
 ):
     """
     登録済みのリーダー一覧を取得
@@ -1284,7 +1287,9 @@ async def list_readers(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/terminal/readers", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/terminal/readers", response_model=dict, status_code=status.HTTP_201_CREATED
+)
 async def register_reader(
     request: TerminalRegisterReaderRequest,
     current_user: dict = Depends(get_current_user),
@@ -1330,7 +1335,11 @@ async def remove_reader(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/terminal/payment-intents", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/terminal/payment-intents",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_terminal_pi(request: TerminalPaymentIntentRequest):
     """
     Terminal用PaymentIntentを作成
@@ -1361,7 +1370,9 @@ async def create_terminal_pi(request: TerminalPaymentIntentRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/terminal/payment-intents/{payment_intent_id}/capture", response_model=dict)
+@router.post(
+    "/terminal/payment-intents/{payment_intent_id}/capture", response_model=dict
+)
 async def capture_terminal_pi(payment_intent_id: str):
     """
     Terminal PaymentIntentをキャプチャ（確定）
@@ -1379,7 +1390,9 @@ async def capture_terminal_pi(payment_intent_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/terminal/payment-intents/{payment_intent_id}/cancel", response_model=dict)
+@router.post(
+    "/terminal/payment-intents/{payment_intent_id}/cancel", response_model=dict
+)
 async def cancel_terminal_pi(payment_intent_id: str):
     """
     Terminal PaymentIntentをキャンセル
@@ -1416,7 +1429,9 @@ async def get_terminal_pi(payment_intent_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/terminal/refunds", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/terminal/refunds", response_model=dict, status_code=status.HTTP_201_CREATED
+)
 async def create_refund(request: TerminalRefundRequest):
     """
     Terminal決済の返金を処理
