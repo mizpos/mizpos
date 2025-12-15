@@ -22,6 +22,7 @@ import {
   updatePaymentRequestResult,
   type PairingInfo as ApiPairingInfo,
   type PaymentRequest as ApiPaymentRequest,
+  type CardDetails,
 } from '@/services/api';
 
 // ==========================================
@@ -83,7 +84,7 @@ interface PairingContextValue {
   // 決済リクエスト
   currentPaymentRequest: PaymentRequest | null;
   paymentHistory: PaymentResult[];
-  completePayment: (paymentIntentId: string) => Promise<void>;
+  completePayment: (paymentIntentId: string, cardDetails?: CardDetails) => Promise<void>;
   cancelPayment: () => Promise<void>;
 
   // エラー
@@ -286,13 +287,14 @@ export function PairingProvider({ children }: PairingProviderProps) {
   /**
    * 決済を完了
    */
-  const completePayment = useCallback(async (paymentIntentId: string) => {
+  const completePayment = useCallback(async (paymentIntentId: string, cardDetails?: CardDetails) => {
     if (!currentPaymentRequest) return;
 
     try {
       await updatePaymentRequestResult(currentPaymentRequest.id, {
         status: 'completed',
         payment_intent_id: paymentIntentId,
+        card_details: cardDetails,
       });
 
       const result: PaymentResult = {

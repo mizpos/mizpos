@@ -26,6 +26,7 @@ const defaultSettings: AppSettings = {
   circleName: "",
   venueAddress: "",
   terminalId: "", // Keychain から同期されるので空にする
+  deviceName: "mizPOS Desktop", // Payment Terminal連携用デバイス名
   taxRate: 10,
   printer: undefined,
   isTrainingMode: false,

@@ -55,9 +55,29 @@ export interface PaymentRequest {
 }
 
 /**
+ * カード詳細情報（レシート表示用）
+ */
+export interface CardDetails {
+  brand?: string;  // カードブランド（visa, mastercard等）
+  last4?: string;  // カード番号下4桁
+  exp_month?: number;  // 有効期限（月）
+  exp_year?: number;  // 有効期限（年）
+  cardholder_name?: string;  // カード名義人
+  funding?: string;  // カード種別（credit, debit等）
+  terminal_serial_number?: string;  // 端末シリアル番号
+  transaction_type?: string;  // 取引種別（sale/refund）
+  payment_type?: string;  // 支払区分
+}
+
+/**
  * 決済結果更新リクエスト
  */
-export type UpdatePaymentRequestResultParams = SalesComponents['schemas']['UpdatePaymentRequestResultRequest'];
+export interface UpdatePaymentRequestResultParams {
+  status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'failed';
+  payment_intent_id?: string;
+  error_message?: string;
+  card_details?: CardDetails;
+}
 
 // ==========================================
 // Terminal Pairing API

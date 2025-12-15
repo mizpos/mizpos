@@ -8,6 +8,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { PaymentIntent } from '@stripe/stripe-terminal-react-native';
+import type { CardDetails } from '@/services/api';
 
 /**
  * 安全にナビゲーションで戻る
@@ -27,6 +28,37 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTerminal, usePairing } from '@/providers';
 
 type PaymentStep = 'ready' | 'creating' | 'collecting' | 'processing' | 'complete' | 'cancelled' | 'error';
+
+/**
+ * PaymentIntentからカード詳細を抽出
+ */
+function extractCardDetails(
+  paymentIntent: PaymentIntent.Type | null | undefined,
+  terminalSerialNumber?: string
+): CardDetails | undefined {
+  if (!paymentIntent) return undefined;
+
+  // chargesからカード情報を取得
+  const charges = paymentIntent.charges;
+  if (!charges || charges.length === 0) return undefined;
+
+  const charge = charges[0];
+  const cardPresent = charge?.paymentMethodDetails?.cardPresent;
+
+  if (!cardPresent) return undefined;
+
+  return {
+    brand: cardPresent.brand || undefined,
+    last4: cardPresent.last4 || undefined,
+    exp_month: cardPresent.expMonth || undefined,
+    exp_year: cardPresent.expYear || undefined,
+    cardholder_name: cardPresent.cardholderName || undefined,
+    funding: cardPresent.funding || undefined,
+    terminal_serial_number: terminalSerialNumber,
+    transaction_type: 'sale',
+    payment_type: '一括',
+  };
+}
 
 export default function PaymentScreen() {
   const {
@@ -96,9 +128,17 @@ export default function PaymentScreen() {
 
       const finalPaymentIntentId = processResult.paymentIntent?.id || createResult.paymentIntent.id;
 
+      // カード詳細を抽出（端末シリアル番号も含める）
+      const cardDetails = extractCardDetails(
+        processResult.paymentIntent,
+        connectedReader?.serialNumber
+      );
+
+      console.log('[Payment] Card details extracted:', cardDetails);
+
       // 決済完了
       setStep('complete');
-      completePayment(finalPaymentIntentId);
+      completePayment(finalPaymentIntentId, cardDetails);
 
       console.log('[Payment] Payment completed:', finalPaymentIntentId);
 

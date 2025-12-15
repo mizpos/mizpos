@@ -1632,11 +1632,17 @@ async def update_payment_request_result_endpoint(
     決済完了、失敗、キャンセルのいずれかを報告
     """
     try:
+        # card_detailsをdictに変換
+        card_details_dict = None
+        if request.card_details:
+            card_details_dict = request.card_details.model_dump(exclude_none=True)
+
         result = update_payment_request_result(
             request_id=request_id,
             status=request.status.value,
             payment_intent_id=request.payment_intent_id,
             error_message=request.error_message,
+            card_details=card_details_dict,
         )
         if not result:
             raise HTTPException(status_code=404, detail="Payment request not found")

@@ -16,6 +16,7 @@ import {
 } from "../lib/printer";
 import { getVersionInfo } from "../lib/version";
 import { useAuthStore } from "../stores/auth";
+import { usePairingStore } from "../stores/pairing";
 import { useSettingsStore } from "../stores/settings";
 import type { PrinterConfig } from "../types";
 
@@ -154,12 +155,14 @@ const printerStyles = {
 function SettingsPage() {
   const { session, clearEventId } = useAuthStore();
   const { settings, updateSettings, updatePrinter } = useSettingsStore();
+  const { status: pairingStatus, pairingInfo, unregisterPairing } = usePairingStore();
   const navigate = useNavigate();
 
   const [circleName, setCircleName] = useState(settings.circleName || "");
   const [venueAddress, setVenueAddress] = useState(settings.venueAddress || "");
   const [terminalId, setTerminalId] = useState(settings.terminalId);
   const [taxRate, setTaxRate] = useState(String(settings.taxRate));
+  const [deviceName, setDeviceName] = useState(settings.deviceName || "mizPOS Desktop");
 
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [usbDevices, setUsbDevices] = useState<UsbDevice[]>([]);
@@ -228,6 +231,7 @@ function SettingsPage() {
       circleName,
       venueAddress,
       terminalId,
+      deviceName,
       taxRate: Number.parseInt(taxRate, 10) || 10,
     });
     await updatePrinter(selectedPrinter);
@@ -236,6 +240,7 @@ function SettingsPage() {
     circleName,
     venueAddress,
     terminalId,
+    deviceName,
     taxRate,
     selectedPrinter,
     updateSettings,
@@ -522,6 +527,120 @@ function SettingsPage() {
                   min={0}
                   max={100}
                 />
+              </div>
+            </div>
+          </Card>
+
+          {/* Payment Terminal設定 */}
+          <Card padding="lg">
+            <h2 className={sectionStyles.title}>Payment Terminal 連携</h2>
+            <div className={css({ marginTop: "20px" })}>
+              <div className={sectionStyles.field}>
+                <Input
+                  label="デバイス名"
+                  value={deviceName}
+                  onChange={(e) => setDeviceName(e.target.value)}
+                  placeholder="例: mizPOS Desktop"
+                />
+                <div
+                  className={css({
+                    fontSize: "12px",
+                    color: "#64748b",
+                    marginTop: "6px",
+                  })}
+                >
+                  Payment Terminal に表示される名前です
+                </div>
+              </div>
+
+              {/* ペアリング状態表示 */}
+              <div className={sectionStyles.fieldLast}>
+                <span
+                  className={css({
+                    display: "block",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#94a3b8",
+                    marginBottom: "8px",
+                  })}
+                >
+                  接続状態
+                </span>
+                <div
+                  className={css({
+                    padding: "12px 14px",
+                    borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background:
+                      pairingStatus === "connected"
+                        ? "#14532d"
+                        : pairingStatus === "waiting"
+                          ? "#1e40af"
+                          : "#1e293b",
+                    border: "1px solid",
+                    borderColor:
+                      pairingStatus === "connected"
+                        ? "#22c55e"
+                        : pairingStatus === "waiting"
+                          ? "#3b82f6"
+                          : "#334155",
+                  })}
+                >
+                  <div>
+                    <div
+                      className={css({
+                        fontSize: "15px",
+                        fontWeight: 500,
+                        color:
+                          pairingStatus === "connected"
+                            ? "#86efac"
+                            : pairingStatus === "waiting"
+                              ? "#93c5fd"
+                              : "#94a3b8",
+                      })}
+                    >
+                      {pairingStatus === "connected"
+                        ? "接続済み"
+                        : pairingStatus === "waiting"
+                          ? "ターミナル接続待ち"
+                          : pairingStatus === "registering"
+                            ? "登録中..."
+                            : "未接続"}
+                    </div>
+                    {pairingInfo && (
+                      <div
+                        className={css({
+                          fontSize: "12px",
+                          color: "#64748b",
+                          marginTop: "2px",
+                        })}
+                      >
+                        PIN: {pairingInfo.pinCode}
+                      </div>
+                    )}
+                  </div>
+                  {(pairingStatus === "connected" ||
+                    pairingStatus === "waiting") && (
+                    <Button
+                      variant="outlineDanger"
+                      size="sm"
+                      onClick={() => unregisterPairing()}
+                    >
+                      接続解除
+                    </Button>
+                  )}
+                </div>
+                <div
+                  className={css({
+                    fontSize: "12px",
+                    color: "#64748b",
+                    marginTop: "8px",
+                  })}
+                >
+                  ペアリングはPOS画面の決済モーダルから行えます
+                </div>
               </div>
             </div>
           </Card>

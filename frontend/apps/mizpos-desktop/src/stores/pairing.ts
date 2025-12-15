@@ -34,6 +34,19 @@ export type PaymentRequestStatus =
   | "cancelled"
   | "failed";
 
+/** カード詳細情報（レシート表示用） */
+export interface CardDetails {
+  brand?: string;  // カードブランド（visa, mastercard等）
+  last4?: string;  // カード番号下4桁
+  expMonth?: number;  // 有効期限（月）
+  expYear?: number;  // 有効期限（年）
+  cardholderName?: string;  // カード名義人
+  funding?: string;  // カード種別（credit, debit等）
+  terminalSerialNumber?: string;  // 端末シリアル番号
+  transactionType?: string;  // 取引種別（sale/refund）
+  paymentType?: string;  // 支払区分
+}
+
 /** 決済リクエスト */
 export interface PaymentRequest {
   requestId: string;
@@ -50,6 +63,7 @@ export interface PaymentRequest {
   status: PaymentRequestStatus;
   paymentIntentId?: string;
   errorMessage?: string;
+  cardDetails?: CardDetails;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -262,11 +276,23 @@ export const usePairingStore = create<PairingState>((set, get) => {
             status: PaymentRequestStatus;
             payment_intent_id?: string;
             error_message?: string;
+            card_details?: {
+              brand?: string;
+              last4?: string;
+              exp_month?: number;
+              exp_year?: number;
+              cardholder_name?: string;
+              funding?: string;
+              terminal_serial_number?: string;
+              transaction_type?: string;
+              payment_type?: string;
+            };
             created_at: string;
             updated_at: string;
           };
         };
 
+        const cd = apiResponse.payment_request.card_details;
         const paymentRequest: PaymentRequest = {
           requestId: apiResponse.payment_request.request_id,
           pinCode: apiResponse.payment_request.pin_code,
@@ -278,6 +304,17 @@ export const usePairingStore = create<PairingState>((set, get) => {
           status: apiResponse.payment_request.status,
           paymentIntentId: apiResponse.payment_request.payment_intent_id,
           errorMessage: apiResponse.payment_request.error_message,
+          cardDetails: cd ? {
+            brand: cd.brand,
+            last4: cd.last4,
+            expMonth: cd.exp_month,
+            expYear: cd.exp_year,
+            cardholderName: cd.cardholder_name,
+            funding: cd.funding,
+            terminalSerialNumber: cd.terminal_serial_number,
+            transactionType: cd.transaction_type,
+            paymentType: cd.payment_type,
+          } : undefined,
           createdAt: new Date(apiResponse.payment_request.created_at),
           updatedAt: new Date(apiResponse.payment_request.updated_at),
         };
@@ -362,11 +399,23 @@ export const usePairingStore = create<PairingState>((set, get) => {
             status: PaymentRequestStatus;
             payment_intent_id?: string;
             error_message?: string;
+            card_details?: {
+              brand?: string;
+              last4?: string;
+              exp_month?: number;
+              exp_year?: number;
+              cardholder_name?: string;
+              funding?: string;
+              terminal_serial_number?: string;
+              transaction_type?: string;
+              payment_type?: string;
+            };
             created_at: string;
             updated_at: string;
           };
         };
 
+        const cd = apiResponse.payment_request.card_details;
         const updatedRequest: PaymentRequest = {
           requestId: apiResponse.payment_request.request_id,
           pinCode: apiResponse.payment_request.pin_code,
@@ -378,6 +427,17 @@ export const usePairingStore = create<PairingState>((set, get) => {
           status: apiResponse.payment_request.status,
           paymentIntentId: apiResponse.payment_request.payment_intent_id,
           errorMessage: apiResponse.payment_request.error_message,
+          cardDetails: cd ? {
+            brand: cd.brand,
+            last4: cd.last4,
+            expMonth: cd.exp_month,
+            expYear: cd.exp_year,
+            cardholderName: cd.cardholder_name,
+            funding: cd.funding,
+            terminalSerialNumber: cd.terminal_serial_number,
+            transactionType: cd.transaction_type,
+            paymentType: cd.payment_type,
+          } : undefined,
           createdAt: new Date(apiResponse.payment_request.created_at),
           updatedAt: new Date(apiResponse.payment_request.updated_at),
         };

@@ -1679,6 +1679,7 @@ def update_payment_request_result(
     status: str,
     payment_intent_id: str | None = None,
     error_message: str | None = None,
+    card_details: dict | None = None,
 ) -> dict | None:
     """
     決済リクエストの結果を更新（ターミナル側から呼び出し）
@@ -1688,6 +1689,7 @@ def update_payment_request_result(
         status: ステータス（completed, failed, cancelled）
         payment_intent_id: Stripe PaymentIntent ID
         error_message: エラーメッセージ
+        card_details: カード詳細情報（レシート表示用）
 
     Returns:
         更新された決済リクエスト
@@ -1706,6 +1708,10 @@ def update_payment_request_result(
     if error_message:
         update_parts.append("error_message = :err")
         expression_values[":err"] = error_message
+
+    if card_details:
+        update_parts.append("card_details = :cd")
+        expression_values[":cd"] = card_details
 
     try:
         response = table.update_item(
