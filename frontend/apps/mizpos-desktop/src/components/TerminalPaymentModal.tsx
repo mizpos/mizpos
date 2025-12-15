@@ -127,14 +127,38 @@ export function TerminalPaymentModal({
   const [localError, setLocalError] = useState<string | null>(null);
   const hasStartedRequest = useRef(false);
 
+  // propsとストアアクションをrefで保持して依存関係の問題を回避
+  const propsRef = useRef({ amount, items, saleId, description });
+  propsRef.current = { amount, items, saleId, description };
+
+  const actionsRef = useRef({
+    createPaymentRequest,
+    startPolling,
+    stopPolling,
+    clearError,
+  });
+  actionsRef.current = {
+    createPaymentRequest,
+    startPolling,
+    stopPolling,
+    clearError,
+  };
+
   const handleCreateRequest = useCallback(async () => {
     setPaymentState("creating");
     setLocalError(null);
-    clearError();
+    actionsRef.current.clearError();
+
+    const { amount, items, saleId, description } = propsRef.current;
 
     try {
-      await createPaymentRequest(amount, items, saleId, description);
-      startPolling();
+      await actionsRef.current.createPaymentRequest(
+        amount,
+        items,
+        saleId,
+        description,
+      );
+      actionsRef.current.startPolling();
     } catch (err) {
       setPaymentState("error");
       setLocalError(
@@ -143,15 +167,7 @@ export function TerminalPaymentModal({
           : "決済リクエストの作成に失敗しました",
       );
     }
-  }, [
-    amount,
-    items,
-    saleId,
-    description,
-    createPaymentRequest,
-    startPolling,
-    clearError,
-  ]);
+  }, []);
 
   // モーダルを開いた時に決済リクエストを作成
   useEffect(() => {
@@ -165,9 +181,9 @@ export function TerminalPaymentModal({
     }
 
     return () => {
-      stopPolling();
+      actionsRef.current.stopPolling();
     };
-  }, [open, handleCreateRequest, stopPolling]);
+  }, [open, handleCreateRequest]);
 
   // 決済リクエストの状態を監視
   useEffect(() => {
