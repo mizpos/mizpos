@@ -2,6 +2,8 @@ import {
   IconBrandAndroid,
   IconBrandDebian,
   IconBrandWindows,
+  IconCreditCard,
+  IconDeviceMobile,
   IconDownload,
   IconInfoCircle,
 } from "@tabler/icons-react";
@@ -22,12 +24,15 @@ interface DownloadFile {
   recommended?: boolean;
 }
 
+type AppType = "desktop" | "payment-terminal";
+
 interface DownloadItem {
   platform: string;
   icon: React.ReactNode;
   description: string;
   files: DownloadFile[];
   instructions: string[];
+  appType?: AppType;
 }
 
 function DownloadPage() {
@@ -106,13 +111,42 @@ function DownloadPage() {
     },
   ];
 
+  const paymentTerminalDownloads: DownloadItem[] = [
+    {
+      platform: "Android",
+      icon: <IconCreditCard size={32} />,
+      description: "Android 8.0 以上（Stripe Terminal対応端末）",
+      appType: "payment-terminal",
+      files: [
+        {
+          name: "Payment Terminal APK",
+          filename: "mizpos-payment-terminal-latest.apk",
+          recommended: true,
+        },
+      ],
+      instructions: [
+        "設定で「提供元不明のアプリ」のインストールを許可",
+        "APKファイルをダウンロードしてタップ",
+        "Stripe Terminal対応のカードリーダーをBluetooth接続",
+        "QRコードでPOSレジとペアリング",
+      ],
+    },
+  ];
+
   const getDownloadUrl = (
     filename: string,
     platform: string,
     arch?: "x64" | "arm64",
+    appType?: AppType,
   ): string => {
     const envPath = env;
 
+    // Payment Terminal app
+    if (appType === "payment-terminal") {
+      return `${cdnUrl}/payment-terminal/${envPath}/${filename}`;
+    }
+
+    // Desktop Android app
     if (platform === "Android") {
       return `${cdnUrl}/android/${envPath}/${filename}`;
     }
@@ -220,7 +254,7 @@ function DownloadPage() {
           })}
         >
           {downloads.map((item) => (
-            <Card key={item.platform} padding="lg">
+            <Card key={`desktop-${item.platform}`} padding="lg">
               <div
                 className={css({
                   display: "flex",
@@ -271,6 +305,7 @@ function DownloadPage() {
                       file.filename,
                       item.platform,
                       file.arch,
+                      item.appType,
                     )}
                     download
                     className={css({
@@ -312,6 +347,201 @@ function DownloadPage() {
                           className={css({
                             fontSize: "xs",
                             color: "primary.600",
+                          })}
+                        >
+                          推奨
+                        </span>
+                      )}
+                    </div>
+                    <IconDownload size={18} />
+                  </a>
+                ))}
+              </div>
+
+              {/* Instructions */}
+              <details
+                className={css({
+                  fontSize: "sm",
+                })}
+              >
+                <summary
+                  className={css({
+                    cursor: "pointer",
+                    color: "gray.600",
+                    fontWeight: "medium",
+                    marginBottom: "2",
+                  })}
+                >
+                  インストール手順
+                </summary>
+                <ol
+                  className={css({
+                    paddingLeft: "5",
+                    color: "gray.600",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1",
+                  })}
+                >
+                  {item.instructions.map((instruction) => (
+                    <li key={instruction}>{instruction}</li>
+                  ))}
+                </ol>
+              </details>
+            </Card>
+          ))}
+        </div>
+
+        {/* Payment Terminal Section */}
+        <Card>
+          <div
+            className={css({
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "4",
+            })}
+          >
+            <div
+              className={css({
+                padding: "3",
+                borderRadius: "lg",
+                backgroundColor: "success.50",
+                color: "success.600",
+              })}
+            >
+              <IconDeviceMobile size={24} />
+            </div>
+            <div>
+              <h2
+                className={css({
+                  fontSize: "lg",
+                  fontWeight: "semibold",
+                  color: "gray.900",
+                  marginBottom: "2",
+                })}
+              >
+                決済端末アプリ (Payment Terminal)
+              </h2>
+              <p
+                className={css({
+                  fontSize: "sm",
+                  color: "gray.600",
+                  marginBottom: "2",
+                })}
+              >
+                Stripe Terminal対応のカードリーダーを使用して、クレジットカード決済を行うためのAndroidアプリです。
+                POSレジアプリとBluetoothでペアリングして使用します。
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Payment Terminal Download cards */}
+        <div
+          className={css({
+            display: "grid",
+            gridTemplateColumns: {
+              base: "1fr",
+              md: "repeat(2, 1fr)",
+              lg: "repeat(3, 1fr)",
+            },
+            gap: "6",
+          })}
+        >
+          {paymentTerminalDownloads.map((item) => (
+            <Card key={`payment-terminal-${item.platform}`} padding="lg">
+              <div
+                className={css({
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "3",
+                  marginBottom: "4",
+                })}
+              >
+                <div
+                  className={css({
+                    padding: "3",
+                    borderRadius: "lg",
+                    backgroundColor: "success.100",
+                    color: "success.700",
+                  })}
+                >
+                  {item.icon}
+                </div>
+                <div>
+                  <h3
+                    className={css({
+                      fontSize: "lg",
+                      fontWeight: "semibold",
+                      color: "gray.900",
+                    })}
+                  >
+                    {item.platform}
+                  </h3>
+                  <p className={css({ fontSize: "sm", color: "gray.500" })}>
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Download buttons */}
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2",
+                  marginBottom: "4",
+                })}
+              >
+                {item.files.map((file) => (
+                  <a
+                    key={`${file.filename}-${file.arch || "default"}`}
+                    href={getDownloadUrl(
+                      file.filename,
+                      item.platform,
+                      file.arch,
+                      item.appType,
+                    )}
+                    download
+                    className={css({
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "3",
+                      borderRadius: "lg",
+                      backgroundColor: file.recommended
+                        ? "success.50"
+                        : "gray.50",
+                      border: "1px solid",
+                      borderColor: file.recommended
+                        ? "success.200"
+                        : "gray.200",
+                      color: file.recommended ? "success.700" : "gray.700",
+                      textDecoration: "none",
+                      transition: "all 0.15s ease",
+                      _hover: {
+                        backgroundColor: file.recommended
+                          ? "success.100"
+                          : "gray.100",
+                        transform: "translateY(-1px)",
+                      },
+                    })}
+                  >
+                    <div>
+                      <span
+                        className={css({
+                          fontSize: "sm",
+                          fontWeight: "medium",
+                          display: "block",
+                        })}
+                      >
+                        {file.name}
+                      </span>
+                      {file.recommended && (
+                        <span
+                          className={css({
+                            fontSize: "xs",
+                            color: "success.600",
                           })}
                         >
                           推奨
