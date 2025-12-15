@@ -115,7 +115,8 @@ export function generateQRCodeData(pinCode: string): string {
 
 export const usePairingStore = create<PairingState>((set, get) => {
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
-  let pairingStatusPollingInterval: ReturnType<typeof setInterval> | null = null;
+  let pairingStatusPollingInterval: ReturnType<typeof setInterval> | null =
+    null;
 
   return {
     status: "disconnected",
@@ -240,11 +241,16 @@ export const usePairingStore = create<PairingState>((set, get) => {
           },
         );
 
-        console.log("[Desktop] createPaymentRequest response status:", response?.status);
+        console.log(
+          "[Desktop] createPaymentRequest response status:",
+          response?.status,
+        );
 
         if (error || !data) {
           console.error("[Desktop] createPaymentRequest error:", error);
-          throw new Error(`Failed to create payment request: ${response?.status}`);
+          throw new Error(
+            `Failed to create payment request: ${response?.status}`,
+          );
         }
 
         const apiResponse = data as unknown as {
@@ -329,15 +335,21 @@ export const usePairingStore = create<PairingState>((set, get) => {
       }
 
       try {
-        const { data, error, response: httpResponse } = await salesClient.GET(
-          "/terminal/payment-requests/{request_id}",
-          {
-            params: { path: { request_id: currentPaymentRequest.requestId } },
-          },
-        );
+        const {
+          data,
+          error,
+          response: httpResponse,
+        } = await salesClient.GET("/terminal/payment-requests/{request_id}", {
+          params: { path: { request_id: currentPaymentRequest.requestId } },
+        });
 
         if (error || !data) {
-          console.error("[Desktop] pollPaymentResult error:", error, "status:", httpResponse?.status);
+          console.error(
+            "[Desktop] pollPaymentResult error:",
+            error,
+            "status:",
+            httpResponse?.status,
+          );
           return null;
         }
 
@@ -440,7 +452,12 @@ export const usePairingStore = create<PairingState>((set, get) => {
         );
 
         if (error || !data) {
-          console.error("[Desktop] pollPairingStatus error:", error, "status:", response?.status);
+          console.error(
+            "[Desktop] pollPairingStatus error:",
+            error,
+            "status:",
+            response?.status,
+          );
           return false;
         }
 
