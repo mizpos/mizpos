@@ -1,98 +1,271 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+/**
+ * 決済ホーム画面
+ *
+ * - 端末接続状態の表示
+ * - POSペアリング状態の表示
+ * - 決済待機画面
+ */
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { StyleSheet, View, TouchableOpacity, ScrollView } from 'react-native';
+import { router } from 'expo-router';
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useTerminal, usePairing } from '@/providers';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+  const {
+    isInitialized,
+    connectedReader,
+    connectionError: terminalError,
+  } = useTerminal();
+
+  const { isPaired, pairingInfo, currentPaymentRequest } = usePairing();
+
+  // 端末接続ステータス
+  const renderReaderStatus = () => {
+    if (!isInitialized) {
+      return (
+        <View style={[styles.statusCard, { backgroundColor: colors.background }]}>
+          <IconSymbol name="exclamationmark.triangle.fill" size={24} color="#FFA500" />
+          <View style={styles.statusTextContainer}>
+            <ThemedText type="subtitle">Terminal SDK</ThemedText>
+            <ThemedText style={styles.statusDescription}>初期化中...</ThemedText>
+          </View>
+        </View>
+      );
+    }
+
+    if (terminalError) {
+      return (
+        <View style={[styles.statusCard, { backgroundColor: colors.background }]}>
+          <IconSymbol name="xmark.circle.fill" size={24} color="#FF3B30" />
+          <View style={styles.statusTextContainer}>
+            <ThemedText type="subtitle">エラー</ThemedText>
+            <ThemedText style={styles.statusDescription}>{terminalError}</ThemedText>
+          </View>
+        </View>
+      );
+    }
+
+    if (connectedReader) {
+      return (
+        <TouchableOpacity
+          style={[styles.statusCard, styles.statusCardConnected]}
+          onPress={() => router.push('/reader-setup')}
+        >
+          <IconSymbol name="checkmark.circle.fill" size={24} color="#34C759" />
+          <View style={styles.statusTextContainer}>
+            <ThemedText type="subtitle">リーダー接続済み</ThemedText>
+            <ThemedText style={styles.statusDescription}>
+              {connectedReader.serialNumber || 'シリアル番号不明'}
+            </ThemedText>
+          </View>
+          <IconSymbol name="chevron.right" size={20} color={colors.text} />
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        style={[styles.statusCard, { backgroundColor: colors.background }]}
+        onPress={() => router.push('/reader-setup')}
+      >
+        <IconSymbol name="wifi.exclamationmark" size={24} color="#FF9500" />
+        <View style={styles.statusTextContainer}>
+          <ThemedText type="subtitle">リーダー未接続</ThemedText>
+          <ThemedText style={styles.statusDescription}>タップして接続</ThemedText>
+        </View>
+        <IconSymbol name="chevron.right" size={20} color={colors.text} />
+      </TouchableOpacity>
+    );
+  };
+
+  // ペアリングステータス
+  const renderPairingStatus = () => {
+    if (isPaired && pairingInfo) {
+      return (
+        <TouchableOpacity
+          style={[styles.statusCard, styles.statusCardConnected]}
+          onPress={() => router.push('/pairing')}
+        >
+          <IconSymbol name="link.circle.fill" size={24} color="#007AFF" />
+          <View style={styles.statusTextContainer}>
+            <ThemedText type="subtitle">POS連携中</ThemedText>
+            <ThemedText style={styles.statusDescription}>
+              {pairingInfo.posName} (PNR: {pairingInfo.pnr})
+            </ThemedText>
+          </View>
+          <IconSymbol name="chevron.right" size={20} color={colors.text} />
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        style={[styles.statusCard, { backgroundColor: colors.background }]}
+        onPress={() => router.push('/pairing')}
+      >
+        <IconSymbol name="qrcode.viewfinder" size={24} color="#8E8E93" />
+        <View style={styles.statusTextContainer}>
+          <ThemedText type="subtitle">POS未連携</ThemedText>
+          <ThemedText style={styles.statusDescription}>タップしてペアリング</ThemedText>
+        </View>
+        <IconSymbol name="chevron.right" size={20} color={colors.text} />
+      </TouchableOpacity>
+    );
+  };
+
+  // 決済待機画面
+  const renderPaymentArea = () => {
+    const canAcceptPayment = isInitialized && connectedReader && isPaired;
+
+    if (currentPaymentRequest) {
+      // 決済リクエストがある場合
+      return (
+        <View style={styles.paymentArea}>
+          <ThemedText type="title" style={styles.paymentAmountLabel}>
+            お支払い金額
+          </ThemedText>
+          <ThemedText style={styles.paymentAmount}>
+            {currentPaymentRequest.amount.toLocaleString()}
+          </ThemedText>
+          <ThemedText style={styles.paymentCurrency}>円</ThemedText>
+
+          <TouchableOpacity
+            style={[styles.paymentButton, { backgroundColor: '#34C759' }]}
+            onPress={() => router.push('/payment')}
+          >
+            <IconSymbol name="creditcard.fill" size={24} color="#FFFFFF" />
+            <ThemedText style={styles.paymentButtonText}>決済を開始</ThemedText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!canAcceptPayment) {
+      return (
+        <View style={styles.paymentArea}>
+          <IconSymbol name="hourglass" size={48} color="#8E8E93" />
+          <ThemedText style={styles.waitingText}>
+            決済を開始するには、リーダーとPOSの接続が必要です
+          </ThemedText>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.paymentArea}>
+        <IconSymbol name="clock.fill" size={48} color="#007AFF" />
+        <ThemedText style={styles.waitingText}>決済待機中</ThemedText>
+        <ThemedText style={styles.waitingDescription}>
+          POSからの決済リクエストを待っています
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+      </View>
+    );
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ThemedView style={styles.section}>
+        <ThemedText type="subtitle" style={styles.sectionTitle}>
+          接続状況
         </ThemedText>
+        {renderReaderStatus()}
+        {renderPairingStatus()}
       </ThemedView>
-    </ParallaxScrollView>
+
+      <ThemedView style={styles.section}>
+        {renderPaymentArea()}
+      </ThemedView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+    gap: 24,
+  },
+  section: {
+    gap: 12,
+  },
+  sectionTitle: {
+    marginBottom: 4,
+  },
+  statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  statusCardConnected: {
+    backgroundColor: '#E8F5E9',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  statusTextContainer: {
+    flex: 1,
+  },
+  statusDescription: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginTop: 2,
+  },
+  paymentArea: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    minHeight: 300,
+    gap: 16,
+  },
+  paymentAmountLabel: {
+    fontSize: 18,
+    opacity: 0.7,
+  },
+  paymentAmount: {
+    fontSize: 64,
+    fontWeight: 'bold',
+  },
+  paymentCurrency: {
+    fontSize: 24,
+    opacity: 0.7,
+  },
+  paymentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 24,
+  },
+  paymentButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  waitingText: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  waitingDescription: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
   },
 });
