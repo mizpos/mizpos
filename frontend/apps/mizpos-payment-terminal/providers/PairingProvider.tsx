@@ -13,7 +13,7 @@ import React, {
   useEffect,
   useRef,
   ReactNode,
-} from '../$node_modules/@types/react/index.js';
+} from 'react';
 
 import {
   verifyPairing,

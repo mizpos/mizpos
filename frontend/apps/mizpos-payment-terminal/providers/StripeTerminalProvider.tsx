@@ -5,6 +5,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { Platform, PermissionsAndroid } from 'react-native';
 import {
   StripeTerminalProvider as RNStripeTerminalProvider,
   useStripeTerminal,
@@ -12,6 +13,37 @@ import {
   PaymentIntent,
 } from '@stripe/stripe-terminal-react-native';
 import { getConnectionToken } from '@/services/api';
+
+// ==========================================
+// Bluetooth権限リクエスト（Android 12+）
+// ==========================================
+
+const requestBluetoothPermissions = async (): Promise<boolean> => {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  try {
+    const granted = await PermissionsAndroid.requestMultiple([
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    ]);
+
+    const allGranted = Object.values(granted).every(
+      (status) => status === PermissionsAndroid.RESULTS.GRANTED
+    );
+
+    if (!allGranted) {
+      console.warn('Bluetooth permissions not granted:', granted);
+    }
+
+    return allGranted;
+  } catch (err) {
+    console.error('Error requesting Bluetooth permissions:', err);
+    return false;
+  }
+};
 
 // ==========================================
 // 型定義
@@ -129,9 +161,16 @@ function TerminalProviderInner({ children }: { children: ReactNode }) {
       setDiscoveredReaders([]);
       setConnectionError(null);
 
+      // Android: Bluetooth権限をリクエスト
+      const hasPermissions = await requestBluetoothPermissions();
+      if (!hasPermissions) {
+        setConnectionError('Bluetooth権限が必要です');
+        return;
+      }
+
       const { error } = await sdkDiscoverReaders({
         discoveryMethod: 'bluetoothScan',
-        simulated: __DEV__, // 開発環境ではシミュレータを使用
+        simulated: false, // 実機のリーダーに接続
       });
 
       if (error) {

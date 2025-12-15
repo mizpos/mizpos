@@ -5,19 +5,9 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { css, keyframes } from "styled-system/css";
+import { css } from "styled-system/css";
 import { usePairingStore } from "../stores/pairing";
 import { Button, Modal } from "./ui";
-
-const pulse = keyframes({
-  "0%, 100%": { opacity: 1 },
-  "50%": { opacity: 0.5 },
-});
-
-const spin = keyframes({
-  "0%": { transform: "rotate(0deg)" },
-  "100%": { transform: "rotate(360deg)" },
-});
 
 const styles = {
   container: css({
@@ -57,7 +47,7 @@ const styles = {
     border: "4px solid #334155",
     borderTopColor: "#3b82f6",
     borderRadius: "50%",
-    animation: `${spin} 1s linear infinite`,
+    animation: "spin 1s linear infinite",
   }),
   statusText: css({
     fontSize: "18px",
@@ -73,7 +63,7 @@ const styles = {
   }),
   successIcon: css({
     fontSize: "64px",
-    animation: `${pulse} 0.5s ease-out`,
+    animation: "pulse 0.5s ease-out",
   }),
   errorIcon: css({
     fontSize: "64px",
