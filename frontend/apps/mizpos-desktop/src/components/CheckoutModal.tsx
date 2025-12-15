@@ -461,7 +461,7 @@ export function CheckoutModal({
   // Terminal決済関連の状態
   const [showTerminalPayment, setShowTerminalPayment] = useState(false);
   const [showPairingModal, setShowPairingModal] = useState(false);
-  const { status: pairingStatus, pairingInfo } = usePairingStore();
+  const { status: pairingStatus, pairingInfo, currentPaymentRequest } = usePairingStore();
 
   const {
     items,
@@ -811,6 +811,20 @@ export function CheckoutModal({
           },
         ];
 
+        // cardDetailsをcurrentPaymentRequestから取得
+        const cardDetails = currentPaymentRequest?.cardDetails ? {
+          brand: currentPaymentRequest.cardDetails.brand,
+          last4: currentPaymentRequest.cardDetails.last4,
+          expMonth: currentPaymentRequest.cardDetails.expMonth,
+          expYear: currentPaymentRequest.cardDetails.expYear,
+          cardholderName: currentPaymentRequest.cardDetails.cardholderName,
+          funding: currentPaymentRequest.cardDetails.funding,
+          terminalSerialNumber: currentPaymentRequest.cardDetails.terminalSerialNumber,
+          transactionType: currentPaymentRequest.cardDetails.transactionType,
+          paymentType: currentPaymentRequest.cardDetails.paymentType,
+          transactionAt: currentPaymentRequest.cardDetails.transactionAt,
+        } : undefined;
+
         const transaction: Transaction = {
           id: `txn-${Date.now()}`,
           items: [...items],
@@ -823,6 +837,7 @@ export function CheckoutModal({
           createdAt: new Date(),
           isTraining: isTrainingMode,
           paymentIntentId, // Stripe PaymentIntent IDを保存
+          cardDetails, // カード詳細を保存
         };
 
         // トレーニングモード時はDBへの保存とAPIへの送信をスキップ
@@ -904,6 +919,7 @@ export function CheckoutModal({
       settings.terminalId,
       appliedCoupon,
       isTrainingMode,
+      currentPaymentRequest,
     ],
   );
 

@@ -85,6 +85,22 @@ export interface Payment {
 }
 
 /**
+ * カード詳細情報（クレジット売上表用）
+ */
+export interface CardDetails {
+  brand?: string;
+  last4?: string;
+  expMonth?: number;
+  expYear?: number;
+  cardholderName?: string;
+  funding?: string;
+  terminalSerialNumber?: string;
+  transactionType?: string;
+  paymentType?: string;
+  transactionAt?: string;
+}
+
+/**
  * 取引情報
  */
 export interface Transaction {
@@ -100,6 +116,8 @@ export interface Transaction {
   isTraining?: boolean;
   /** Stripe PaymentIntent ID (Terminal決済時) */
   paymentIntentId?: string;
+  /** カード詳細情報（クレジット決済時） */
+  cardDetails?: CardDetails;
 }
 
 /**

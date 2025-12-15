@@ -239,6 +239,32 @@ export interface PaymentInfo {
 }
 
 /**
+ * カード詳細情報（クレジット売上表用）
+ */
+export interface CardDetailsForReceipt {
+  /** カードブランド（visa, mastercard等） */
+  brand?: string;
+  /** カード番号下4桁 */
+  last4?: string;
+  /** 有効期限（月） */
+  exp_month?: number;
+  /** 有効期限（年） */
+  exp_year?: number;
+  /** カード名義人 */
+  cardholder_name?: string;
+  /** カード種別（credit, debit等） */
+  funding?: string;
+  /** 端末シリアル番号 */
+  terminal_serial_number?: string;
+  /** 取引種別（sale/refund） */
+  transaction_type?: string;
+  /** 支払区分 */
+  payment_type?: string;
+  /** 取引日時（ISO8601形式） */
+  transaction_at?: string;
+}
+
+/**
  * 新レシート印刷データ（領収書形式）
  */
 export interface FullReceiptData {
@@ -266,6 +292,10 @@ export interface FullReceiptData {
   tax_amount: number;
   /** レシート番号 */
   receipt_number: string;
+  /** カード詳細情報（クレジット決済時） */
+  card_details?: CardDetailsForReceipt;
+  /** Stripe PaymentIntent ID（クレジット決済時） */
+  payment_intent_id?: string;
 }
 
 export function bluetoothPrintReceipt(data: ReceiptData): PrinterResult {
