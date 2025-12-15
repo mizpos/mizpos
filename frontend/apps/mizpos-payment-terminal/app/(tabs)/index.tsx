@@ -62,12 +62,14 @@ export default function HomeScreen() {
         >
           <IconSymbol name="checkmark.circle.fill" size={24} color="#34C759" />
           <View style={styles.statusTextContainer}>
-            <ThemedText type="subtitle">リーダー接続済み</ThemedText>
-            <ThemedText style={styles.statusDescription}>
+            <ThemedText type="subtitle" lightColor="#11181C" darkColor="#11181C">
+              リーダー接続済み
+            </ThemedText>
+            <ThemedText style={styles.statusDescription} lightColor="#11181C" darkColor="#11181C">
               {connectedReader.serialNumber || 'シリアル番号不明'}
             </ThemedText>
           </View>
-          <IconSymbol name="chevron.right" size={20} color={colors.text} />
+          <IconSymbol name="chevron.right" size={20} color="#11181C" />
         </TouchableOpacity>
       );
     }
@@ -97,12 +99,14 @@ export default function HomeScreen() {
         >
           <IconSymbol name="link.circle.fill" size={24} color="#007AFF" />
           <View style={styles.statusTextContainer}>
-            <ThemedText type="subtitle">POS連携中</ThemedText>
-            <ThemedText style={styles.statusDescription}>
+            <ThemedText type="subtitle" lightColor="#11181C" darkColor="#11181C">
+              POS連携中
+            </ThemedText>
+            <ThemedText style={styles.statusDescription} lightColor="#11181C" darkColor="#11181C">
               {pairingInfo.posName} (PIN: {pairingInfo.pinCode})
             </ThemedText>
           </View>
-          <IconSymbol name="chevron.right" size={20} color={colors.text} />
+          <IconSymbol name="chevron.right" size={20} color="#11181C" />
         </TouchableOpacity>
       );
     }
