@@ -265,7 +265,7 @@ export function TerminalPaymentModal({
   return (
     <Modal
       open={open}
-      onClose={canClose ? onCancel : undefined}
+      onClose={onCancel}
       title="カード決済"
       maxWidth="400px"
       disableClose={!canClose}

@@ -167,9 +167,6 @@ export const usePairingStore = create<PairingState>((set, get) => {
           pairingInfo,
         });
 
-        // ターミナル接続待ちのポーリングを開始
-        get().startPairingStatusPolling();
-
         console.log("Pairing registered with PIN:", pinCode);
         return pinCode;
       } catch (err) {

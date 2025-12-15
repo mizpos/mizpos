@@ -5,7 +5,7 @@
  */
 
 import { QRCodeSVG } from "qrcode.react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
 import { generateQRCodeData, usePairingStore } from "../stores/pairing";
 import { useSettingsStore } from "../stores/settings";
@@ -103,10 +103,13 @@ export function PairingModal({ open, onClose }: PairingModalProps) {
     registerPairing,
     unregisterPairing,
     clearError,
+    startPairingStatusPolling,
+    stopPairingStatusPolling,
   } = usePairingStore();
   const { settings } = useSettingsStore();
 
   const [isRegistering, setIsRegistering] = useState(false);
+  const hasStartedRegistration = useRef(false);
 
   const handleRegister = useCallback(async () => {
     setIsRegistering(true);
@@ -135,11 +138,23 @@ export function PairingModal({ open, onClose }: PairingModalProps) {
 
   // モーダルを開いた時に自動でペアリング登録
   useEffect(() => {
-    if (open && status === "disconnected" && !isRegistering) {
+    if (open && status === "disconnected" && !isRegistering && !hasStartedRegistration.current) {
+      hasStartedRegistration.current = true;
       handleRegister();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, handleRegister, isRegistering, status]);
+    if (!open) {
+      hasStartedRegistration.current = false;
+    }
+  }, [open, status, isRegistering, handleRegister]);
+
+  // statusが"waiting"になったらポーリング開始、それ以外で停止
+  useEffect(() => {
+    if (status === "waiting") {
+      startPairingStatusPolling();
+    } else {
+      stopPairingStatusPolling();
+    }
+  }, [status, startPairingStatusPolling, stopPairingStatusPolling]);
 
   const handleUnregister = useCallback(async () => {
     await unregisterPairing();
