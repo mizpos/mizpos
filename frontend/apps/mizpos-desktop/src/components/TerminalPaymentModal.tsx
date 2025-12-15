@@ -4,7 +4,7 @@
  * Payment Terminalでの決済処理を表示・管理するモーダル
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "styled-system/css";
 import { usePairingStore } from "../stores/pairing";
 import { Button, Modal } from "./ui";
@@ -125,6 +125,8 @@ export function TerminalPaymentModal({
 
   const [paymentState, setPaymentState] = useState<PaymentState>("creating");
   const [localError, setLocalError] = useState<string | null>(null);
+  const hasStartedRequest = useRef(false);
+
   const handleCreateRequest = useCallback(async () => {
     setPaymentState("creating");
     setLocalError(null);
@@ -153,14 +155,18 @@ export function TerminalPaymentModal({
 
   // モーダルを開いた時に決済リクエストを作成
   useEffect(() => {
-    if (open) {
+    if (open && !hasStartedRequest.current) {
+      hasStartedRequest.current = true;
       handleCreateRequest();
+    }
+
+    if (!open) {
+      hasStartedRequest.current = false;
     }
 
     return () => {
       stopPolling();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, handleCreateRequest, stopPolling]);
 
   // 決済リクエストの状態を監視
