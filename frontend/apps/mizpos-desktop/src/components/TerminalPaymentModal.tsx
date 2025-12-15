@@ -125,6 +125,31 @@ export function TerminalPaymentModal({
 
   const [paymentState, setPaymentState] = useState<PaymentState>("creating");
   const [localError, setLocalError] = useState<string | null>(null);
+  const handleCreateRequest = useCallback(async () => {
+    setPaymentState("creating");
+    setLocalError(null);
+    clearError();
+
+    try {
+      await createPaymentRequest(amount, items, saleId, description);
+      startPolling();
+    } catch (err) {
+      setPaymentState("error");
+      setLocalError(
+        err instanceof Error
+          ? err.message
+          : "決済リクエストの作成に失敗しました",
+      );
+    }
+  }, [
+    amount,
+    items,
+    saleId,
+    description,
+    createPaymentRequest,
+    startPolling,
+    clearError,
+  ]);
 
   // モーダルを開いた時に決済リクエストを作成
   useEffect(() => {
@@ -136,7 +161,7 @@ export function TerminalPaymentModal({
       stopPolling();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, handleCreateRequest, stopPolling]);
 
   // 決済リクエストの状態を監視
   useEffect(() => {
@@ -164,35 +189,11 @@ export function TerminalPaymentModal({
       case "failed":
         setPaymentState("failed");
         setLocalError(
-          currentPaymentRequest.errorMessage || "決済に失敗しました"
+          currentPaymentRequest.errorMessage || "決済に失敗しました",
         );
         break;
     }
   }, [currentPaymentRequest, onComplete]);
-
-  const handleCreateRequest = useCallback(async () => {
-    setPaymentState("creating");
-    setLocalError(null);
-    clearError();
-
-    try {
-      await createPaymentRequest(amount, items, saleId, description);
-      startPolling();
-    } catch (err) {
-      setPaymentState("error");
-      setLocalError(
-        err instanceof Error ? err.message : "決済リクエストの作成に失敗しました"
-      );
-    }
-  }, [
-    amount,
-    items,
-    saleId,
-    description,
-    createPaymentRequest,
-    startPolling,
-    clearError,
-  ]);
 
   const handleCancel = useCallback(async () => {
     stopPolling();
@@ -259,8 +260,7 @@ export function TerminalPaymentModal({
     paymentState === "waiting" ||
     paymentState === "processing";
   const canRetry = paymentState === "failed" || paymentState === "error";
-  const canClose =
-    paymentState === "completed" || paymentState === "cancelled";
+  const canClose = paymentState === "completed" || paymentState === "cancelled";
 
   return (
     <Modal

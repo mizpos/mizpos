@@ -9,6 +9,18 @@ import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-nat
 import { router } from 'expo-router';
 import { PaymentIntent } from '@stripe/stripe-terminal-react-native';
 
+/**
+ * 安全にナビゲーションで戻る
+ * 戻れる画面がない場合はホーム画面に遷移
+ */
+const safeGoBack = () => {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace('/');
+  }
+};
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -34,7 +46,7 @@ export default function PaymentScreen() {
   // 決済リクエストがない場合は戻る
   useEffect(() => {
     if (!currentPaymentRequest) {
-      router.back();
+      safeGoBack();
     }
   }, [currentPaymentRequest]);
 
@@ -75,7 +87,7 @@ export default function PaymentScreen() {
           </ThemedText>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: '#007AFF' }]}
-            onPress={() => router.back()}
+            onPress={safeGoBack}
           >
             <ThemedText style={styles.buttonText}>戻る</ThemedText>
           </TouchableOpacity>
@@ -144,17 +156,17 @@ export default function PaymentScreen() {
       }
 
       cancelPayment();
-      router.back();
+      safeGoBack();
     } catch (err) {
       console.error('Cancel error:', err);
       cancelPayment();
-      router.back();
+      safeGoBack();
     }
   };
 
   // 完了後に閉じる
   const handleClose = () => {
-    router.back();
+    safeGoBack();
   };
 
   // 準備完了画面

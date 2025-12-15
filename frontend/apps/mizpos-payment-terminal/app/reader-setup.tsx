@@ -15,6 +15,18 @@ import {
 import { router } from 'expo-router';
 import { Reader } from '@stripe/stripe-terminal-react-native';
 
+/**
+ * 安全にナビゲーションで戻る
+ * 戻れる画面がない場合はホーム画面に遷移
+ */
+const safeGoBack = () => {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace('/');
+  }
+};
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -53,7 +65,7 @@ export default function ReaderSetupScreen() {
   const handleConnectReader = async (reader: Reader.Type) => {
     await connectReader(reader);
     if (!connectionError) {
-      router.back();
+      safeGoBack();
     }
   };
 

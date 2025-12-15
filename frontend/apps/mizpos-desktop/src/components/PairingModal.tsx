@@ -7,10 +7,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
-import {
-  generateQRCodeData,
-  usePairingStore,
-} from "../stores/pairing";
+import { generateQRCodeData, usePairingStore } from "../stores/pairing";
 import { useSettingsStore } from "../stores/settings";
 import { Button, Modal } from "./ui";
 
@@ -111,14 +108,6 @@ export function PairingModal({ open, onClose }: PairingModalProps) {
 
   const [isRegistering, setIsRegistering] = useState(false);
 
-  // モーダルを開いた時に自動でペアリング登録
-  useEffect(() => {
-    if (open && status === "disconnected" && !isRegistering) {
-      handleRegister();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
   const handleRegister = useCallback(async () => {
     setIsRegistering(true);
     clearError();
@@ -128,7 +117,7 @@ export function PairingModal({ open, onClose }: PairingModalProps) {
         settings.terminalId || "unknown",
         settings.deviceName || "mizPOS Desktop",
         settings.eventId,
-        settings.eventName
+        settings.eventName,
       );
     } catch (err) {
       console.error("Failed to register pairing:", err);
@@ -143,6 +132,14 @@ export function PairingModal({ open, onClose }: PairingModalProps) {
     settings.eventId,
     settings.eventName,
   ]);
+
+  // モーダルを開いた時に自動でペアリング登録
+  useEffect(() => {
+    if (open && status === "disconnected" && !isRegistering) {
+      handleRegister();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, handleRegister, isRegistering, status]);
 
   const handleUnregister = useCallback(async () => {
     await unregisterPairing();

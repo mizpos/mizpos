@@ -4,47 +4,71 @@
  * QRコードまたはPINコードでmizpos-desktopとペアリング
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from "react";
 import {
   StyleSheet,
   View,
   TouchableOpacity,
   TextInput,
   Alert,
-} from 'react-native';
-import { router } from 'expo-router';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+} from "react-native";
+import { router } from "expo-router";
+import { CameraView, useCameraPermissions } from "expo-camera";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { usePairing } from '@/providers';
+/**
+ * 安全にナビゲーションで戻る
+ * 戻れる画面がない場合はホーム画面に遷移
+ */
+const safeGoBack = () => {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace("/");
+  }
+};
 
-type PairingMode = 'qr' | 'pin';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { usePairing } from "@/providers";
+
+type PairingMode = "qr" | "pin";
 
 export default function PairingScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme ?? "light"];
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [mode, setMode] = useState<PairingMode>('qr');
-  const [pinInput, setPinInput] = useState('');
+  const [mode, setMode] = useState<PairingMode>("qr");
+  const [pinInput, setPinInput] = useState("");
   const [isScanning, setIsScanning] = useState(true);
 
-  const { isPaired, pairingInfo, pairWithQRCode, pairWithPIN, unpair, error, clearError } =
-    usePairing();
+  const {
+    isPaired,
+    pairingInfo,
+    pairWithQRCode,
+    pairWithPIN,
+    unpair,
+    error,
+    clearError,
+  } = usePairing();
 
   // QRコードスキャン処理
-  const handleBarCodeScanned = async ({ data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = async ({
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
     if (!isScanning) return;
     setIsScanning(false);
 
     try {
       await pairWithQRCode(data);
       if (!error) {
-        router.back();
+        safeGoBack();
       }
     } finally {
       setIsScanning(true);
@@ -54,32 +78,28 @@ export default function PairingScreen() {
   // PINコードでペアリング
   const handlePinPairing = async () => {
     if (!pinInput.trim()) {
-      Alert.alert('エラー', 'PINコードを入力してください');
+      Alert.alert("エラー", "PINコードを入力してください");
       return;
     }
 
     await pairWithPIN(pinInput.trim());
     if (!error) {
-      router.back();
+      safeGoBack();
     }
   };
 
   // ペアリング解除
   const handleUnpair = () => {
-    Alert.alert(
-      'ペアリングを解除',
-      '本当にPOSとのペアリングを解除しますか？',
-      [
-        { text: 'キャンセル', style: 'cancel' },
-        {
-          text: '解除',
-          style: 'destructive',
-          onPress: () => {
-            unpair();
-          },
+    Alert.alert("ペアリングを解除", "本当にPOSとのペアリングを解除しますか？", [
+      { text: "キャンセル", style: "cancel" },
+      {
+        text: "解除",
+        style: "destructive",
+        onPress: () => {
+          unpair();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // ペアリング済みの場合
@@ -98,32 +118,37 @@ export default function PairingScreen() {
           <View style={styles.pairedInfoCard}>
             <View style={styles.pairedInfoRow}>
               <ThemedText style={styles.pairedInfoLabel}>POS端末</ThemedText>
-              <ThemedText style={styles.pairedInfoValue}>{pairingInfo.posName}</ThemedText>
+              <ThemedText style={styles.pairedInfoValue}>
+                {pairingInfo.posName}
+              </ThemedText>
             </View>
             <View style={styles.pairedInfoRow}>
               <ThemedText style={styles.pairedInfoLabel}>PINコード</ThemedText>
-              <ThemedText style={styles.pairedInfoValue}>{pairingInfo.pinCode}</ThemedText>
+              <ThemedText style={styles.pairedInfoValue}>
+                {pairingInfo.pinCode}
+              </ThemedText>
             </View>
             {pairingInfo.eventName && (
               <View style={styles.pairedInfoRow}>
                 <ThemedText style={styles.pairedInfoLabel}>イベント</ThemedText>
-                <ThemedText style={styles.pairedInfoValue}>{pairingInfo.eventName}</ThemedText>
+                <ThemedText style={styles.pairedInfoValue}>
+                  {pairingInfo.eventName}
+                </ThemedText>
               </View>
             )}
             <View style={styles.pairedInfoRow}>
               <ThemedText style={styles.pairedInfoLabel}>接続日時</ThemedText>
               <ThemedText style={styles.pairedInfoValue}>
-                {pairingInfo.pairedAt.toLocaleString('ja-JP')}
+                {pairingInfo.pairedAt.toLocaleString("ja-JP")}
               </ThemedText>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.unpairButton}
-            onPress={handleUnpair}
-          >
+          <TouchableOpacity style={styles.unpairButton} onPress={handleUnpair}>
             <IconSymbol name="link" size={20} color="#FF3B30" />
-            <ThemedText style={styles.unpairButtonText}>ペアリングを解除</ThemedText>
+            <ThemedText style={styles.unpairButtonText}>
+              ペアリングを解除
+            </ThemedText>
           </TouchableOpacity>
         </View>
       </ThemedView>
@@ -131,7 +156,7 @@ export default function PairingScreen() {
   }
 
   // カメラ権限リクエスト
-  if (!permission && mode === 'qr') {
+  if (!permission && mode === "qr") {
     return <View />;
   }
 
@@ -140,7 +165,11 @@ export default function PairingScreen() {
       {/* エラー表示 */}
       {error && (
         <View style={styles.errorBanner}>
-          <IconSymbol name="exclamationmark.triangle.fill" size={20} color="#FF3B30" />
+          <IconSymbol
+            name="exclamationmark.triangle.fill"
+            size={20}
+            color="#FF3B30"
+          />
           <ThemedText style={styles.errorText}>{error}</ThemedText>
           <TouchableOpacity onPress={clearError}>
             <IconSymbol name="xmark" size={16} color="#FF3B30" />
@@ -151,35 +180,39 @@ export default function PairingScreen() {
       {/* モード切り替えタブ */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, mode === 'qr' && styles.tabActive]}
-          onPress={() => setMode('qr')}
+          style={[styles.tab, mode === "qr" && styles.tabActive]}
+          onPress={() => setMode("qr")}
         >
           <IconSymbol
             name="qrcode.viewfinder"
             size={20}
-            color={mode === 'qr' ? '#007AFF' : '#8E8E93'}
+            color={mode === "qr" ? "#007AFF" : "#8E8E93"}
           />
-          <ThemedText style={[styles.tabText, mode === 'qr' && styles.tabTextActive]}>
+          <ThemedText
+            style={[styles.tabText, mode === "qr" && styles.tabTextActive]}
+          >
             QRコード
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, mode === 'pin' && styles.tabActive]}
-          onPress={() => setMode('pin')}
+          style={[styles.tab, mode === "pin" && styles.tabActive]}
+          onPress={() => setMode("pin")}
         >
           <IconSymbol
             name="textformat.123"
             size={20}
-            color={mode === 'pin' ? '#007AFF' : '#8E8E93'}
+            color={mode === "pin" ? "#007AFF" : "#8E8E93"}
           />
-          <ThemedText style={[styles.tabText, mode === 'pin' && styles.tabTextActive]}>
+          <ThemedText
+            style={[styles.tabText, mode === "pin" && styles.tabTextActive]}
+          >
             PIN入力
           </ThemedText>
         </TouchableOpacity>
       </View>
 
       {/* QRコードスキャン */}
-      {mode === 'qr' && (
+      {mode === "qr" && (
         <>
           {!permission?.granted ? (
             <View style={styles.permissionContainer}>
@@ -188,7 +221,7 @@ export default function PairingScreen() {
                 QRコードをスキャンするにはカメラへのアクセスが必要です
               </ThemedText>
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#007AFF' }]}
+                style={[styles.button, { backgroundColor: "#007AFF" }]}
                 onPress={requestPermission}
               >
                 <ThemedText style={styles.buttonText}>カメラを許可</ThemedText>
@@ -200,7 +233,7 @@ export default function PairingScreen() {
                 style={styles.camera}
                 facing="back"
                 barcodeScannerSettings={{
-                  barcodeTypes: ['qr'],
+                  barcodeTypes: ["qr"],
                 }}
                 onBarcodeScanned={handleBarCodeScanned}
               >
@@ -211,7 +244,8 @@ export default function PairingScreen() {
               <View style={styles.scanInfo}>
                 <ThemedText type="subtitle">POSのQRコードをスキャン</ThemedText>
                 <ThemedText style={styles.scanDescription}>
-                  mizpos-desktop で表示されるペアリング用QRコードをスキャンしてください
+                  mizpos-desktop
+                  で表示されるペアリング用QRコードをスキャンしてください
                 </ThemedText>
               </View>
             </View>
@@ -220,7 +254,7 @@ export default function PairingScreen() {
       )}
 
       {/* PIN入力 */}
-      {mode === 'pin' && (
+      {mode === "pin" && (
         <View style={styles.pinContainer}>
           <IconSymbol name="keyboard" size={48} color="#007AFF" />
           <ThemedText type="subtitle" style={styles.pinTitle}>
@@ -231,11 +265,14 @@ export default function PairingScreen() {
           </ThemedText>
 
           <TextInput
-            style={[styles.pinInput, { color: colors.text, borderColor: colors.text }]}
+            style={[
+              styles.pinInput,
+              { color: colors.text, borderColor: colors.text },
+            ]}
             value={pinInput}
             onChangeText={(text) => {
               // 数字のみ、6桁まで
-              const filtered = text.replace(/[^0-9]/g, '').slice(0, 6);
+              const filtered = text.replace(/[^0-9]/g, "").slice(0, 6);
               setPinInput(filtered);
             }}
             placeholder="000000"
@@ -248,7 +285,9 @@ export default function PairingScreen() {
           <TouchableOpacity
             style={[
               styles.button,
-              { backgroundColor: pinInput.length === 6 ? '#007AFF' : '#E5E5E5' },
+              {
+                backgroundColor: pinInput.length === 6 ? "#007AFF" : "#E5E5E5",
+              },
             ]}
             onPress={handlePinPairing}
             disabled={pinInput.length !== 6}
@@ -256,7 +295,7 @@ export default function PairingScreen() {
             <ThemedText
               style={[
                 styles.buttonText,
-                { color: pinInput.length === 6 ? '#FFFFFF' : '#8E8E93' },
+                { color: pinInput.length === 6 ? "#FFFFFF" : "#8E8E93" },
               ]}
             >
               ペアリング
@@ -273,52 +312,52 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: '#FFF0F0',
+    backgroundColor: "#FFF0F0",
     gap: 8,
   },
   errorText: {
     flex: 1,
-    color: '#FF3B30',
+    color: "#FF3B30",
     fontSize: 14,
   },
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
     gap: 8,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     gap: 8,
   },
   tabActive: {
-    backgroundColor: '#E5F0FF',
+    backgroundColor: "#E5F0FF",
   },
   tabText: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: "#8E8E93",
   },
   tabTextActive: {
-    color: '#007AFF',
-    fontWeight: '600',
+    color: "#007AFF",
+    fontWeight: "600",
   },
   permissionContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 32,
     gap: 16,
   },
   permissionText: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 16,
   },
   scannerContainer: {
@@ -330,31 +369,31 @@ const styles = StyleSheet.create({
   },
   scanOverlay: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   scanFrame: {
     width: 250,
     height: 250,
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: "#FFFFFF",
     borderRadius: 12,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   scanInfo: {
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
   },
   scanDescription: {
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.7,
   },
   pinContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 32,
     gap: 16,
   },
@@ -362,36 +401,36 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   pinDescription: {
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.7,
     marginBottom: 16,
   },
   pinInput: {
-    width: '100%',
+    width: "100%",
     maxWidth: 200,
     borderWidth: 2,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     letterSpacing: 8,
   },
   button: {
-    width: '100%',
+    width: "100%",
     maxWidth: 200,
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   pairedContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     padding: 32,
     gap: 16,
   },
@@ -399,39 +438,41 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   pairedTitle: {
-    color: '#34C759',
+    color: "#34C759",
   },
   pairedInfoCard: {
-    width: '100%',
-    backgroundColor: '#F5F5F5',
+    width: "100%",
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     padding: 16,
     gap: 12,
     marginTop: 16,
   },
   pairedInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   pairedInfoLabel: {
     opacity: 0.7,
+    color: "#000000",
   },
   pairedInfoValue: {
-    fontWeight: '500',
+    color: "#000000",
+    fontWeight: "500",
   },
   unpairButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF3B30',
+    borderColor: "#FF3B30",
     gap: 8,
     marginTop: 24,
   },
   unpairButtonText: {
-    color: '#FF3B30',
+    color: "#FF3B30",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

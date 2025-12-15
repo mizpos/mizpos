@@ -872,7 +872,7 @@ export function CheckoutModal({
             if (!response.ok) {
               console.error(
                 "Failed to send sale to backend:",
-                response.statusText
+                response.statusText,
               );
             } else {
               console.log("Sale successfully sent to backend");
@@ -904,7 +904,7 @@ export function CheckoutModal({
       settings.terminalId,
       appliedCoupon,
       isTrainingMode,
-    ]
+    ],
   );
 
   // Enterキーで会計完了
@@ -1343,9 +1343,10 @@ export function CheckoutModal({
             className={css({
               marginTop: "16px",
               padding: "12px 16px",
-              background: pairingStatus === "connected" || pairingStatus === "waiting"
-                ? "#14532d"
-                : "#334155",
+              background:
+                pairingStatus === "connected" || pairingStatus === "waiting"
+                  ? "#14532d"
+                  : "#334155",
               borderRadius: "8px",
               display: "flex",
               alignItems: "center",

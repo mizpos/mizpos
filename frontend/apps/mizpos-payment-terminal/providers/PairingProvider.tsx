@@ -119,15 +119,20 @@ export function PairingProvider({ children }: PairingProviderProps) {
   /**
    * APIレスポンスをローカル型に変換
    */
-  const convertApiPairing = (api: ApiPairingInfo): PairingInfo => ({
-    pinCode: api.pin_code,
-    posId: api.pos_id,
-    posName: api.pos_name,
-    pairedAt: new Date(api.created_at),
-    expiresAt: new Date(api.expires_at),
-    eventId: api.event_id,
-    eventName: api.event_name,
-  });
+  const convertApiPairing = (api: ApiPairingInfo): PairingInfo => {
+    const pairedAt = new Date(api.created_at);
+    const expiresAt = new Date(api.expires_at);
+
+    return {
+      pinCode: api.pin_code || '',
+      posId: api.pos_id || '',
+      posName: api.pos_name || '不明なPOS',
+      pairedAt: isNaN(pairedAt.getTime()) ? new Date() : pairedAt,
+      expiresAt: isNaN(expiresAt.getTime()) ? new Date(Date.now() + 24 * 60 * 60 * 1000) : expiresAt,
+      eventId: api.event_id,
+      eventName: api.event_name,
+    };
+  };
 
   const convertApiPaymentRequest = (api: ApiPaymentRequest): PaymentRequest => ({
     id: api.request_id,

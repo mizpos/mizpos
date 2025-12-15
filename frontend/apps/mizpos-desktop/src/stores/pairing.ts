@@ -5,14 +5,14 @@
  * PINコードでペアリングし、決済リクエストを送信・結果をポーリングで取得
  */
 
-import { create } from "zustand";
 import { createSalesClient } from "@mizpos/api";
+import { create } from "zustand";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Sales APIクライアント
+// Sales APIクライアント（API Gatewayの/salesプレフィックスを追加）
 const salesClient = createSalesClient({
-  baseUrl: API_BASE_URL,
+  baseUrl: `${API_BASE_URL}/sales`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -82,14 +82,14 @@ interface PairingState {
     posId: string,
     posName: string,
     eventId?: string,
-    eventName?: string
+    eventName?: string,
   ) => Promise<string>;
   unregisterPairing: () => Promise<void>;
   createPaymentRequest: (
     amount: number,
     items?: Array<{ name: string; quantity: number; price: number }>,
     saleId?: string,
-    description?: string
+    description?: string,
   ) => Promise<PaymentRequest>;
   cancelPaymentRequest: () => Promise<void>;
   pollPaymentResult: () => Promise<PaymentRequest | null>;
@@ -221,7 +221,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
               sale_id: saleId,
               items,
             },
-          }
+          },
         );
 
         if (error || !data) {
@@ -288,12 +288,9 @@ export const usePairingStore = create<PairingState>((set, get) => {
       }
 
       try {
-        await salesClient.DELETE(
-          "/terminal/payment-requests/{request_id}",
-          {
-            params: { path: { request_id: currentPaymentRequest.requestId } },
-          }
-        );
+        await salesClient.DELETE("/terminal/payment-requests/{request_id}", {
+          params: { path: { request_id: currentPaymentRequest.requestId } },
+        });
 
         set({ currentPaymentRequest: null });
         console.log("Payment request cancelled");
@@ -317,7 +314,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
           "/terminal/payment-requests/{request_id}",
           {
             params: { path: { request_id: currentPaymentRequest.requestId } },
-          }
+          },
         );
 
         if (error || !data) {

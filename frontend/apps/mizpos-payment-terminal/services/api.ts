@@ -72,10 +72,22 @@ export async function verifyPairing(pinCode: string): Promise<PairingInfo> {
   });
 
   if (error) {
-    throw new Error('Failed to verify pairing');
+    console.error('verifyPairing error:', error);
+    throw new Error('PINコードが見つかりません');
   }
 
-  return data as unknown as { pairing: PairingInfo } & { pairing: PairingInfo }['pairing'];
+  if (!data) {
+    throw new Error('レスポンスが空です');
+  }
+
+  const response = data as unknown as { pairing: PairingInfo };
+
+  if (!response.pairing) {
+    console.error('verifyPairing: pairing not found in response', data);
+    throw new Error('ペアリング情報が見つかりません');
+  }
+
+  return response.pairing;
 }
 
 /**
