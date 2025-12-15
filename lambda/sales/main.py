@@ -26,26 +26,32 @@ from models import (
     CreateEventRequest,
     CreateOnlineOrderRequest,
     CreatePaymentIntentRequest,
+    CreatePaymentRequestRequest,
     CreateSaleRequest,
     CreateShippingOptionRequest,
     SaleStatus,
     StripeTerminalConfigRequest,
     TerminalConnectionTokenRequest,
     TerminalLocationRequest,
+    TerminalPairingRegisterRequest,
+    TerminalPairingVerifyRequest,
     TerminalPaymentIntentRequest,
     TerminalRefundRequest,
     TerminalRegisterReaderRequest,
     UpdateConfigRequest,
+    UpdatePaymentRequestResultRequest,
     UpdateShippingOptionRequest,
     UpdateShippingRequest,
 )
 from services import (
     calculate_commission_fees,
     calculate_coupon_discount,
+    cancel_payment_request,
     cancel_terminal_payment_intent,
     capture_terminal_payment_intent,
     config_table,
     create_online_order,
+    create_payment_request,
     create_shipping_option,
     create_terminal_connection_token,
     create_terminal_location,
@@ -53,6 +59,7 @@ from services import (
     create_terminal_refund,
     deduct_stock,
     delete_shipping_option,
+    delete_terminal_pairing,
     delete_terminal_reader,
     dynamo_to_dict,
     events_table,
@@ -63,12 +70,15 @@ from services import (
     get_order_by_id,
     get_orders_by_email,
     get_payment_intent_for_refund,
+    get_payment_request,
+    get_pending_payment_request,
     get_products_info,
     get_shipping_option_by_id,
     increment_coupon_usage,
     init_stripe,
     list_terminal_locations,
     list_terminal_readers,
+    register_terminal_pairing,
     register_terminal_reader,
     restore_stock,
     sales_table,
@@ -76,11 +86,13 @@ from services import (
     set_stripe_terminal_config,
     update_order_payment_intent,
     update_order_status_with_stripe,
+    update_payment_request_result,
     update_shipping_info,
     update_shipping_option,
     update_stripe_payment_status,
     validate_and_reserve_stock,
     validate_coupon,
+    verify_terminal_pairing,
 )
 
 # ロガーの設定
@@ -1450,6 +1462,186 @@ async def create_refund(request: TerminalRefundRequest):
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error creating refund: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# Terminal Pairing エンドポイント
+# ==========================================
+
+
+@router.post(
+    "/terminal/pairing/register",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register_pairing(request: TerminalPairingRegisterRequest):
+    """
+    ターミナルペアリングを登録（デスクトップ側から呼び出し）
+
+    6桁のPINコードを登録し、ターミナルとの連携を準備する
+    """
+    try:
+        pairing = register_terminal_pairing(
+            pin_code=request.pin_code,
+            pos_id=request.pos_id,
+            pos_name=request.pos_name,
+            event_id=request.event_id,
+            event_name=request.event_name,
+        )
+        return {"pairing": pairing}
+    except Exception as e:
+        logger.error(f"Error registering pairing: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminal/pairing/verify", response_model=dict)
+async def verify_pairing(request: TerminalPairingVerifyRequest):
+    """
+    ターミナルペアリングを検証（ターミナル側から呼び出し）
+
+    PINコードが有効な場合、POS情報を返す
+    """
+    try:
+        pairing = verify_terminal_pairing(request.pin_code)
+        if not pairing:
+            raise HTTPException(status_code=404, detail="Pairing not found or expired")
+        return {"pairing": pairing}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying pairing: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/terminal/pairing/{pin_code}", response_model=dict)
+async def delete_pairing(pin_code: str):
+    """
+    ターミナルペアリングを解除
+
+    デスクトップまたはターミナルから呼び出し可能
+    """
+    try:
+        success = delete_terminal_pairing(pin_code)
+        if not success:
+            raise HTTPException(status_code=404, detail="Pairing not found")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting pairing: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# Terminal Payment Request エンドポイント
+# ==========================================
+
+
+@router.post(
+    "/terminal/payment-requests",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_payment_request_endpoint(request: CreatePaymentRequestRequest):
+    """
+    決済リクエストを作成（デスクトップ側から呼び出し）
+
+    ターミナルがポーリングで取得し、決済を実行する
+    """
+    try:
+        items_dict = None
+        if request.items:
+            items_dict = [item.model_dump() for item in request.items]
+
+        payment_request = create_payment_request(
+            pin_code=request.pin_code,
+            amount=request.amount,
+            currency=request.currency,
+            description=request.description,
+            sale_id=request.sale_id,
+            items=items_dict,
+        )
+        return {"payment_request": payment_request}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating payment request: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminal/payment-requests/pending/{pin_code}", response_model=dict)
+async def get_pending_payment_request_endpoint(pin_code: str):
+    """
+    ペンディング状態の決済リクエストを取得（ターミナル側からポーリング）
+
+    決済リクエストが存在しない場合はnullを返す
+    """
+    try:
+        payment_request = get_pending_payment_request(pin_code)
+        return {"payment_request": payment_request}
+    except Exception as e:
+        logger.error(f"Error getting pending payment request: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminal/payment-requests/{request_id}", response_model=dict)
+async def get_payment_request_endpoint(request_id: str):
+    """
+    決済リクエストを取得（デスクトップ側からステータス確認）
+    """
+    try:
+        payment_request = get_payment_request(request_id)
+        if not payment_request:
+            raise HTTPException(status_code=404, detail="Payment request not found")
+        return {"payment_request": payment_request}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting payment request: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.put("/terminal/payment-requests/{request_id}/result", response_model=dict)
+async def update_payment_request_result_endpoint(
+    request_id: str, request: UpdatePaymentRequestResultRequest
+):
+    """
+    決済リクエストの結果を更新（ターミナル側から呼び出し）
+
+    決済完了、失敗、キャンセルのいずれかを報告
+    """
+    try:
+        result = update_payment_request_result(
+            request_id=request_id,
+            status=request.status.value,
+            payment_intent_id=request.payment_intent_id,
+            error_message=request.error_message,
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Payment request not found")
+        return {"payment_request": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating payment request result: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/terminal/payment-requests/{request_id}", response_model=dict)
+async def cancel_payment_request_endpoint(request_id: str):
+    """
+    決済リクエストをキャンセル（デスクトップ側から呼び出し）
+    """
+    try:
+        success = cancel_payment_request(request_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Payment request not found")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error canceling payment request: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

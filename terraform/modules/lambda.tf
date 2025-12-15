@@ -118,18 +118,20 @@ resource "aws_lambda_function" "sales" {
 
   environment {
     variables = {
-      ENVIRONMENT           = var.environment
-      SALES_TABLE           = aws_dynamodb_table.sales.name
-      STOCK_TABLE           = aws_dynamodb_table.stock.name
-      STOCK_HISTORY_TABLE   = aws_dynamodb_table.stock_history.name
-      EVENTS_TABLE          = aws_dynamodb_table.events.name
-      CONFIG_TABLE          = aws_dynamodb_table.config.name
-      USERS_TABLE           = aws_dynamodb_table.users.name
-      STRIPE_SECRET_ARN     = aws_secretsmanager_secret.stripe_api_key.arn
-      USER_POOL_ID          = aws_cognito_user_pool.main.id
-      COGNITO_CLIENT_ID     = aws_cognito_user_pool_client.main.id
-      SES_SENDER_EMAIL      = var.ses_sender_email
-      SES_CONFIGURATION_SET = aws_ses_configuration_set.main.name
+      ENVIRONMENT                      = var.environment
+      SALES_TABLE                      = aws_dynamodb_table.sales.name
+      STOCK_TABLE                      = aws_dynamodb_table.stock.name
+      STOCK_HISTORY_TABLE              = aws_dynamodb_table.stock_history.name
+      EVENTS_TABLE                     = aws_dynamodb_table.events.name
+      CONFIG_TABLE                     = aws_dynamodb_table.config.name
+      USERS_TABLE                      = aws_dynamodb_table.users.name
+      TERMINAL_PAIRING_TABLE           = aws_dynamodb_table.terminal_pairing.name
+      TERMINAL_PAYMENT_REQUESTS_TABLE  = aws_dynamodb_table.terminal_payment_requests.name
+      STRIPE_SECRET_ARN                = aws_secretsmanager_secret.stripe_api_key.arn
+      USER_POOL_ID                     = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID                = aws_cognito_user_pool_client.main.id
+      SES_SENDER_EMAIL                 = var.ses_sender_email
+      SES_CONFIGURATION_SET            = aws_ses_configuration_set.main.name
     }
   }
 

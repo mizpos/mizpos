@@ -310,3 +310,125 @@ class TerminalLocationRequest(BaseModel):
         default="JP", min_length=2, max_length=2, description="国コード"
     )
     postal_code: str = Field(..., min_length=1, max_length=20, description="郵便番号")
+
+
+# ==============================
+# Terminal Pairing用モデル
+# ==============================
+
+
+class TerminalPairingRegisterRequest(BaseModel):
+    """ペアリング登録リクエスト（デスクトップ側）"""
+
+    pin_code: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+        description="6桁のPINコード",
+    )
+    pos_id: str = Field(..., min_length=1, max_length=100, description="POS端末ID")
+    pos_name: str = Field(..., min_length=1, max_length=200, description="POS端末名")
+    event_id: str | None = Field(default=None, description="イベントID")
+    event_name: str | None = Field(
+        default=None, max_length=200, description="イベント名"
+    )
+
+
+class TerminalPairingVerifyRequest(BaseModel):
+    """ペアリング検証リクエスト（ターミナル側）"""
+
+    pin_code: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+        description="6桁のPINコード",
+    )
+
+
+class TerminalPairingResponse(BaseModel):
+    """ペアリング情報レスポンス"""
+
+    pin_code: str
+    pos_id: str
+    pos_name: str
+    event_id: str | None = None
+    event_name: str | None = None
+    created_at: str
+    expires_at: str
+
+    class Config:
+        from_attributes = True
+
+
+# ==============================
+# Terminal Payment Request用モデル
+# ==============================
+
+
+class PaymentRequestStatus(str, Enum):
+    PENDING = "pending"  # 決済待ち
+    PROCESSING = "processing"  # 処理中
+    COMPLETED = "completed"  # 完了
+    CANCELLED = "cancelled"  # キャンセル
+    FAILED = "failed"  # 失敗
+
+
+class PaymentRequestItem(BaseModel):
+    """決済リクエスト内の商品"""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    quantity: int = Field(..., ge=1)
+    price: int = Field(..., ge=0)
+
+
+class CreatePaymentRequestRequest(BaseModel):
+    """決済リクエスト作成（デスクトップ側）"""
+
+    pin_code: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+        description="ペアリングPINコード",
+    )
+    amount: int = Field(..., gt=0, description="決済金額（円）")
+    currency: str = Field(default="jpy", description="通貨コード")
+    description: str | None = Field(default=None, max_length=500, description="説明")
+    sale_id: str | None = Field(default=None, description="販売ID")
+    items: list[PaymentRequestItem] | None = Field(
+        default=None, description="商品リスト"
+    )
+
+
+class PaymentRequestResponse(BaseModel):
+    """決済リクエストレスポンス"""
+
+    request_id: str
+    pin_code: str
+    amount: int
+    currency: str
+    description: str | None = None
+    sale_id: str | None = None
+    items: list[dict] | None = None
+    status: str
+    payment_intent_id: str | None = None
+    error_message: str | None = None
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class UpdatePaymentRequestResultRequest(BaseModel):
+    """決済結果更新リクエスト（ターミナル側）"""
+
+    status: PaymentRequestStatus = Field(..., description="決済ステータス")
+    payment_intent_id: str | None = Field(
+        default=None, description="Stripe PaymentIntent ID"
+    )
+    error_message: str | None = Field(
+        default=None, max_length=500, description="エラーメッセージ"
+    )

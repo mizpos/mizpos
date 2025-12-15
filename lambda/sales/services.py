@@ -1318,3 +1318,366 @@ def list_terminal_locations() -> list[dict]:
         }
         for loc in locations.data
     ]
+
+
+# ==============================
+# Terminal Pairing サービス
+# ==============================
+
+# 環境変数（ペアリング用）
+TERMINAL_PAIRING_TABLE = os.environ.get(
+    "TERMINAL_PAIRING_TABLE", f"{ENVIRONMENT}-mizpos-terminal-pairing"
+)
+TERMINAL_PAYMENT_REQUESTS_TABLE = os.environ.get(
+    "TERMINAL_PAYMENT_REQUESTS_TABLE", f"{ENVIRONMENT}-mizpos-terminal-payment-requests"
+)
+
+# テーブル参照（遅延初期化）
+_terminal_pairing_table = None
+_terminal_payment_requests_table = None
+
+
+def get_terminal_pairing_table():
+    """ペアリングテーブルを遅延初期化"""
+    global _terminal_pairing_table
+    if _terminal_pairing_table is None:
+        _terminal_pairing_table = dynamodb.Table(TERMINAL_PAIRING_TABLE)
+    return _terminal_pairing_table
+
+
+def get_terminal_payment_requests_table():
+    """決済リクエストテーブルを遅延初期化"""
+    global _terminal_payment_requests_table
+    if _terminal_payment_requests_table is None:
+        _terminal_payment_requests_table = dynamodb.Table(
+            TERMINAL_PAYMENT_REQUESTS_TABLE
+        )
+    return _terminal_payment_requests_table
+
+
+# ペアリング有効期限（24時間）
+PAIRING_TTL_SECONDS = 24 * 60 * 60
+
+
+def register_terminal_pairing(
+    pin_code: str,
+    pos_id: str,
+    pos_name: str,
+    event_id: str | None = None,
+    event_name: str | None = None,
+) -> dict:
+    """
+    ターミナルペアリングを登録（デスクトップ側から呼び出し）
+
+    Args:
+        pin_code: 6桁のPINコード
+        pos_id: POS端末ID
+        pos_name: POS端末名
+        event_id: イベントID（オプション）
+        event_name: イベント名（オプション）
+
+    Returns:
+        登録されたペアリング情報
+    """
+    table = get_terminal_pairing_table()
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    expires_at = now.timestamp() + PAIRING_TTL_SECONDS
+    expires_at_iso = datetime.fromtimestamp(expires_at, timezone.utc).isoformat()
+
+    # 既存のPINコードがあれば上書き
+    pairing_item = {
+        "pin_code": pin_code,
+        "pos_id": pos_id,
+        "pos_name": pos_name,
+        "event_id": event_id or "",
+        "event_name": event_name or "",
+        "created_at": now_iso,
+        "expires_at": expires_at_iso,
+        "ttl": int(expires_at),  # DynamoDB TTL用
+    }
+
+    table.put_item(Item=pairing_item)
+
+    return {
+        "pin_code": pin_code,
+        "pos_id": pos_id,
+        "pos_name": pos_name,
+        "event_id": event_id,
+        "event_name": event_name,
+        "created_at": now_iso,
+        "expires_at": expires_at_iso,
+    }
+
+
+def verify_terminal_pairing(pin_code: str) -> dict | None:
+    """
+    ターミナルペアリングを検証（ターミナル側から呼び出し）
+
+    Args:
+        pin_code: 6桁のPINコード
+
+    Returns:
+        ペアリング情報（有効な場合）、または None
+    """
+    table = get_terminal_pairing_table()
+    response = table.get_item(Key={"pin_code": pin_code})
+    item = response.get("Item")
+
+    if not item:
+        return None
+
+    # 有効期限チェック
+    expires_at = datetime.fromisoformat(item["expires_at"].replace("Z", "+00:00"))
+    if datetime.now(timezone.utc) > expires_at:
+        # 期限切れ
+        return None
+
+    return {
+        "pin_code": item["pin_code"],
+        "pos_id": item["pos_id"],
+        "pos_name": item["pos_name"],
+        "event_id": item.get("event_id") or None,
+        "event_name": item.get("event_name") or None,
+        "created_at": item["created_at"],
+        "expires_at": item["expires_at"],
+    }
+
+
+def delete_terminal_pairing(pin_code: str) -> bool:
+    """
+    ターミナルペアリングを解除
+
+    Args:
+        pin_code: 6桁のPINコード
+
+    Returns:
+        削除成功かどうか
+    """
+    table = get_terminal_pairing_table()
+
+    # 存在確認
+    response = table.get_item(Key={"pin_code": pin_code})
+    if not response.get("Item"):
+        return False
+
+    table.delete_item(Key={"pin_code": pin_code})
+    return True
+
+
+# ==============================
+# Terminal Payment Request サービス
+# ==============================
+
+# 決済リクエスト有効期限（5分）
+PAYMENT_REQUEST_TTL_SECONDS = 5 * 60
+
+
+def create_payment_request(
+    pin_code: str,
+    amount: int,
+    currency: str = "jpy",
+    description: str | None = None,
+    sale_id: str | None = None,
+    items: list | None = None,
+) -> dict:
+    """
+    決済リクエストを作成（デスクトップ側から呼び出し）
+
+    Args:
+        pin_code: ペアリングPINコード
+        amount: 決済金額
+        currency: 通貨コード
+        description: 説明
+        sale_id: 販売ID
+        items: 商品リスト
+
+    Returns:
+        作成された決済リクエスト
+    """
+    import uuid
+
+    # ペアリング確認
+    pairing = verify_terminal_pairing(pin_code)
+    if not pairing:
+        raise HTTPException(status_code=404, detail="Pairing not found or expired")
+
+    table = get_terminal_payment_requests_table()
+    request_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    expires_at = now.timestamp() + PAYMENT_REQUEST_TTL_SECONDS
+
+    request_item = {
+        "request_id": request_id,
+        "pin_code": pin_code,
+        "amount": amount,
+        "currency": currency,
+        "description": description or "",
+        "sale_id": sale_id or "",
+        "items": items or [],
+        "status": "pending",
+        "payment_intent_id": "",
+        "error_message": "",
+        "created_at": now_iso,
+        "updated_at": now_iso,
+        "ttl": int(expires_at),  # DynamoDB TTL用
+    }
+
+    table.put_item(Item=request_item)
+
+    return {
+        "request_id": request_id,
+        "pin_code": pin_code,
+        "amount": amount,
+        "currency": currency,
+        "description": description,
+        "sale_id": sale_id,
+        "items": items,
+        "status": "pending",
+        "payment_intent_id": None,
+        "error_message": None,
+        "created_at": now_iso,
+        "updated_at": now_iso,
+    }
+
+
+def get_pending_payment_request(pin_code: str) -> dict | None:
+    """
+    ペンディング状態の決済リクエストを取得（ターミナル側からポーリング）
+
+    Args:
+        pin_code: ペアリングPINコード
+
+    Returns:
+        ペンディング状態の決済リクエスト（存在する場合）
+    """
+    table = get_terminal_payment_requests_table()
+
+    # PINコードでフィルタしてpending状態のリクエストを取得
+    # GSIを使用する場合はそちらを優先（ここではスキャン）
+    response = table.scan(
+        FilterExpression="pin_code = :pin AND #st = :status",
+        ExpressionAttributeNames={"#st": "status"},
+        ExpressionAttributeValues={":pin": pin_code, ":status": "pending"},
+    )
+
+    items = response.get("Items", [])
+    if not items:
+        return None
+
+    # 最新のリクエストを返す（created_atでソート）
+    sorted_items = sorted(items, key=lambda x: x["created_at"], reverse=True)
+    item = sorted_items[0]
+
+    return dynamo_to_dict(
+        {
+            "request_id": item["request_id"],
+            "pin_code": item["pin_code"],
+            "amount": item["amount"],
+            "currency": item["currency"],
+            "description": item.get("description") or None,
+            "sale_id": item.get("sale_id") or None,
+            "items": item.get("items") or None,
+            "status": item["status"],
+            "payment_intent_id": item.get("payment_intent_id") or None,
+            "error_message": item.get("error_message") or None,
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+        }
+    )
+
+
+def get_payment_request(request_id: str) -> dict | None:
+    """
+    決済リクエストを取得
+
+    Args:
+        request_id: リクエストID
+
+    Returns:
+        決済リクエスト情報
+    """
+    table = get_terminal_payment_requests_table()
+    response = table.get_item(Key={"request_id": request_id})
+    item = response.get("Item")
+
+    if not item:
+        return None
+
+    return dynamo_to_dict(
+        {
+            "request_id": item["request_id"],
+            "pin_code": item["pin_code"],
+            "amount": item["amount"],
+            "currency": item["currency"],
+            "description": item.get("description") or None,
+            "sale_id": item.get("sale_id") or None,
+            "items": item.get("items") or None,
+            "status": item["status"],
+            "payment_intent_id": item.get("payment_intent_id") or None,
+            "error_message": item.get("error_message") or None,
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+        }
+    )
+
+
+def update_payment_request_result(
+    request_id: str,
+    status: str,
+    payment_intent_id: str | None = None,
+    error_message: str | None = None,
+) -> dict | None:
+    """
+    決済リクエストの結果を更新（ターミナル側から呼び出し）
+
+    Args:
+        request_id: リクエストID
+        status: ステータス（completed, failed, cancelled）
+        payment_intent_id: Stripe PaymentIntent ID
+        error_message: エラーメッセージ
+
+    Returns:
+        更新された決済リクエスト
+    """
+    table = get_terminal_payment_requests_table()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    update_parts = ["#st = :status", "updated_at = :updated_at"]
+    expression_values = {":status": status, ":updated_at": now_iso}
+    expression_names = {"#st": "status"}
+
+    if payment_intent_id:
+        update_parts.append("payment_intent_id = :pi")
+        expression_values[":pi"] = payment_intent_id
+
+    if error_message:
+        update_parts.append("error_message = :err")
+        expression_values[":err"] = error_message
+
+    try:
+        response = table.update_item(
+            Key={"request_id": request_id},
+            UpdateExpression=f"SET {', '.join(update_parts)}",
+            ExpressionAttributeNames=expression_names,
+            ExpressionAttributeValues=expression_values,
+            ReturnValues="ALL_NEW",
+        )
+        return dynamo_to_dict(response["Attributes"])
+    except ClientError:
+        return None
+
+
+def cancel_payment_request(request_id: str) -> bool:
+    """
+    決済リクエストをキャンセル
+
+    Args:
+        request_id: リクエストID
+
+    Returns:
+        キャンセル成功かどうか
+    """
+    result = update_payment_request_result(request_id, "cancelled")
+    return result is not None
