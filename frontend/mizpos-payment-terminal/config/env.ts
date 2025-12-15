@@ -4,13 +4,17 @@
  * 開発環境と本番環境で異なる設定を管理
  */
 
+const API_GATEWAY_BASE = 'https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com';
+
 const ENV = {
   development: {
-    API_BASE_URL: 'https://api.example.com/dev/sales',  // TODO: 実際のAPIエンドポイントに置き換え
+    API_GATEWAY_BASE,
+    API_BASE_URL: `${API_GATEWAY_BASE}/dev/sales`,
     STRIPE_PUBLISHABLE_KEY: 'pk_test_xxx',  // TODO: 実際のキーに置き換え
   },
   production: {
-    API_BASE_URL: 'https://api.example.com/prod/sales',  // TODO: 実際のAPIエンドポイントに置き換え
+    API_GATEWAY_BASE,
+    API_BASE_URL: `${API_GATEWAY_BASE}/prod/sales`,
     STRIPE_PUBLISHABLE_KEY: 'pk_live_xxx',  // TODO: 実際のキーに置き換え
   },
 };

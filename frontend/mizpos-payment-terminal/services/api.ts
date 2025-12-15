@@ -1,46 +1,141 @@
 /**
  * API通信サービス
  *
- * バックエンドとの通信を管理
+ * @mizpos/api パッケージを使用したOpenAPIクライアント
  */
 
+import { createSalesClient, type SalesComponents } from '@mizpos/api';
 import config from '@/config/env';
 
-// API レスポンス型
-interface ApiResponse<T> {
-  data: T | null;
-  error: string | null;
+// Sales APIクライアント
+export const salesClient = createSalesClient({
+  baseUrl: config.API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// ==========================================
+// 型定義（APIレスポンス用）
+// ==========================================
+
+/**
+ * ペアリング情報（APIレスポンス）
+ */
+export interface PairingInfo {
+  pin_code: string;
+  pos_id: string;
+  pos_name: string;
+  event_id?: string;
+  event_name?: string;
+  created_at: string;
+  expires_at: string;
 }
 
-// 共通のfetch関数
-async function fetchApi<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<ApiResponse<T>> {
-  try {
-    const url = `${config.API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+/**
+ * 決済リクエスト（APIレスポンス）
+ */
+export interface PaymentRequest {
+  request_id: string;
+  pin_code: string;
+  amount: number;
+  currency: string;
+  description?: string;
+  sale_id?: string;
+  items?: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  status: SalesComponents['schemas']['PaymentRequestStatus'];
+  payment_intent_id?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
+/**
+ * 決済結果更新リクエスト
+ */
+export type UpdatePaymentRequestResultParams = SalesComponents['schemas']['UpdatePaymentRequestResultRequest'];
 
-    const data = await response.json();
-    return { data, error: null };
-  } catch (error) {
-    console.error('API Error:', error);
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+// ==========================================
+// Terminal Pairing API
+// ==========================================
+
+/**
+ * ペアリングを検証（ターミナル側）
+ */
+export async function verifyPairing(pinCode: string): Promise<PairingInfo> {
+  const { data, error } = await salesClient.POST('/terminal/pairing/verify', {
+    body: { pin_code: pinCode },
+  });
+
+  if (error) {
+    throw new Error('Failed to verify pairing');
   }
+
+  return data as unknown as { pairing: PairingInfo } & { pairing: PairingInfo }['pairing'];
+}
+
+/**
+ * ペアリングを解除
+ */
+export async function deletePairing(pinCode: string): Promise<void> {
+  const { error } = await salesClient.DELETE('/terminal/pairing/{pin_code}', {
+    params: { path: { pin_code: pinCode } },
+  });
+
+  if (error) {
+    throw new Error('Failed to delete pairing');
+  }
+}
+
+// ==========================================
+// Terminal Payment Request API
+// ==========================================
+
+/**
+ * ペンディング状態の決済リクエストを取得（ポーリング用）
+ */
+export async function getPendingPaymentRequest(
+  pinCode: string
+): Promise<PaymentRequest | null> {
+  const { data, error } = await salesClient.GET(
+    '/terminal/payment-requests/pending/{pin_code}',
+    {
+      params: { path: { pin_code: pinCode } },
+    }
+  );
+
+  if (error) {
+    throw new Error('Failed to get pending payment request');
+  }
+
+  const response = data as unknown as { payment_request: PaymentRequest | null };
+  return response?.payment_request || null;
+}
+
+/**
+ * 決済リクエストの結果を更新
+ */
+export async function updatePaymentRequestResult(
+  requestId: string,
+  params: UpdatePaymentRequestResultParams
+): Promise<PaymentRequest> {
+  const { data, error } = await salesClient.PUT(
+    '/terminal/payment-requests/{request_id}/result',
+    {
+      params: { path: { request_id: requestId } },
+      body: params,
+    }
+  );
+
+  if (error) {
+    throw new Error('Failed to update payment request result');
+  }
+
+  return data as unknown as { payment_request: PaymentRequest }['payment_request'];
 }
 
 // ==========================================
@@ -51,20 +146,16 @@ async function fetchApi<T>(
  * Connection Tokenを取得
  */
 export async function getConnectionToken(locationId?: string): Promise<string> {
-  const body = locationId ? { location_id: locationId } : {};
-  const response = await fetchApi<{ connection_token: { secret: string } }>(
-    '/terminal/connection-token',
-    {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }
-  );
+  const { data, error } = await salesClient.POST('/terminal/connection-token', {
+    body: locationId ? { location_id: locationId } : null,
+  });
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to get connection token');
+  if (error) {
+    throw new Error('Failed to get connection token');
   }
 
-  return response.data.connection_token.secret;
+  const response = data as unknown as { connection_token: { secret: string } };
+  return response.connection_token.secret;
 }
 
 /**
@@ -83,15 +174,14 @@ export interface TerminalLocation {
 }
 
 export async function getLocations(): Promise<TerminalLocation[]> {
-  const response = await fetchApi<{ locations: TerminalLocation[] }>(
-    '/terminal/locations'
-  );
+  const { data, error } = await salesClient.GET('/terminal/locations');
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to get locations');
+  if (error) {
+    throw new Error('Failed to get locations');
   }
 
-  return response.data.locations;
+  const response = data as unknown as { locations: TerminalLocation[] };
+  return response.locations;
 }
 
 /**
@@ -107,16 +197,16 @@ export interface TerminalReader {
 }
 
 export async function getReaders(locationId?: string): Promise<TerminalReader[]> {
-  const queryParams = locationId ? `?location_id=${locationId}` : '';
-  const response = await fetchApi<{ readers: TerminalReader[] }>(
-    `/terminal/readers${queryParams}`
-  );
+  const { data, error } = await salesClient.GET('/terminal/readers', {
+    params: { query: { location_id: locationId } },
+  });
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to get readers');
+  if (error) {
+    throw new Error('Failed to get readers');
   }
 
-  return response.data.readers;
+  const response = data as unknown as { readers: TerminalReader[] };
+  return response.readers;
 }
 
 /**
@@ -142,19 +232,23 @@ export interface PaymentIntent {
 export async function createPaymentIntent(
   params: CreatePaymentIntentParams
 ): Promise<PaymentIntent> {
-  const response = await fetchApi<{ payment_intent: PaymentIntent }>(
-    '/terminal/payment-intents',
-    {
-      method: 'POST',
-      body: JSON.stringify(params),
-    }
-  );
+  const { data, error } = await salesClient.POST('/terminal/payment-intents', {
+    body: {
+      amount: params.amount,
+      currency: params.currency ?? 'jpy',
+      description: params.description,
+      metadata: params.metadata,
+      sale_id: params.sale_id,
+      pnr: params.pinCode,
+    },
+  });
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to create payment intent');
+  if (error) {
+    throw new Error('Failed to create payment intent');
   }
 
-  return response.data.payment_intent;
+  const response = data as unknown as { payment_intent: PaymentIntent };
+  return response.payment_intent;
 }
 
 /**
@@ -163,18 +257,19 @@ export async function createPaymentIntent(
 export async function capturePaymentIntent(
   paymentIntentId: string
 ): Promise<PaymentIntent> {
-  const response = await fetchApi<{ payment_intent: PaymentIntent }>(
-    `/terminal/payment-intents/${paymentIntentId}/capture`,
+  const { data, error } = await salesClient.POST(
+    '/terminal/payment-intents/{payment_intent_id}/capture',
     {
-      method: 'POST',
+      params: { path: { payment_intent_id: paymentIntentId } },
     }
   );
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to capture payment intent');
+  if (error) {
+    throw new Error('Failed to capture payment intent');
   }
 
-  return response.data.payment_intent;
+  const response = data as unknown as { payment_intent: PaymentIntent };
+  return response.payment_intent;
 }
 
 /**
@@ -183,18 +278,19 @@ export async function capturePaymentIntent(
 export async function cancelPaymentIntent(
   paymentIntentId: string
 ): Promise<PaymentIntent> {
-  const response = await fetchApi<{ payment_intent: PaymentIntent }>(
-    `/terminal/payment-intents/${paymentIntentId}/cancel`,
+  const { data, error } = await salesClient.POST(
+    '/terminal/payment-intents/{payment_intent_id}/cancel',
     {
-      method: 'POST',
+      params: { path: { payment_intent_id: paymentIntentId } },
     }
   );
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to cancel payment intent');
+  if (error) {
+    throw new Error('Failed to cancel payment intent');
   }
 
-  return response.data.payment_intent;
+  const response = data as unknown as { payment_intent: PaymentIntent };
+  return response.payment_intent;
 }
 
 /**
@@ -213,15 +309,19 @@ export interface PaymentIntentForRefund {
 export async function getPaymentIntent(
   paymentIntentId: string
 ): Promise<PaymentIntentForRefund> {
-  const response = await fetchApi<{ payment_intent: PaymentIntentForRefund }>(
-    `/terminal/payment-intents/${paymentIntentId}`
+  const { data, error } = await salesClient.GET(
+    '/terminal/payment-intents/{payment_intent_id}',
+    {
+      params: { path: { payment_intent_id: paymentIntentId } },
+    }
   );
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to get payment intent');
+  if (error) {
+    throw new Error('Failed to get payment intent');
   }
 
-  return response.data.payment_intent;
+  const response = data as unknown as { payment_intent: PaymentIntentForRefund };
+  return response.payment_intent;
 }
 
 /**
@@ -243,14 +343,14 @@ export interface Refund {
 }
 
 export async function createRefund(params: CreateRefundParams): Promise<Refund> {
-  const response = await fetchApi<{ refund: Refund }>('/terminal/refunds', {
-    method: 'POST',
-    body: JSON.stringify(params),
+  const { data, error } = await salesClient.POST('/terminal/refunds', {
+    body: params,
   });
 
-  if (response.error || !response.data) {
-    throw new Error(response.error || 'Failed to create refund');
+  if (error) {
+    throw new Error('Failed to create refund');
   }
 
-  return response.data.refund;
+  const response = data as unknown as { refund: Refund };
+  return response.refund;
 }
