@@ -58,6 +58,7 @@ export interface CartItem {
 export type PaymentMethod =
   | "cash"
   | "oya_cashless"
+  | "stripe_terminal" // Stripe Terminal（クレジットカード）
   | "voucher_department" // 百貨店商品券
   | "voucher_event"; // イベント主催者発行商品券
 
@@ -84,6 +85,22 @@ export interface Payment {
 }
 
 /**
+ * カード詳細情報（クレジット売上表用）
+ */
+export interface CardDetails {
+  brand?: string;
+  last4?: string;
+  expMonth?: number;
+  expYear?: number;
+  cardholderName?: string;
+  funding?: string;
+  terminalSerialNumber?: string;
+  transactionType?: string;
+  paymentType?: string;
+  transactionAt?: string;
+}
+
+/**
  * 取引情報
  */
 export interface Transaction {
@@ -97,6 +114,10 @@ export interface Transaction {
   staffId: string;
   createdAt: Date;
   isTraining?: boolean;
+  /** Stripe PaymentIntent ID (Terminal決済時) */
+  paymentIntentId?: string;
+  /** カード詳細情報（クレジット決済時） */
+  cardDetails?: CardDetails;
 }
 
 /**
@@ -121,6 +142,10 @@ export interface AppSettings {
   /** 会場住所 */
   venueAddress?: string;
   terminalId: string;
+  /** デバイス名（ペアリング用） */
+  deviceName?: string;
+  /** イベントID（ペアリング用） */
+  eventId?: string;
   taxRate: number;
   printer?: PrinterConfig;
   isTrainingMode?: boolean;

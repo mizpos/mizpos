@@ -240,3 +240,230 @@ class ShippingOptionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ==============================
+# Stripe Terminal用モデル
+# ==============================
+
+
+class TerminalConnectionTokenRequest(BaseModel):
+    """Connection Token発行リクエスト"""
+
+    location_id: str | None = Field(
+        default=None, description="オプションのロケーションID"
+    )
+
+
+class TerminalRegisterReaderRequest(BaseModel):
+    """リーダー登録リクエスト"""
+
+    registration_code: str = Field(
+        ..., min_length=1, description="リーダーの登録コード"
+    )
+    label: str = Field(
+        ..., min_length=1, max_length=100, description="リーダーの識別名"
+    )
+    location_id: str = Field(..., min_length=1, description="StripeロケーションID")
+
+
+class TerminalPaymentIntentRequest(BaseModel):
+    """Terminal用PaymentIntent作成リクエスト"""
+
+    amount: int = Field(..., gt=0, description="金額（円）")
+    currency: str = Field(default="jpy", description="通貨コード")
+    description: str | None = Field(default=None, max_length=500, description="説明")
+    metadata: dict | None = Field(default=None, description="メタデータ")
+    # POS連携用メタデータ
+    sale_id: str | None = Field(
+        default=None, description="販売ID（mizpos-desktop連携用）"
+    )
+    pnr: str | None = Field(default=None, description="連携番号（ペアリング用）")
+
+
+class TerminalCaptureRequest(BaseModel):
+    """PaymentIntentキャプチャリクエスト"""
+
+    payment_intent_id: str = Field(..., min_length=1, description="PaymentIntentID")
+
+
+class TerminalRefundRequest(BaseModel):
+    """Terminal返金リクエスト"""
+
+    payment_intent_id: str = Field(
+        ..., min_length=1, description="返金対象PaymentIntentID"
+    )
+    amount: int | None = Field(default=None, gt=0, description="返金額（Noneで全額）")
+    reason: str | None = Field(default=None, max_length=500, description="返金理由")
+
+
+class TerminalLocationRequest(BaseModel):
+    """ロケーション作成リクエスト"""
+
+    display_name: str = Field(..., min_length=1, max_length=100, description="表示名")
+    address_line1: str = Field(
+        ..., min_length=1, max_length=200, description="住所1行目"
+    )
+    city: str = Field(..., min_length=1, max_length=100, description="市区町村")
+    state: str = Field(..., min_length=1, max_length=100, description="都道府県")
+    country: str = Field(
+        default="JP", min_length=2, max_length=2, description="国コード"
+    )
+    postal_code: str = Field(..., min_length=1, max_length=20, description="郵便番号")
+
+
+# ==============================
+# Terminal Pairing用モデル
+# ==============================
+
+
+class TerminalPairingRegisterRequest(BaseModel):
+    """ペアリング登録リクエスト（デスクトップ側）"""
+
+    pin_code: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+        description="6桁のPINコード",
+    )
+    pos_id: str = Field(..., min_length=1, max_length=100, description="POS端末ID")
+    pos_name: str = Field(..., min_length=1, max_length=200, description="POS端末名")
+    event_id: str | None = Field(default=None, description="イベントID")
+    event_name: str | None = Field(
+        default=None, max_length=200, description="イベント名"
+    )
+
+
+class TerminalPairingVerifyRequest(BaseModel):
+    """ペアリング検証リクエスト（ターミナル側）"""
+
+    pin_code: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+        description="6桁のPINコード",
+    )
+
+
+class TerminalPairingResponse(BaseModel):
+    """ペアリング情報レスポンス"""
+
+    pin_code: str
+    pos_id: str
+    pos_name: str
+    event_id: str | None = None
+    event_name: str | None = None
+    created_at: str
+    expires_at: str
+
+    class Config:
+        from_attributes = True
+
+
+# ==============================
+# Terminal Payment Request用モデル
+# ==============================
+
+
+class PaymentRequestStatus(str, Enum):
+    PENDING = "pending"  # 決済待ち
+    PROCESSING = "processing"  # 処理中
+    COMPLETED = "completed"  # 完了
+    CANCELLED = "cancelled"  # キャンセル
+    FAILED = "failed"  # 失敗
+
+
+class PaymentRequestItem(BaseModel):
+    """決済リクエスト内の商品"""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    quantity: int = Field(..., ge=1)
+    price: int = Field(..., ge=0)
+
+
+class CreatePaymentRequestRequest(BaseModel):
+    """決済リクエスト作成（デスクトップ側）"""
+
+    pin_code: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+        description="ペアリングPINコード",
+    )
+    amount: int = Field(..., gt=0, description="決済金額（円）")
+    currency: str = Field(default="jpy", description="通貨コード")
+    description: str | None = Field(default=None, max_length=500, description="説明")
+    sale_id: str | None = Field(default=None, description="販売ID")
+    items: list[PaymentRequestItem] | None = Field(
+        default=None, description="商品リスト"
+    )
+
+
+class PaymentRequestResponse(BaseModel):
+    """決済リクエストレスポンス"""
+
+    request_id: str
+    pin_code: str
+    amount: int
+    currency: str
+    description: str | None = None
+    sale_id: str | None = None
+    items: list[dict] | None = None
+    status: str
+    payment_intent_id: str | None = None
+    error_message: str | None = None
+    card_details: dict | None = None
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class CardDetails(BaseModel):
+    """クレジットカード詳細情報（レシート表示用）"""
+
+    brand: str | None = Field(
+        default=None, description="カードブランド（visa, mastercard等）"
+    )
+    last4: str | None = Field(default=None, max_length=4, description="カード番号下4桁")
+    exp_month: int | None = Field(
+        default=None, ge=1, le=12, description="有効期限（月）"
+    )
+    exp_year: int | None = Field(default=None, description="有効期限（年）")
+    cardholder_name: str | None = Field(
+        default=None, max_length=200, description="カード名義人"
+    )
+    funding: str | None = Field(
+        default=None, description="カード種別（credit, debit等）"
+    )
+    # 端末情報
+    terminal_serial_number: str | None = Field(
+        default=None, description="端末シリアル番号"
+    )
+    # 取引情報
+    transaction_type: str | None = Field(
+        default="sale", description="取引種別（sale/refund）"
+    )
+    payment_type: str | None = Field(default="一括", description="支払区分")
+    transaction_at: str | None = Field(
+        default=None, description="取引日時（ISO8601形式）"
+    )
+
+
+class UpdatePaymentRequestResultRequest(BaseModel):
+    """決済結果更新リクエスト（ターミナル側）"""
+
+    status: PaymentRequestStatus = Field(..., description="決済ステータス")
+    payment_intent_id: str | None = Field(
+        default=None, description="Stripe PaymentIntent ID"
+    )
+    error_message: str | None = Field(
+        default=None, max_length=500, description="エラーメッセージ"
+    )
+    card_details: CardDetails | None = Field(
+        default=None, description="カード詳細情報（レシート表示用）"
+    )

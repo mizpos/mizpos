@@ -321,6 +321,7 @@ function RefundPage() {
     const labels: Record<string, string> = {
       cash: "現金",
       oya_cashless: "大家キャッシュレス",
+      stripe_terminal: "クレジット",
       voucher_department: "百貨店商品券",
       voucher_event: "イベント主催者発行商品券",
     };

@@ -51,6 +51,31 @@ mod desktop_printer {
         pub amount: u32,
     }
 
+    /// カード詳細情報（クレジット売上表用）
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct CardDetails {
+        /// カードブランド（visa, mastercard等）
+        pub brand: Option<String>,
+        /// カード番号下4桁
+        pub last4: Option<String>,
+        /// 有効期限（月）
+        pub exp_month: Option<u32>,
+        /// 有効期限（年）
+        pub exp_year: Option<u32>,
+        /// カード名義人
+        pub cardholder_name: Option<String>,
+        /// カード種別（credit, debit等）
+        pub funding: Option<String>,
+        /// 端末シリアル番号
+        pub terminal_serial_number: Option<String>,
+        /// 取引種別（sale/refund）
+        pub transaction_type: Option<String>,
+        /// 支払区分
+        pub payment_type: Option<String>,
+        /// 取引日時（ISO8601形式）
+        pub transaction_at: Option<String>,
+    }
+
     /// レシートデータ
     #[derive(Debug, Clone, Deserialize)]
     pub struct ReceiptData {
@@ -78,6 +103,10 @@ mod desktop_printer {
         pub tax_amount: u32,
         /// レシート番号
         pub receipt_number: String,
+        /// カード詳細情報（クレジット決済時）
+        pub card_details: Option<CardDetails>,
+        /// Stripe PaymentIntent ID（クレジット決済時）
+        pub payment_intent_id: Option<String>,
     }
 
     #[tauri::command]
@@ -324,10 +353,118 @@ mod desktop_printer {
         // QRコード（レシート番号）
         printer.qr_code_center(&receipt.receipt_number, Some(6))?;
 
+        // クレジット売上表（カード詳細がある場合のみ）
+        if let Some(ref card) = receipt.card_details {
+            printer.textln("")?;
+            printer.double_separator()?;
+            printer.jp_textln_padded("クレジット売上表", TextStyle::default().double().reverse().center())?;
+            printer.textln("")?;
+
+            // 加盟店名（サークル名を使用）
+            if let Some(ref circle_name) = receipt.circle_name {
+                if !circle_name.is_empty() {
+                    printer.row_auto("加盟店名:", circle_name)?;
+                }
+            }
+
+            // 端末番号
+            if let Some(ref terminal_sn) = card.terminal_serial_number {
+                printer.row_auto("端末番号:", terminal_sn)?;
+            }
+
+            // ご利用日時
+            if let Some(ref tx_at) = card.transaction_at {
+                // ISO8601をフォーマット（例: 2025-12-16T10:30:00Z → 2025/12/16 10:30）
+                let formatted = format_transaction_datetime(tx_at);
+                printer.row_auto("ご利用日時:", &formatted)?;
+            }
+
+            // 伝票番号（PaymentIntent ID）
+            if let Some(ref pi_id) = receipt.payment_intent_id {
+                // IDが長い場合は末尾のみ表示
+                let display_id = if pi_id.len() > 16 {
+                    format!("...{}", &pi_id[pi_id.len()-12..])
+                } else {
+                    pi_id.clone()
+                };
+                printer.row_auto("伝票番号:", &display_id)?;
+            }
+
+            printer.separator()?;
+
+            // 会員番号（マスク済みカード番号）
+            if let Some(ref last4) = card.last4 {
+                printer.row_auto("会員番号:", &format!("**** **** **** {}", last4))?;
+            }
+
+            // 取引内容
+            let tx_type = card.transaction_type.as_deref().unwrap_or("sale");
+            let tx_type_display = match tx_type {
+                "sale" => "売上",
+                "refund" => "返品",
+                _ => tx_type,
+            };
+            printer.row_auto("取引内容:", tx_type_display)?;
+
+            // 支払い区分
+            let payment_type = card.payment_type.as_deref().unwrap_or("一括");
+            printer.row_auto("支払区分:", payment_type)?;
+
+            // カード会社
+            if let Some(ref brand) = card.brand {
+                let brand_display = match brand.to_lowercase().as_str() {
+                    "visa" => "VISA",
+                    "mastercard" | "mc" => "MasterCard",
+                    "amex" | "american_express" => "AMEX",
+                    "jcb" => "JCB",
+                    "diners" | "diners_club" => "Diners Club",
+                    "discover" => "Discover",
+                    "unionpay" => "UnionPay",
+                    _ => brand,
+                };
+                printer.row_auto("カード会社:", brand_display)?;
+            }
+
+            // 有効期限
+            if let (Some(month), Some(year)) = (card.exp_month, card.exp_year) {
+                let year_short = year % 100;
+                printer.row_auto("有効期限:", &format!("{:02}/{:02}", month, year_short))?;
+            }
+
+            printer.separator()?;
+
+            // 利用金額
+            printer.row_auto_bold("ご利用金額:", &format_price(receipt.total))?;
+
+            printer.textln("")?;
+
+            // 署名欄
+            printer.jp_textln("【お客様サイン】", TextStyle::default().bold())?;
+            printer.textln("")?;
+            printer.jp_textln_padded("＜IC取引につき不要＞", TextStyle::default().center())?;
+            printer.textln("")?;
+            printer.separator()?;
+
+            printer.jp_textln("上記正に受領いたしました", TextStyle::default().center())?;
+        }
+
         printer.feed(3)?;
         printer.cut()?;
 
         Ok(())
+    }
+
+    /// ISO8601形式の日時を読みやすい形式に変換
+    fn format_transaction_datetime(iso_datetime: &str) -> String {
+        // 簡易パース: 2025-12-16T10:30:00.000Z のような形式を想定
+        if iso_datetime.len() >= 16 {
+            let date_part = &iso_datetime[0..10];
+            let time_part = &iso_datetime[11..16];
+            let date_formatted = date_part.replace('-', "/");
+            format!("{} {}", date_formatted, time_part)
+        } else {
+            iso_datetime.to_string()
+        }
     }
 
     /// 金種カウント

@@ -1,0 +1,241 @@
+name: Build Payment Terminal App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/apps/mizpos-payment-terminal/**"
+      - "frontend/packages/**"
+      - ".github/workflows/build-payment-terminal.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to build for"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+  workflow_call:
+    inputs:
+      environment:
+        description: "Environment to build for"
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10"
+  AWS_REGION: ap-northeast-1
+  JAVA_VERSION: "17"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  setup-env:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      cdn-bucket: ${{ steps.set-env.outputs.cdn-bucket }}
+      cdn-distribution-id: ${{ steps.set-env.outputs.cdn-distribution-id }}
+      cdn-domain: ${{ steps.set-env.outputs.cdn-domain }}
+    steps:
+      - id: set-env
+        run: |
+          # Determine environment
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            ENV="dev"
+          fi
+
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
+          # Set environment-specific values
+          if [[ "$ENV" == "prod" ]]; then
+            echo "cdn-bucket=prod-mizpos-cdn-assets" >> $GITHUB_OUTPUT
+            echo "cdn-distribution-id=E2H6IWQATGJWQS" >> $GITHUB_OUTPUT
+            echo "cdn-domain=https://di1aotrw2gywt.cloudfront.net" >> $GITHUB_OUTPUT
+          else
+            echo "cdn-bucket=dev-mizpos-cdn-assets" >> $GITHUB_OUTPUT
+            echo "cdn-distribution-id=E195S6TD7VY00" >> $GITHUB_OUTPUT
+            echo "cdn-domain=https://d1o5hbbhoeegz0.cloudfront.net" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    name: Build Payment Terminal App (${{ needs.setup-env.outputs.environment }})
+    needs: setup-env
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Frontend Environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          working-directory: frontend
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "build-tools;35.0.0 platform-tools platforms;android-35"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get App Version from S3
+        id: version
+        shell: bash
+        run: |
+          chmod +x scripts/version-manager.sh
+          VERSION=$(./scripts/version-manager.sh get "mizpos-payment-terminal" "${{ needs.setup-env.outputs.environment }}" || echo "1.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "App version: $VERSION"
+
+      - name: Generate native project with expo prebuild
+        working-directory: frontend/apps/mizpos-payment-terminal
+        env:
+          EXPO_NO_TELEMETRY: 1
+        run: |
+          npx expo prebuild --platform android --clean
+
+      - name: Update version in build.gradle
+        working-directory: frontend/apps/mizpos-payment-terminal/android
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_CODE=$(echo "$VERSION" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')
+
+          # Update versionName and versionCode in build.gradle
+          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" app/build.gradle
+          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" app/build.gradle
+
+          echo "Updated version to $VERSION (code: $VERSION_CODE)"
+
+      - name: Build Android APK
+        working-directory: frontend/apps/mizpos-payment-terminal/android
+        run: |
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Setup Android keystore from AWS Secrets Manager
+        run: |
+          # Get signing credentials from AWS Secrets Manager
+          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id mizpos/android-signing --query SecretString --output text)
+
+          # Extract values and set environment variables
+          echo "$SECRET_JSON" | jq -r '.keystore_base64' | base64 -d > keystore.jks
+          echo "ANDROID_KEYSTORE_PATH=$PWD/keystore.jks" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PASSWORD=$(echo "$SECRET_JSON" | jq -r '.keystore_password')" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=$(echo "$SECRET_JSON" | jq -r '.key_password')" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=$(echo "$SECRET_JSON" | jq -r '.key_alias')" >> $GITHUB_ENV
+
+      - name: Sign APK
+        run: |
+          # Add Android build-tools to PATH
+          export PATH="$ANDROID_HOME/build-tools/35.0.0:$PATH"
+
+          BUILD_DIR="frontend/apps/mizpos-payment-terminal/android/app/build/outputs/apk/release"
+          ENV="${{ needs.setup-env.outputs.environment }}"
+
+          # APK signing: zipalign first, then apksigner (APK Signature Scheme v2)
+          zipalign -v 4 $BUILD_DIR/app-release-unsigned.apk \
+            $BUILD_DIR/mizpos-payment-terminal-$ENV-aligned.apk
+
+          apksigner sign --ks $ANDROID_KEYSTORE_PATH \
+            --ks-pass pass:$ANDROID_KEYSTORE_PASSWORD \
+            --ks-key-alias $ANDROID_KEY_ALIAS \
+            --key-pass pass:$ANDROID_KEY_PASSWORD \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --v4-signing-enabled false \
+            --out $BUILD_DIR/mizpos-payment-terminal-$ENV.apk \
+            $BUILD_DIR/mizpos-payment-terminal-$ENV-aligned.apk
+
+          # Verify APK signature
+          apksigner verify --verbose $BUILD_DIR/mizpos-payment-terminal-$ENV.apk
+
+      - name: Upload to CDN
+        env:
+          ENV: ${{ needs.setup-env.outputs.environment }}
+          CDN_BUCKET: ${{ needs.setup-env.outputs.cdn-bucket }}
+        run: |
+          BUILD_DIR="frontend/apps/mizpos-payment-terminal/android/app/build/outputs/apk/release"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+          # Upload APK with timestamp for history
+          aws s3 cp $BUILD_DIR/mizpos-payment-terminal-$ENV.apk \
+            "s3://$CDN_BUCKET/payment-terminal/$ENV/mizpos-payment-terminal-${TIMESTAMP}.apk"
+          # Upload APK as latest
+          aws s3 cp $BUILD_DIR/mizpos-payment-terminal-$ENV.apk \
+            "s3://$CDN_BUCKET/payment-terminal/$ENV/mizpos-payment-terminal-latest.apk"
+
+      - name: Create deployment summary
+        run: |
+          echo "## Payment Terminal Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ needs.setup-env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Download URL**: ${{ needs.setup-env.outputs.cdn-domain }}/payment-terminal/${{ needs.setup-env.outputs.environment }}/mizpos-payment-terminal-latest.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- **Built at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  increment-version:
+    name: Increment Payment Terminal Version
+    needs: [setup-env, build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Increment Version and Update Build Info
+        run: |
+          chmod +x scripts/version-manager.sh
+          ENV="${{ needs.setup-env.outputs.environment }}"
+          NEW_VERSION=$(./scripts/version-manager.sh increment "mizpos-payment-terminal" "$ENV" patch)
+          ./scripts/version-manager.sh set-build-info "mizpos-payment-terminal" "$ENV" "${{ github.sha }}"
+          echo "New version: $NEW_VERSION"
+          echo "## Payment Terminal App Version Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Version**: $NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: $ENV" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  invalidate-cloudfront:
+    name: Invalidate CloudFront Cache
+    needs: [setup-env, build]
+    runs-on: ubuntu-latest
+    if: always() && needs.build.result == 'success'
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.setup-env.outputs.environment == 'prod' && secrets.AWS_ROLE_ARN_PROD || secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ needs.setup-env.outputs.cdn-distribution-id }} \
+            --paths "/payment-terminal/*"
+          echo "CloudFront cache invalidated for Payment Terminal builds"

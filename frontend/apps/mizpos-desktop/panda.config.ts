@@ -22,7 +22,11 @@ export default defineConfig({
         },
         pulse: {
           "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.6" },
+          "50%": { opacity: "0.5" },
+        },
+        spin: {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
         },
         shake: {
           "0%, 100%": { transform: "translateX(0)" },
@@ -40,6 +44,7 @@ export default defineConfig({
           slideUp: { value: "slideUp 0.2s ease-out" },
           slideDown: { value: "slideDown 0.2s ease-out" },
           pulse: { value: "pulse 1.5s ease-in-out infinite" },
+          spin: { value: "spin 1s linear infinite" },
           shake: { value: "shake 0.4s ease-in-out" },
           scaleIn: { value: "scaleIn 0.15s ease-out" },
         },

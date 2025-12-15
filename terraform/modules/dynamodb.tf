@@ -524,3 +524,69 @@ resource "aws_dynamodb_table" "coupons" {
     Name = "${var.environment}-mizpos-coupons"
   }
 }
+
+# Terminal Pairing table - ターミナルペアリング情報
+# mizpos-desktopとmizpos-payment-terminalの連携用
+resource "aws_dynamodb_table" "terminal_pairing" {
+  name         = "${var.environment}-mizpos-terminal-pairing"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "pin_code"
+
+  attribute {
+    name = "pin_code"
+    type = "S"
+  }
+
+  # 24時間で自動削除
+  ttl {
+    enabled        = true
+    attribute_name = "ttl"
+  }
+
+  point_in_time_recovery {
+    enabled = false # 一時的なデータのためPITR不要
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-terminal-pairing"
+  }
+}
+
+# Terminal Payment Requests table - 決済リクエストキュー
+# mizpos-desktopからmizpos-payment-terminalへの決済リクエスト
+resource "aws_dynamodb_table" "terminal_payment_requests" {
+  name         = "${var.environment}-mizpos-terminal-payment-requests"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "request_id"
+
+  attribute {
+    name = "request_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "pin_code"
+    type = "S"
+  }
+
+  # PINコードでのポーリング用
+  global_secondary_index {
+    name            = "PinCodeIndex"
+    hash_key        = "pin_code"
+    projection_type = "ALL"
+  }
+
+  # 5分で自動削除
+  ttl {
+    enabled        = true
+    attribute_name = "ttl"
+  }
+
+  point_in_time_recovery {
+    enabled = false # 一時的なデータのためPITR不要
+  }
+
+  tags = {
+    Name = "${var.environment}-mizpos-terminal-payment-requests"
+  }
+}

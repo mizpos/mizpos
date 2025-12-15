@@ -22,6 +22,8 @@ function getPaymentMethodDisplayName(
       return "現金";
     case "oya_cashless":
       return "大家キャッシュレス";
+    case "stripe_terminal":
+      return "クレジット";
     case "voucher_department": {
       const config = voucherConfigs?.find(
         (c) => c.type === "voucher_department",
@@ -253,6 +255,23 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
         receipt_number: isTraining
           ? `TRAINING-${transaction.id}`
           : transaction.id,
+        // カード詳細（クレジット決済時）
+        card_details: transaction.cardDetails
+          ? {
+              brand: transaction.cardDetails.brand,
+              last4: transaction.cardDetails.last4,
+              exp_month: transaction.cardDetails.expMonth,
+              exp_year: transaction.cardDetails.expYear,
+              cardholder_name: transaction.cardDetails.cardholderName,
+              funding: transaction.cardDetails.funding,
+              terminal_serial_number:
+                transaction.cardDetails.terminalSerialNumber,
+              transaction_type: transaction.cardDetails.transactionType,
+              payment_type: transaction.cardDetails.paymentType,
+              transaction_at: transaction.cardDetails.transactionAt,
+            }
+          : undefined,
+        payment_intent_id: transaction.paymentIntentId,
       };
 
       const printResult = await printer.printFullReceipt(receiptData);

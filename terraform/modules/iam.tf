@@ -268,6 +268,7 @@ resource "aws_iam_role_policy" "lambda_sales" {
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
           "dynamodb:Query",
           "dynamodb:Scan"
         ]
@@ -281,7 +282,10 @@ resource "aws_iam_role_policy" "lambda_sales" {
           aws_dynamodb_table.events.arn,
           "${aws_dynamodb_table.events.arn}/index/*",
           aws_dynamodb_table.config.arn,
-          aws_dynamodb_table.users.arn
+          aws_dynamodb_table.users.arn,
+          aws_dynamodb_table.terminal_pairing.arn,
+          aws_dynamodb_table.terminal_payment_requests.arn,
+          "${aws_dynamodb_table.terminal_payment_requests.arn}/index/*"
         ]
       },
       {
