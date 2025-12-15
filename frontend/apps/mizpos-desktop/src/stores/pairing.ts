@@ -45,6 +45,7 @@ export interface CardDetails {
   terminalSerialNumber?: string;  // 端末シリアル番号
   transactionType?: string;  // 取引種別（sale/refund）
   paymentType?: string;  // 支払区分
+  transactionAt?: string;  // 取引日時（ISO8601形式）
 }
 
 /** 決済リクエスト */
@@ -286,6 +287,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
               terminal_serial_number?: string;
               transaction_type?: string;
               payment_type?: string;
+              transaction_at?: string;
             };
             created_at: string;
             updated_at: string;
@@ -314,6 +316,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
             terminalSerialNumber: cd.terminal_serial_number,
             transactionType: cd.transaction_type,
             paymentType: cd.payment_type,
+            transactionAt: cd.transaction_at,
           } : undefined,
           createdAt: new Date(apiResponse.payment_request.created_at),
           updatedAt: new Date(apiResponse.payment_request.updated_at),
@@ -409,6 +412,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
               terminal_serial_number?: string;
               transaction_type?: string;
               payment_type?: string;
+              transaction_at?: string;
             };
             created_at: string;
             updated_at: string;
@@ -437,6 +441,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
             terminalSerialNumber: cd.terminal_serial_number,
             transactionType: cd.transaction_type,
             paymentType: cd.payment_type,
+            transactionAt: cd.transaction_at,
           } : undefined,
           createdAt: new Date(apiResponse.payment_request.created_at),
           updatedAt: new Date(apiResponse.payment_request.updated_at),

@@ -437,6 +437,7 @@ class CardDetails(BaseModel):
     # 取引情報
     transaction_type: str | None = Field(default="sale", description="取引種別（sale/refund）")
     payment_type: str | None = Field(default="一括", description="支払区分")
+    transaction_at: str | None = Field(default=None, description="取引日時（ISO8601形式）")
 
 
 class UpdatePaymentRequestResultRequest(BaseModel):

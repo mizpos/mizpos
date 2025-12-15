@@ -57,6 +57,7 @@ function extractCardDetails(
     terminal_serial_number: terminalSerialNumber,
     transaction_type: 'sale',
     payment_type: '一括',
+    transaction_at: new Date().toISOString(),
   };
 }
 

@@ -67,6 +67,7 @@ export interface CardDetails {
   terminal_serial_number?: string;  // 端末シリアル番号
   transaction_type?: string;  // 取引種別（sale/refund）
   payment_type?: string;  // 支払区分
+  transaction_at?: string;  // 取引日時（ISO8601形式）
 }
 
 /**
