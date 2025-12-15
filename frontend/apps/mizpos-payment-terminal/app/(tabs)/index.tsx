@@ -6,6 +6,7 @@
  * - 決済待機画面
  */
 
+import { useEffect, useRef } from 'react';
 import { StyleSheet, View, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 
@@ -27,6 +28,26 @@ export default function HomeScreen() {
   } = useTerminal();
 
   const { isPaired, pairingInfo, currentPaymentRequest } = usePairing();
+
+  // 自動遷移用のref（二重遷移防止）
+  const hasNavigatedRef = useRef<string | null>(null);
+
+  // 決済リクエストが来たら自動で決済画面に遷移
+  useEffect(() => {
+    const canAcceptPayment = isInitialized && connectedReader && isPaired;
+
+    if (currentPaymentRequest && canAcceptPayment) {
+      // 同じリクエストで二重遷移しない
+      if (hasNavigatedRef.current !== currentPaymentRequest.id) {
+        hasNavigatedRef.current = currentPaymentRequest.id;
+        console.log('[Home] Auto-navigating to payment screen for request:', currentPaymentRequest.id);
+        router.push('/payment');
+      }
+    } else {
+      // リクエストがなくなったらリセット
+      hasNavigatedRef.current = null;
+    }
+  }, [currentPaymentRequest, isInitialized, connectedReader, isPaired]);
 
   // 端末接続ステータス
   const renderReaderStatus = () => {

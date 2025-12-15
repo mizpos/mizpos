@@ -131,6 +131,10 @@ export function TerminalPaymentModal({
   const propsRef = useRef({ amount, items, saleId, description });
   propsRef.current = { amount, items, saleId, description };
 
+  // コールバックをrefで保持
+  const callbacksRef = useRef({ onComplete, onCancel });
+  callbacksRef.current = { onComplete, onCancel };
+
   const actionsRef = useRef({
     createPaymentRequest,
     startPolling,
@@ -143,6 +147,9 @@ export function TerminalPaymentModal({
     stopPolling,
     clearError,
   };
+
+  // 完了通知が送信済みかを追跡
+  const hasNotifiedComplete = useRef(false);
 
   const handleCreateRequest = useCallback(async () => {
     setPaymentState("creating");
@@ -173,11 +180,13 @@ export function TerminalPaymentModal({
   useEffect(() => {
     if (open && !hasStartedRequest.current) {
       hasStartedRequest.current = true;
+      hasNotifiedComplete.current = false;
       handleCreateRequest();
     }
 
     if (!open) {
       hasStartedRequest.current = false;
+      hasNotifiedComplete.current = false;
     }
 
     return () => {
@@ -189,6 +198,8 @@ export function TerminalPaymentModal({
   useEffect(() => {
     if (!currentPaymentRequest) return;
 
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     switch (currentPaymentRequest.status) {
       case "pending":
         setPaymentState("waiting");
@@ -198,10 +209,11 @@ export function TerminalPaymentModal({
         break;
       case "completed":
         setPaymentState("completed");
-        // 完了後に親コンポーネントに通知
-        if (currentPaymentRequest.paymentIntentId) {
-          setTimeout(() => {
-            onComplete(currentPaymentRequest.paymentIntentId!);
+        // 完了後に親コンポーネントに通知（一度だけ）
+        if (currentPaymentRequest.paymentIntentId && !hasNotifiedComplete.current) {
+          hasNotifiedComplete.current = true;
+          timeoutId = setTimeout(() => {
+            callbacksRef.current.onComplete(currentPaymentRequest.paymentIntentId!);
           }, 1500);
         }
         break;
@@ -215,7 +227,13 @@ export function TerminalPaymentModal({
         );
         break;
     }
-  }, [currentPaymentRequest, onComplete]);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [currentPaymentRequest]);
 
   const handleCancel = useCallback(async () => {
     stopPolling();

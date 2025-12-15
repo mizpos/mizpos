@@ -4,7 +4,7 @@
  * カード決済の実行とステータス表示
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { PaymentIntent } from '@stripe/stripe-terminal-react-native';
@@ -43,12 +43,87 @@ export default function PaymentScreen() {
   const [error, setError] = useState<string | null>(null);
   const [currentPaymentIntent, setCurrentPaymentIntent] = useState<PaymentIntent.Type | null>(null);
 
+  // 自動開始用のref（二重実行防止）
+  const hasStartedRef = useRef(false);
+
+  // 決済を開始
+  const handleStartPayment = useCallback(async () => {
+    if (!currentPaymentRequest) return;
+
+    try {
+      setStep('creating');
+      setError(null);
+
+      console.log('[Payment] Starting payment for amount:', currentPaymentRequest.amount);
+
+      // PaymentIntentをSDKで作成
+      const createResult = await createPaymentIntent(currentPaymentRequest.amount);
+
+      if (createResult.error || !createResult.paymentIntent) {
+        throw new Error(createResult.error?.message || 'PaymentIntentの作成に失敗しました');
+      }
+
+      setCurrentPaymentIntent(createResult.paymentIntent);
+      setStep('collecting');
+
+      console.log('[Payment] Collecting payment method...');
+
+      // カード情報を収集
+      const collectResult = await collectPaymentMethod(createResult.paymentIntent);
+
+      if (collectResult.error) {
+        if (collectResult.error.code === 'Canceled') {
+          setStep('cancelled');
+          return;
+        }
+        throw new Error(collectResult.error.message);
+      }
+
+      if (!collectResult.paymentIntent) {
+        throw new Error('カード情報の収集に失敗しました');
+      }
+
+      setStep('processing');
+
+      console.log('[Payment] Processing payment...');
+
+      // 決済を処理
+      const processResult = await processPayment(collectResult.paymentIntent);
+
+      if (processResult.error) {
+        throw new Error(processResult.error.message);
+      }
+
+      const finalPaymentIntentId = processResult.paymentIntent?.id || createResult.paymentIntent.id;
+
+      // 決済完了
+      setStep('complete');
+      completePayment(finalPaymentIntentId);
+
+      console.log('[Payment] Payment completed:', finalPaymentIntentId);
+
+    } catch (err) {
+      console.error('[Payment] Payment error:', err);
+      setError(err instanceof Error ? err.message : '決済処理に失敗しました');
+      setStep('error');
+    }
+  }, [currentPaymentRequest, createPaymentIntent, collectPaymentMethod, processPayment, completePayment]);
+
   // 決済リクエストがない場合は戻る
   useEffect(() => {
     if (!currentPaymentRequest) {
       safeGoBack();
     }
   }, [currentPaymentRequest]);
+
+  // 自動で決済を開始
+  useEffect(() => {
+    if (currentPaymentRequest && connectedReader && step === 'ready' && !hasStartedRef.current) {
+      hasStartedRef.current = true;
+      console.log('[Payment] Auto-starting payment process');
+      handleStartPayment();
+    }
+  }, [currentPaymentRequest, connectedReader, step, handleStartPayment]);
 
   // リーダー未接続の場合
   if (!connectedReader) {
@@ -96,58 +171,6 @@ export default function PaymentScreen() {
     );
   }
 
-  // 決済を開始
-  const handleStartPayment = async () => {
-    try {
-      setStep('creating');
-      setError(null);
-
-      // PaymentIntentをSDKで作成
-      const createResult = await createPaymentIntent(currentPaymentRequest.amount);
-
-      if (createResult.error || !createResult.paymentIntent) {
-        throw new Error(createResult.error?.message || 'PaymentIntentの作成に失敗しました');
-      }
-
-      setCurrentPaymentIntent(createResult.paymentIntent);
-      setStep('collecting');
-
-      // カード情報を収集
-      const collectResult = await collectPaymentMethod(createResult.paymentIntent);
-
-      if (collectResult.error) {
-        if (collectResult.error.code === 'Canceled') {
-          setStep('cancelled');
-          return;
-        }
-        throw new Error(collectResult.error.message);
-      }
-
-      if (!collectResult.paymentIntent) {
-        throw new Error('カード情報の収集に失敗しました');
-      }
-
-      setStep('processing');
-
-      // 決済を処理
-      const processResult = await processPayment(collectResult.paymentIntent);
-
-      if (processResult.error) {
-        throw new Error(processResult.error.message);
-      }
-
-      const finalPaymentIntentId = processResult.paymentIntent?.id || createResult.paymentIntent.id;
-
-      // 決済完了
-      setStep('complete');
-      completePayment(finalPaymentIntentId);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '決済処理に失敗しました');
-      setStep('error');
-    }
-  };
-
   // 決済をキャンセル
   const handleCancelPayment = async () => {
     try {
@@ -169,40 +192,20 @@ export default function PaymentScreen() {
     safeGoBack();
   };
 
-  // 準備完了画面
+  // 準備完了画面（自動開始するので短時間しか表示されない）
   if (step === 'ready') {
     return (
       <ThemedView style={styles.container}>
-        <View style={styles.amountContainer}>
-          <ThemedText style={styles.amountLabel}>お支払い金額</ThemedText>
-          <ThemedText style={styles.amount}>
-            {currentPaymentRequest.amount.toLocaleString()}
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <ThemedText type="title" style={styles.processingTitle}>
+            決済準備中...
           </ThemedText>
-          <ThemedText style={styles.currency}>円</ThemedText>
-        </View>
-
-        <View style={styles.readerInfo}>
-          <IconSymbol name="creditcard.fill" size={24} color="#34C759" />
-          <ThemedText style={styles.readerInfoText}>
-            {connectedReader.label || connectedReader.deviceType || 'リーダー'} に接続中
-          </ThemedText>
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={handleStartPayment}
-          >
-            <IconSymbol name="creditcard.fill" size={24} color="#FFFFFF" />
-            <ThemedText style={styles.buttonText}>カードで支払う</ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
-            onPress={handleCancelPayment}
-          >
-            <ThemedText style={styles.cancelButtonText}>キャンセル</ThemedText>
-          </TouchableOpacity>
+          <View style={styles.amountBadge}>
+            <ThemedText style={styles.amountBadgeText}>
+              {currentPaymentRequest.amount.toLocaleString()} 円
+            </ThemedText>
+          </View>
         </View>
       </ThemedView>
     );
@@ -297,6 +300,11 @@ export default function PaymentScreen() {
 
   // キャンセル
   if (step === 'cancelled') {
+    const handleRetry = () => {
+      hasStartedRef.current = false;
+      setStep('ready');
+    };
+
     return (
       <ThemedView style={styles.container}>
         <View style={styles.centerContainer}>
@@ -307,7 +315,7 @@ export default function PaymentScreen() {
 
           <TouchableOpacity
             style={[styles.button, styles.primaryButton, { marginTop: 48 }]}
-            onPress={() => setStep('ready')}
+            onPress={handleRetry}
           >
             <ThemedText style={styles.buttonText}>やり直す</ThemedText>
           </TouchableOpacity>
@@ -325,6 +333,11 @@ export default function PaymentScreen() {
 
   // エラー
   if (step === 'error') {
+    const handleRetry = () => {
+      hasStartedRef.current = false;
+      setStep('ready');
+    };
+
     return (
       <ThemedView style={styles.container}>
         <View style={styles.centerContainer}>
@@ -336,7 +349,7 @@ export default function PaymentScreen() {
 
           <TouchableOpacity
             style={[styles.button, styles.primaryButton, { marginTop: 48 }]}
-            onPress={() => setStep('ready')}
+            onPress={handleRetry}
           >
             <ThemedText style={styles.buttonText}>やり直す</ThemedText>
           </TouchableOpacity>
@@ -364,44 +377,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-  },
-  amountContainer: {
-    alignItems: 'center',
-    paddingTop: 64,
-    paddingBottom: 32,
-  },
-  amountLabel: {
-    fontSize: 16,
-    opacity: 0.7,
-  },
-  amount: {
-    fontSize: 72,
-    fontWeight: 'bold',
-    marginTop: 8,
-  },
-  currency: {
-    fontSize: 24,
-    opacity: 0.7,
-    marginTop: 4,
-  },
-  readerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    marginHorizontal: 32,
-    gap: 8,
-  },
-  readerInfoText: {
-    fontSize: 14,
-    color: '#34C759',
-  },
-  buttonContainer: {
-    padding: 32,
-    gap: 12,
-    marginTop: 'auto',
   },
   button: {
     flexDirection: 'row',

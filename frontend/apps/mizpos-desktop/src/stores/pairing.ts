@@ -431,12 +431,13 @@ export const usePairingStore = create<PairingState>((set, get) => {
     },
 
     /**
-     * ペアリング状態をポーリングで取得（ターミナル接続検知用）
+     * ペアリング状態をポーリングで取得（ターミナル接続/切断検知用）
      */
     pollPairingStatus: async () => {
       const { pairingInfo, status } = get();
 
-      if (!pairingInfo || status !== "waiting") {
+      // disconnected, registering, error の場合はポーリング不要
+      if (!pairingInfo || status === "disconnected" || status === "registering" || status === "error") {
         return false;
       }
 
@@ -447,6 +448,18 @@ export const usePairingStore = create<PairingState>((set, get) => {
             params: { path: { pin_code: pairingInfo.pinCode } },
           },
         );
+
+        // 404の場合はペアリングが削除された（ターミナル側で切断された）
+        if (response?.status === 404) {
+          console.log("[Desktop] Pairing not found - terminal disconnected");
+          get().stopPairingStatusPolling();
+          set({
+            status: "disconnected",
+            pairingInfo: null,
+            error: "ターミナルとの接続が切れました",
+          });
+          return false;
+        }
 
         if (error || !data) {
           console.error(
@@ -473,10 +486,21 @@ export const usePairingStore = create<PairingState>((set, get) => {
         };
 
         if (apiResponse.pairing.terminal_connected) {
-          console.log("[Desktop] Terminal connected!");
-          get().stopPairingStatusPolling();
-          set({ status: "connected" });
+          if (status === "waiting") {
+            console.log("[Desktop] Terminal connected!");
+            set({ status: "connected" });
+          }
           return true;
+        }
+
+        // 接続済みだったのに terminal_connected が false になった場合
+        if (status === "connected" && !apiResponse.pairing.terminal_connected) {
+          console.log("[Desktop] Terminal disconnected!");
+          set({
+            status: "waiting",
+            error: "ターミナルとの接続が切れました。再接続を待っています...",
+          });
+          return false;
         }
 
         return false;
@@ -488,6 +512,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
 
     /**
      * ペアリング状態のポーリングを開始
+     * connected 状態でも切断検知のため継続する
      */
     startPairingStatusPolling: () => {
       if (pairingStatusPollingInterval) {
@@ -498,7 +523,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
 
       pairingStatusPollingInterval = setInterval(async () => {
         await get().pollPairingStatus();
-      }, 3000); // 3秒間隔
+      }, 5000); // 5秒間隔（接続後は頻繁なチェックは不要）
 
       console.log("[Desktop] Started polling for pairing status");
     },

@@ -147,9 +147,9 @@ export function PairingModal({ open, onClose }: PairingModalProps) {
     }
   }, [open, status, isRegistering, handleRegister]);
 
-  // statusが"waiting"になったらポーリング開始、それ以外で停止
+  // statusが"waiting"または"connected"の時はポーリングを継続（切断検知のため）
   useEffect(() => {
-    if (status === "waiting") {
+    if (status === "waiting" || status === "connected") {
       startPairingStatusPolling();
     } else {
       stopPairingStatusPolling();
