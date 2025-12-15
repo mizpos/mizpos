@@ -19,6 +19,7 @@ import {
   verifyPairing,
   deletePairing,
   getPendingPaymentRequest,
+  getPairingStatus,
   updatePaymentRequestResult,
   type PairingInfo as ApiPairingInfo,
   type PaymentRequest as ApiPaymentRequest,
@@ -175,9 +176,32 @@ export function PairingProvider({ children }: PairingProviderProps) {
 
     let consecutiveErrors = 0;
     const MAX_CONSECUTIVE_ERRORS = 5;
+    let pairingCheckCounter = 0;
+    const PAIRING_CHECK_INTERVAL = 3; // 3回に1回ペアリング状態を確認
 
     const poll = async () => {
       try {
+        // 定期的にペアリング状態を確認（POS側での切断を検知）
+        pairingCheckCounter++;
+        if (pairingCheckCounter >= PAIRING_CHECK_INTERVAL) {
+          pairingCheckCounter = 0;
+          const pairingStatus = await getPairingStatus(pinCode);
+          if (pairingStatus === null) {
+            // ペアリングが存在しない（POS側で削除された）
+            console.log('[Polling] Pairing deleted by POS - disconnecting');
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+            setIsPolling(false);
+            setPairingInfo(null);
+            setCurrentPaymentRequest(null);
+            currentRequestIdRef.current = null;
+            setError('POSとの接続が切断されました');
+            return;
+          }
+        }
+
         const request = await getPendingPaymentRequest(pinCode);
         consecutiveErrors = 0; // 成功したらリセット
 

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { css } from "styled-system/css";
+import { PairingModal } from "../components/PairingModal";
 import { Badge, Button, Card, Input } from "../components/ui";
 import { getTodayOpeningReport, syncProducts } from "../lib/db";
 import {
@@ -163,6 +164,7 @@ function SettingsPage() {
   const [terminalId, setTerminalId] = useState(settings.terminalId);
   const [taxRate, setTaxRate] = useState(String(settings.taxRate));
   const [deviceName, setDeviceName] = useState(settings.deviceName || "mizPOS Desktop");
+  const [showPairingModal, setShowPairingModal] = useState(false);
 
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [usbDevices, setUsbDevices] = useState<UsbDevice[]>([]);
@@ -621,6 +623,15 @@ function SettingsPage() {
                       </div>
                     )}
                   </div>
+                  {pairingStatus === "disconnected" && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setShowPairingModal(true)}
+                    >
+                      ペアリング開始
+                    </Button>
+                  )}
                   {(pairingStatus === "connected" ||
                     pairingStatus === "waiting") && (
                     <Button
@@ -639,11 +650,17 @@ function SettingsPage() {
                     marginTop: "8px",
                   })}
                 >
-                  ペアリングはPOS画面の決済モーダルから行えます
+                  Payment Terminal アプリでQRコードをスキャンするか、PINコードを入力してください
                 </div>
               </div>
             </div>
           </Card>
+
+          {/* ペアリングモーダル */}
+          <PairingModal
+            open={showPairingModal}
+            onClose={() => setShowPairingModal(false)}
+          />
 
           {/* 商品データ同期 */}
           <Card padding="lg">

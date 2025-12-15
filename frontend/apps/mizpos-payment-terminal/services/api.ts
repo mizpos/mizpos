@@ -118,6 +118,33 @@ export async function verifyPairing(pinCode: string): Promise<PairingInfo> {
 }
 
 /**
+ * ペアリング状態を取得（切断検知用）
+ * @returns ペアリング情報、または存在しない場合はnull
+ */
+export async function getPairingStatus(pinCode: string): Promise<PairingInfo | null> {
+  console.log('[API] Checking pairing status for PIN:', pinCode);
+
+  const { data, error, response } = await salesClient.GET('/terminal/pairing/{pin_code}', {
+    params: { path: { pin_code: pinCode } },
+  });
+
+  // 404はペアリングが存在しない（POS側で削除された）
+  if (response?.status === 404) {
+    console.log('[API] Pairing not found - disconnected');
+    return null;
+  }
+
+  if (error) {
+    console.error('[API] getPairingStatus error:', error, 'status:', response?.status);
+    throw new Error(`ペアリング状態の取得に失敗: ${response?.status || 'unknown'}`);
+  }
+
+  const result = data as unknown as { pairing: PairingInfo };
+  console.log('[API] Pairing status:', result?.pairing ? 'exists' : 'not found');
+  return result?.pairing || null;
+}
+
+/**
  * ペアリングを解除
  */
 export async function deletePairing(pinCode: string): Promise<void> {
