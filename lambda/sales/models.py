@@ -426,18 +426,32 @@ class PaymentRequestResponse(BaseModel):
 class CardDetails(BaseModel):
     """クレジットカード詳細情報（レシート表示用）"""
 
-    brand: str | None = Field(default=None, description="カードブランド（visa, mastercard等）")
+    brand: str | None = Field(
+        default=None, description="カードブランド（visa, mastercard等）"
+    )
     last4: str | None = Field(default=None, max_length=4, description="カード番号下4桁")
-    exp_month: int | None = Field(default=None, ge=1, le=12, description="有効期限（月）")
+    exp_month: int | None = Field(
+        default=None, ge=1, le=12, description="有効期限（月）"
+    )
     exp_year: int | None = Field(default=None, description="有効期限（年）")
-    cardholder_name: str | None = Field(default=None, max_length=200, description="カード名義人")
-    funding: str | None = Field(default=None, description="カード種別（credit, debit等）")
+    cardholder_name: str | None = Field(
+        default=None, max_length=200, description="カード名義人"
+    )
+    funding: str | None = Field(
+        default=None, description="カード種別（credit, debit等）"
+    )
     # 端末情報
-    terminal_serial_number: str | None = Field(default=None, description="端末シリアル番号")
+    terminal_serial_number: str | None = Field(
+        default=None, description="端末シリアル番号"
+    )
     # 取引情報
-    transaction_type: str | None = Field(default="sale", description="取引種別（sale/refund）")
+    transaction_type: str | None = Field(
+        default="sale", description="取引種別（sale/refund）"
+    )
     payment_type: str | None = Field(default="一括", description="支払区分")
-    transaction_at: str | None = Field(default=None, description="取引日時（ISO8601形式）")
+    transaction_at: str | None = Field(
+        default=None, description="取引日時（ISO8601形式）"
+    )
 
 
 class UpdatePaymentRequestResultRequest(BaseModel):

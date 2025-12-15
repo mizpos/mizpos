@@ -210,10 +210,15 @@ export function TerminalPaymentModal({
       case "completed":
         setPaymentState("completed");
         // 完了後に親コンポーネントに通知（一度だけ）
-        if (currentPaymentRequest.paymentIntentId && !hasNotifiedComplete.current) {
+        if (
+          currentPaymentRequest.paymentIntentId &&
+          !hasNotifiedComplete.current
+        ) {
           hasNotifiedComplete.current = true;
           timeoutId = setTimeout(() => {
-            callbacksRef.current.onComplete(currentPaymentRequest.paymentIntentId!);
+            callbacksRef.current.onComplete(
+              currentPaymentRequest.paymentIntentId!,
+            );
           }, 1500);
         }
         break;

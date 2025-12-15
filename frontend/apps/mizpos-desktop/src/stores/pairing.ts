@@ -36,16 +36,16 @@ export type PaymentRequestStatus =
 
 /** カード詳細情報（レシート表示用） */
 export interface CardDetails {
-  brand?: string;  // カードブランド（visa, mastercard等）
-  last4?: string;  // カード番号下4桁
-  expMonth?: number;  // 有効期限（月）
-  expYear?: number;  // 有効期限（年）
-  cardholderName?: string;  // カード名義人
-  funding?: string;  // カード種別（credit, debit等）
-  terminalSerialNumber?: string;  // 端末シリアル番号
-  transactionType?: string;  // 取引種別（sale/refund）
-  paymentType?: string;  // 支払区分
-  transactionAt?: string;  // 取引日時（ISO8601形式）
+  brand?: string; // カードブランド（visa, mastercard等）
+  last4?: string; // カード番号下4桁
+  expMonth?: number; // 有効期限（月）
+  expYear?: number; // 有効期限（年）
+  cardholderName?: string; // カード名義人
+  funding?: string; // カード種別（credit, debit等）
+  terminalSerialNumber?: string; // 端末シリアル番号
+  transactionType?: string; // 取引種別（sale/refund）
+  paymentType?: string; // 支払区分
+  transactionAt?: string; // 取引日時（ISO8601形式）
 }
 
 /** 決済リクエスト */
@@ -306,18 +306,20 @@ export const usePairingStore = create<PairingState>((set, get) => {
           status: apiResponse.payment_request.status,
           paymentIntentId: apiResponse.payment_request.payment_intent_id,
           errorMessage: apiResponse.payment_request.error_message,
-          cardDetails: cd ? {
-            brand: cd.brand,
-            last4: cd.last4,
-            expMonth: cd.exp_month,
-            expYear: cd.exp_year,
-            cardholderName: cd.cardholder_name,
-            funding: cd.funding,
-            terminalSerialNumber: cd.terminal_serial_number,
-            transactionType: cd.transaction_type,
-            paymentType: cd.payment_type,
-            transactionAt: cd.transaction_at,
-          } : undefined,
+          cardDetails: cd
+            ? {
+                brand: cd.brand,
+                last4: cd.last4,
+                expMonth: cd.exp_month,
+                expYear: cd.exp_year,
+                cardholderName: cd.cardholder_name,
+                funding: cd.funding,
+                terminalSerialNumber: cd.terminal_serial_number,
+                transactionType: cd.transaction_type,
+                paymentType: cd.payment_type,
+                transactionAt: cd.transaction_at,
+              }
+            : undefined,
           createdAt: new Date(apiResponse.payment_request.created_at),
           updatedAt: new Date(apiResponse.payment_request.updated_at),
         };
@@ -431,18 +433,20 @@ export const usePairingStore = create<PairingState>((set, get) => {
           status: apiResponse.payment_request.status,
           paymentIntentId: apiResponse.payment_request.payment_intent_id,
           errorMessage: apiResponse.payment_request.error_message,
-          cardDetails: cd ? {
-            brand: cd.brand,
-            last4: cd.last4,
-            expMonth: cd.exp_month,
-            expYear: cd.exp_year,
-            cardholderName: cd.cardholder_name,
-            funding: cd.funding,
-            terminalSerialNumber: cd.terminal_serial_number,
-            transactionType: cd.transaction_type,
-            paymentType: cd.payment_type,
-            transactionAt: cd.transaction_at,
-          } : undefined,
+          cardDetails: cd
+            ? {
+                brand: cd.brand,
+                last4: cd.last4,
+                expMonth: cd.exp_month,
+                expYear: cd.exp_year,
+                cardholderName: cd.cardholder_name,
+                funding: cd.funding,
+                terminalSerialNumber: cd.terminal_serial_number,
+                transactionType: cd.transaction_type,
+                paymentType: cd.payment_type,
+                transactionAt: cd.transaction_at,
+              }
+            : undefined,
           createdAt: new Date(apiResponse.payment_request.created_at),
           updatedAt: new Date(apiResponse.payment_request.updated_at),
         };
@@ -502,7 +506,12 @@ export const usePairingStore = create<PairingState>((set, get) => {
       const { pairingInfo, status } = get();
 
       // disconnected, registering, error の場合はポーリング不要
-      if (!pairingInfo || status === "disconnected" || status === "registering" || status === "error") {
+      if (
+        !pairingInfo ||
+        status === "disconnected" ||
+        status === "registering" ||
+        status === "error"
+      ) {
         return false;
       }
 

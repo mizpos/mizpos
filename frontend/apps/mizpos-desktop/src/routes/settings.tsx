@@ -156,14 +156,20 @@ const printerStyles = {
 function SettingsPage() {
   const { session, clearEventId } = useAuthStore();
   const { settings, updateSettings, updatePrinter } = useSettingsStore();
-  const { status: pairingStatus, pairingInfo, unregisterPairing } = usePairingStore();
+  const {
+    status: pairingStatus,
+    pairingInfo,
+    unregisterPairing,
+  } = usePairingStore();
   const navigate = useNavigate();
 
   const [circleName, setCircleName] = useState(settings.circleName || "");
   const [venueAddress, setVenueAddress] = useState(settings.venueAddress || "");
   const [terminalId, setTerminalId] = useState(settings.terminalId);
   const [taxRate, setTaxRate] = useState(String(settings.taxRate));
-  const [deviceName, setDeviceName] = useState(settings.deviceName || "mizPOS Desktop");
+  const [deviceName, setDeviceName] = useState(
+    settings.deviceName || "mizPOS Desktop",
+  );
   const [showPairingModal, setShowPairingModal] = useState(false);
 
   const [platform, setPlatform] = useState<Platform>("desktop");
@@ -650,7 +656,8 @@ function SettingsPage() {
                     marginTop: "8px",
                   })}
                 >
-                  Payment Terminal アプリでQRコードをスキャンするか、PINコードを入力してください
+                  Payment Terminal
+                  アプリでQRコードをスキャンするか、PINコードを入力してください
                 </div>
               </div>
             </div>

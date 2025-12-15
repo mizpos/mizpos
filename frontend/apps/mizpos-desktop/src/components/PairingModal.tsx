@@ -138,7 +138,12 @@ export function PairingModal({ open, onClose }: PairingModalProps) {
 
   // モーダルを開いた時に自動でペアリング登録
   useEffect(() => {
-    if (open && status === "disconnected" && !isRegistering && !hasStartedRegistration.current) {
+    if (
+      open &&
+      status === "disconnected" &&
+      !isRegistering &&
+      !hasStartedRegistration.current
+    ) {
       hasStartedRegistration.current = true;
       handleRegister();
     }
