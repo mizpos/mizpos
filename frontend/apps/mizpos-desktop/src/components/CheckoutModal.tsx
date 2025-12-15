@@ -3,6 +3,7 @@ import { css } from "styled-system/css";
 import { saveTransaction, updateSalesSummary } from "../lib/db";
 import { useAuthStore } from "../stores/auth";
 import { type AppliedCoupon, useCartStore } from "../stores/cart";
+import { usePairingStore } from "../stores/pairing";
 import { useSettingsStore } from "../stores/settings";
 import type {
   Payment,
@@ -10,6 +11,8 @@ import type {
   Transaction,
   VoucherType,
 } from "../types";
+import { PairingModal } from "./PairingModal";
+import { TerminalPaymentModal } from "./TerminalPaymentModal";
 import { Button, Modal } from "./ui";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -455,6 +458,11 @@ export function CheckoutModal({
     useState<VoucherType>("voucher_department");
   const [voucherAmount, setVoucherAmount] = useState("");
 
+  // Terminal決済関連の状態
+  const [showTerminalPayment, setShowTerminalPayment] = useState(false);
+  const [showPairingModal, setShowPairingModal] = useState(false);
+  const { status: pairingStatus, pairingInfo } = usePairingStore();
+
   const {
     items,
     appliedCoupon,
@@ -787,6 +795,117 @@ export function CheckoutModal({
     cashChange,
     selectedVoucherType,
   ]);
+
+  // Terminal決済完了後の処理
+  const handleTerminalPaymentComplete = useCallback(
+    async (paymentIntentId: string) => {
+      if (!session) return;
+
+      setIsProcessing(true);
+
+      try {
+        const payments: Payment[] = [
+          {
+            method: "oya_cashless",
+            amount: total,
+          },
+        ];
+
+        const transaction: Transaction = {
+          id: `txn-${Date.now()}`,
+          items: [...items],
+          subtotal,
+          taxRate,
+          taxAmount,
+          total,
+          payments,
+          staffId: session.staffId,
+          createdAt: new Date(),
+          isTraining: isTrainingMode,
+          paymentIntentId, // Stripe PaymentIntent IDを保存
+        };
+
+        // トレーニングモード時はDBへの保存とAPIへの送信をスキップ
+        if (!isTrainingMode) {
+          // ローカルDBに保存
+          await saveTransaction(transaction);
+          // 販売サマリーを更新
+          await updateSalesSummary(transaction);
+
+          // バックエンドに送信
+          try {
+            const saleItems = items.map((item) => ({
+              product_id: item.product.id,
+              product_name: item.product.name,
+              circle_name: item.product.circleName || null,
+              jan: item.product.jan,
+              jan2: item.product.jan2 || null,
+              isbn: item.product.isbn || null,
+              isdn: item.product.isdn || null,
+              quantity: item.quantity,
+              unit_price: item.product.price,
+            }));
+
+            const saleBody: Record<string, unknown> = {
+              items: saleItems,
+              total_amount: total,
+              payment_method: "oya_cashless",
+              event_id: session.eventId,
+              terminal_id: settings.terminalId,
+              payment_intent_id: paymentIntentId,
+            };
+
+            if (appliedCoupon) {
+              saleBody.coupon_code = appliedCoupon.code;
+              saleBody.subtotal = subtotal;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/pos/sales`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-POS-Session": session.sessionId,
+              },
+              body: JSON.stringify(saleBody),
+            });
+
+            if (!response.ok) {
+              console.error(
+                "Failed to send sale to backend:",
+                response.statusText
+              );
+            } else {
+              console.log("Sale successfully sent to backend");
+            }
+          } catch (apiError) {
+            console.error("Error sending sale to backend:", apiError);
+          }
+        } else {
+          console.log("Training mode: Transaction not saved");
+        }
+
+        clear();
+        onComplete(transaction);
+      } catch (error) {
+        console.error("Terminal payment completion failed:", error);
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [
+      session,
+      total,
+      items,
+      subtotal,
+      taxRate,
+      taxAmount,
+      clear,
+      onComplete,
+      settings.terminalId,
+      appliedCoupon,
+      isTrainingMode,
+    ]
+  );
 
   // Enterキーで会計完了
   const handleKeyDown = useCallback(
@@ -1218,19 +1337,115 @@ export function CheckoutModal({
           <div className={cashlessDisplayStyles.amount}>
             ¥{total.toLocaleString()}
           </div>
+
+          {/* Terminal接続状態 */}
+          <div
+            className={css({
+              marginTop: "16px",
+              padding: "12px 16px",
+              background: pairingStatus === "connected" || pairingStatus === "waiting"
+                ? "#14532d"
+                : "#334155",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            })}
+          >
+            <div
+              className={css({
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              })}
+            >
+              <span
+                className={css({
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background:
+                    pairingStatus === "connected" || pairingStatus === "waiting"
+                      ? "#4ade80"
+                      : "#64748b",
+                })}
+              />
+              <span className={css({ fontSize: "13px", color: "#f8fafc" })}>
+                {pairingStatus === "connected" || pairingStatus === "waiting"
+                  ? `Terminal接続中 (PIN: ${pairingInfo?.pinCode})`
+                  : "Terminal未接続"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPairingModal(true)}
+              className={css({
+                fontSize: "12px",
+                color: "#93c5fd",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "underline",
+              })}
+            >
+              {pairingStatus === "connected" || pairingStatus === "waiting"
+                ? "設定"
+                : "接続"}
+            </button>
+          </div>
         </div>
       )}
 
       {/* 完了ボタン */}
-      <Button
-        variant="primary"
-        size="xl"
-        fullWidth
-        onClick={handleComplete}
-        disabled={isProcessing || !canComplete}
-      >
-        {isProcessing ? "処理中..." : "会計完了 (Enter)"}
-      </Button>
+      {paymentMethod === "oya_cashless" &&
+      (pairingStatus === "connected" || pairingStatus === "waiting") ? (
+        <Button
+          variant="primary"
+          size="xl"
+          fullWidth
+          onClick={() => setShowTerminalPayment(true)}
+          disabled={isProcessing}
+        >
+          Terminal決済を開始
+        </Button>
+      ) : (
+        <Button
+          variant="primary"
+          size="xl"
+          fullWidth
+          onClick={handleComplete}
+          disabled={isProcessing || !canComplete}
+        >
+          {isProcessing ? "処理中..." : "会計完了 (Enter)"}
+        </Button>
+      )}
+
+      {/* ペアリングモーダル */}
+      <PairingModal
+        open={showPairingModal}
+        onClose={() => setShowPairingModal(false)}
+      />
+
+      {/* Terminal決済モーダル */}
+      {showTerminalPayment && (
+        <TerminalPaymentModal
+          open={showTerminalPayment}
+          amount={total}
+          items={items.map((item) => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.product.price,
+          }))}
+          saleId={undefined}
+          description={`${settings.eventName || "イベント"} - ${items.length}点`}
+          onComplete={(paymentIntentId) => {
+            setShowTerminalPayment(false);
+            // Terminal決済完了後の処理
+            handleTerminalPaymentComplete(paymentIntentId);
+          }}
+          onCancel={() => setShowTerminalPayment(false)}
+        />
+      )}
     </Modal>
   );
 }

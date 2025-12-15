@@ -97,6 +97,8 @@ export interface Transaction {
   staffId: string;
   createdAt: Date;
   isTraining?: boolean;
+  /** Stripe PaymentIntent ID (Terminal決済時) */
+  paymentIntentId?: string;
 }
 
 /**
@@ -121,6 +123,10 @@ export interface AppSettings {
   /** 会場住所 */
   venueAddress?: string;
   terminalId: string;
+  /** デバイス名（ペアリング用） */
+  deviceName?: string;
+  /** イベントID（ペアリング用） */
+  eventId?: string;
   taxRate: number;
   printer?: PrinterConfig;
   isTrainingMode?: boolean;
