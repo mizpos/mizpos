@@ -11,8 +11,8 @@
     "lint": "expo lint"
   },
   "dependencies": {
-    "@mizpos/api": "workspace:*",
     "@expo/vector-icons": "^15.0.3",
+    "@mizpos/api": "workspace:*",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
@@ -42,6 +42,7 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@expo/cli": "^54.0.19",
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
