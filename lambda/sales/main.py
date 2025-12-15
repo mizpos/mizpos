@@ -30,6 +30,12 @@ from models import (
     CreateShippingOptionRequest,
     SaleStatus,
     StripeTerminalConfigRequest,
+    TerminalCaptureRequest,
+    TerminalConnectionTokenRequest,
+    TerminalLocationRequest,
+    TerminalPaymentIntentRequest,
+    TerminalRefundRequest,
+    TerminalRegisterReaderRequest,
     UpdateConfigRequest,
     UpdateShippingOptionRequest,
     UpdateShippingRequest,
@@ -37,11 +43,18 @@ from models import (
 from services import (
     calculate_commission_fees,
     calculate_coupon_discount,
+    cancel_terminal_payment_intent,
+    capture_terminal_payment_intent,
     config_table,
     create_online_order,
     create_shipping_option,
+    create_terminal_connection_token,
+    create_terminal_location,
+    create_terminal_payment_intent,
+    create_terminal_refund,
     deduct_stock,
     delete_shipping_option,
+    delete_terminal_reader,
     dynamo_to_dict,
     events_table,
     get_all_shipping_options,
@@ -50,10 +63,14 @@ from services import (
     get_coupon_by_code,
     get_order_by_id,
     get_orders_by_email,
+    get_payment_intent_for_refund,
     get_products_info,
     get_shipping_option_by_id,
     increment_coupon_usage,
     init_stripe,
+    list_terminal_locations,
+    list_terminal_readers,
+    register_terminal_reader,
     restore_stock,
     sales_table,
     set_config,
@@ -1174,6 +1191,250 @@ async def delete_shipping_option_endpoint(
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ==========================================
+# Stripe Terminal エンドポイント
+# ==========================================
+
+
+@router.post("/terminal/connection-token", response_model=dict)
+async def create_connection_token(
+    request: TerminalConnectionTokenRequest | None = None,
+):
+    """
+    Stripe Terminal用のConnection Tokenを発行
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        location_id = request.location_id if request else None
+        token = create_terminal_connection_token(location_id)
+        return {"connection_token": token}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error creating connection token: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error creating connection token: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminal/locations", response_model=dict)
+async def list_locations():
+    """
+    登録済みのロケーション一覧を取得
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        locations = list_terminal_locations()
+        return {"locations": locations}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error listing locations: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error listing locations: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminal/locations", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_location(
+    request: TerminalLocationRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Stripe Terminalのロケーションを作成（Admin用）
+    """
+    try:
+        location = create_terminal_location(
+            display_name=request.display_name,
+            address_line1=request.address_line1,
+            city=request.city,
+            state=request.state,
+            country=request.country,
+            postal_code=request.postal_code,
+        )
+        return {"location": location}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error creating location: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error creating location: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminal/readers", response_model=dict)
+async def list_readers(
+    location_id: str | None = Query(default=None, description="ロケーションIDでフィルタ"),
+):
+    """
+    登録済みのリーダー一覧を取得
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        readers = list_terminal_readers(location_id)
+        return {"readers": readers}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error listing readers: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error listing readers: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminal/readers", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def register_reader(
+    request: TerminalRegisterReaderRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Stripe Terminalにリーダーを登録（Admin用）
+    """
+    try:
+        reader = register_terminal_reader(
+            registration_code=request.registration_code,
+            label=request.label,
+            location_id=request.location_id,
+        )
+        return {"reader": reader}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error registering reader: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error registering reader: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/terminal/readers/{reader_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_reader(
+    reader_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    リーダーを削除（Admin用）
+    """
+    try:
+        deleted = delete_terminal_reader(reader_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Reader not found")
+        return None
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error deleting reader: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting reader: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminal/payment-intents", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_terminal_pi(request: TerminalPaymentIntentRequest):
+    """
+    Terminal用PaymentIntentを作成
+
+    認証不要（モバイルアプリから呼び出し）
+    capture_method="manual"で作成される
+    """
+    try:
+        # メタデータにsale_idとpnrを追加
+        metadata = request.metadata or {}
+        if request.sale_id:
+            metadata["sale_id"] = request.sale_id
+        if request.pnr:
+            metadata["pnr"] = request.pnr
+
+        payment_intent = create_terminal_payment_intent(
+            amount=request.amount,
+            currency=request.currency,
+            description=request.description,
+            metadata=metadata if metadata else None,
+        )
+        return {"payment_intent": payment_intent}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error creating terminal payment intent: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error creating terminal payment intent: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminal/payment-intents/{payment_intent_id}/capture", response_model=dict)
+async def capture_terminal_pi(payment_intent_id: str):
+    """
+    Terminal PaymentIntentをキャプチャ（確定）
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        result = capture_terminal_payment_intent(payment_intent_id)
+        return {"payment_intent": result}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error capturing payment intent: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error capturing payment intent: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminal/payment-intents/{payment_intent_id}/cancel", response_model=dict)
+async def cancel_terminal_pi(payment_intent_id: str):
+    """
+    Terminal PaymentIntentをキャンセル
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        result = cancel_terminal_payment_intent(payment_intent_id)
+        return {"payment_intent": result}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error canceling payment intent: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error canceling payment intent: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminal/payment-intents/{payment_intent_id}", response_model=dict)
+async def get_terminal_pi(payment_intent_id: str):
+    """
+    PaymentIntent情報を取得（返金可否確認用）
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        result = get_payment_intent_for_refund(payment_intent_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="PaymentIntent not found")
+        return {"payment_intent": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting payment intent: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/terminal/refunds", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def create_refund(request: TerminalRefundRequest):
+    """
+    Terminal決済の返金を処理
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        refund = create_terminal_refund(
+            payment_intent_id=request.payment_intent_id,
+            amount=request.amount,
+            reason=request.reason,
+        )
+        return {"refund": refund}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error creating refund: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error creating refund: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

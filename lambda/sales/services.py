@@ -1014,3 +1014,307 @@ def calculate_shipping_fee(cart_items: list[CartItem]) -> int:
             max_shipping_fee = shipping_fee
 
     return max_shipping_fee
+
+
+# ==============================
+# Stripe Terminal サービス
+# ==============================
+
+
+def create_terminal_connection_token(location_id: str | None = None) -> dict:
+    """
+    Stripe Terminal用のConnection Tokenを発行
+
+    Args:
+        location_id: オプションのロケーションID
+
+    Returns:
+        {"secret": "...", "object": "terminal.connection_token"}
+    """
+    init_stripe()
+    params: dict = {}
+    if location_id:
+        params["location"] = location_id
+
+    token = stripe.terminal.ConnectionToken.create(**params)
+    return {"secret": token.secret, "object": token.object}
+
+
+def register_terminal_reader(
+    registration_code: str,
+    label: str,
+    location_id: str,
+) -> dict:
+    """
+    Stripe Terminalにリーダーを登録
+
+    Args:
+        registration_code: リーダーの登録コード（ペアリング時に表示される）
+        label: リーダーの識別名
+        location_id: StripeのロケーションID
+
+    Returns:
+        登録されたリーダー情報
+    """
+    init_stripe()
+    reader = stripe.terminal.Reader.create(
+        registration_code=registration_code,
+        label=label,
+        location=location_id,
+    )
+    return {
+        "id": reader.id,
+        "label": reader.label,
+        "location": reader.location,
+        "device_type": reader.device_type,
+        "status": reader.status,
+        "serial_number": reader.serial_number,
+    }
+
+
+def list_terminal_readers(location_id: str | None = None) -> list[dict]:
+    """
+    登録済みのリーダー一覧を取得
+
+    Args:
+        location_id: フィルタリング用のロケーションID
+
+    Returns:
+        リーダー情報のリスト
+    """
+    init_stripe()
+    params: dict = {"limit": 100}
+    if location_id:
+        params["location"] = location_id
+
+    readers = stripe.terminal.Reader.list(**params)
+    return [
+        {
+            "id": r.id,
+            "label": r.label,
+            "location": r.location,
+            "device_type": r.device_type,
+            "status": r.status,
+            "serial_number": r.serial_number,
+        }
+        for r in readers.data
+    ]
+
+
+def delete_terminal_reader(reader_id: str) -> bool:
+    """
+    リーダーを削除
+
+    Args:
+        reader_id: 削除するリーダーのID
+
+    Returns:
+        削除成功かどうか
+    """
+    init_stripe()
+    result = stripe.terminal.Reader.delete(reader_id)
+    return result.deleted
+
+
+def create_terminal_payment_intent(
+    amount: int,
+    currency: str = "jpy",
+    description: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    """
+    Stripe Terminal用のPaymentIntentを作成
+
+    capture_method="manual"で作成し、後でキャプチャする
+
+    Args:
+        amount: 金額（最小通貨単位、日本円ならそのまま円）
+        currency: 通貨コード
+        description: 説明
+        metadata: メタデータ
+
+    Returns:
+        PaymentIntent情報
+    """
+    init_stripe()
+    params: dict = {
+        "amount": amount,
+        "currency": currency,
+        "payment_method_types": ["card_present"],
+        "capture_method": "manual",  # Terminal用は手動キャプチャ
+    }
+
+    if description:
+        params["description"] = description
+    if metadata:
+        params["metadata"] = metadata
+
+    intent = stripe.PaymentIntent.create(**params)
+    return {
+        "id": intent.id,
+        "client_secret": intent.client_secret,
+        "amount": intent.amount,
+        "currency": intent.currency,
+        "status": intent.status,
+    }
+
+
+def capture_terminal_payment_intent(payment_intent_id: str) -> dict:
+    """
+    Terminal PaymentIntentをキャプチャ（確定）
+
+    Args:
+        payment_intent_id: キャプチャするPaymentIntentのID
+
+    Returns:
+        更新されたPaymentIntent情報
+    """
+    init_stripe()
+    intent = stripe.PaymentIntent.capture(payment_intent_id)
+    return {
+        "id": intent.id,
+        "amount": intent.amount,
+        "amount_received": intent.amount_received,
+        "currency": intent.currency,
+        "status": intent.status,
+    }
+
+
+def cancel_terminal_payment_intent(payment_intent_id: str) -> dict:
+    """
+    Terminal PaymentIntentをキャンセル
+
+    Args:
+        payment_intent_id: キャンセルするPaymentIntentのID
+
+    Returns:
+        キャンセルされたPaymentIntent情報
+    """
+    init_stripe()
+    intent = stripe.PaymentIntent.cancel(payment_intent_id)
+    return {
+        "id": intent.id,
+        "amount": intent.amount,
+        "currency": intent.currency,
+        "status": intent.status,
+    }
+
+
+def create_terminal_refund(
+    payment_intent_id: str,
+    amount: int | None = None,
+    reason: str | None = None,
+) -> dict:
+    """
+    Stripe Terminal決済の返金を処理
+
+    Args:
+        payment_intent_id: 返金対象のPaymentIntentID
+        amount: 返金額（Noneなら全額返金）
+        reason: 返金理由
+
+    Returns:
+        Refund情報
+    """
+    init_stripe()
+    params: dict = {"payment_intent": payment_intent_id}
+
+    if amount:
+        params["amount"] = amount
+    if reason:
+        params["reason"] = reason
+
+    refund = stripe.Refund.create(**params)
+    return {
+        "id": refund.id,
+        "amount": refund.amount,
+        "currency": refund.currency,
+        "status": refund.status,
+        "payment_intent": refund.payment_intent,
+        "reason": refund.reason,
+    }
+
+
+def get_payment_intent_for_refund(payment_intent_id: str) -> dict | None:
+    """
+    返金用にPaymentIntent情報を取得
+
+    Args:
+        payment_intent_id: PaymentIntentID
+
+    Returns:
+        PaymentIntent情報（返金可能かどうかを含む）
+    """
+    init_stripe()
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        return {
+            "id": intent.id,
+            "amount": intent.amount,
+            "amount_received": intent.amount_received,
+            "currency": intent.currency,
+            "status": intent.status,
+            "refundable": intent.status == "succeeded",
+            "metadata": dict(intent.metadata) if intent.metadata else {},
+        }
+    except stripe._error.StripeError:
+        return None
+
+
+def create_terminal_location(
+    display_name: str,
+    address_line1: str,
+    city: str,
+    state: str,
+    country: str,
+    postal_code: str,
+) -> dict:
+    """
+    Stripe Terminalのロケーションを作成
+
+    Args:
+        display_name: 表示名
+        address_line1: 住所1行目
+        city: 市区町村
+        state: 都道府県
+        country: 国コード（JP）
+        postal_code: 郵便番号
+
+    Returns:
+        作成されたロケーション情報
+    """
+    init_stripe()
+    location = stripe.terminal.Location.create(
+        display_name=display_name,
+        address={
+            "line1": address_line1,
+            "city": city,
+            "state": state,
+            "country": country,
+            "postal_code": postal_code,
+        },
+    )
+    return {
+        "id": location.id,
+        "display_name": location.display_name,
+        "address": dict(location.address),
+    }
+
+
+def list_terminal_locations() -> list[dict]:
+    """
+    登録済みのロケーション一覧を取得
+
+    Returns:
+        ロケーション情報のリスト
+    """
+    init_stripe()
+    locations = stripe.terminal.Location.list(limit=100)
+    return [
+        {
+            "id": loc.id,
+            "display_name": loc.display_name,
+            "address": dict(loc.address),
+        }
+        for loc in locations.data
+    ]
