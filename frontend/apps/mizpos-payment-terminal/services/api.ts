@@ -67,27 +67,34 @@ export type UpdatePaymentRequestResultParams = SalesComponents['schemas']['Updat
  * ペアリングを検証（ターミナル側）
  */
 export async function verifyPairing(pinCode: string): Promise<PairingInfo> {
-  const { data, error } = await salesClient.POST('/terminal/pairing/verify', {
+  console.log('[API] Verifying pairing for PIN:', pinCode);
+
+  const { data, error, response } = await salesClient.POST('/terminal/pairing/verify', {
     body: { pin_code: pinCode },
   });
 
+  console.log('[API] verifyPairing response status:', response?.status);
+
   if (error) {
-    console.error('verifyPairing error:', error);
-    throw new Error('PINコードが見つかりません');
+    console.error('[API] verifyPairing error:', error, 'status:', response?.status);
+    throw new Error(`PINコードが見つかりません (${response?.status || 'unknown'})`);
   }
 
   if (!data) {
+    console.error('[API] verifyPairing: empty response');
     throw new Error('レスポンスが空です');
   }
 
-  const response = data as unknown as { pairing: PairingInfo };
+  console.log('[API] verifyPairing data:', JSON.stringify(data));
+  const result = data as unknown as { pairing: PairingInfo };
 
-  if (!response.pairing) {
-    console.error('verifyPairing: pairing not found in response', data);
+  if (!result.pairing) {
+    console.error('[API] verifyPairing: pairing not found in response', data);
     throw new Error('ペアリング情報が見つかりません');
   }
 
-  return response.pairing;
+  console.log('[API] Pairing verified successfully:', result.pairing.pos_name);
+  return result.pairing;
 }
 
 /**
@@ -113,19 +120,29 @@ export async function deletePairing(pinCode: string): Promise<void> {
 export async function getPendingPaymentRequest(
   pinCode: string
 ): Promise<PaymentRequest | null> {
-  const { data, error } = await salesClient.GET(
+  console.log('[API] Polling for pending payment request, PIN:', pinCode);
+
+  const { data, error, response } = await salesClient.GET(
     '/terminal/payment-requests/pending/{pin_code}',
     {
       params: { path: { pin_code: pinCode } },
     }
   );
 
-  if (error) {
-    throw new Error('Failed to get pending payment request');
+  // 404は「リクエストなし」として正常扱い
+  if (response?.status === 404) {
+    console.log('[API] No pending payment request');
+    return null;
   }
 
-  const response = data as unknown as { payment_request: PaymentRequest | null };
-  return response?.payment_request || null;
+  if (error) {
+    console.error('[API] getPendingPaymentRequest error:', error, 'status:', response?.status);
+    throw new Error(`決済リクエストの取得に失敗: ${response?.status || 'unknown'}`);
+  }
+
+  const result = data as unknown as { payment_request: PaymentRequest | null };
+  console.log('[API] Pending payment request:', result?.payment_request?.request_id || 'none');
+  return result?.payment_request || null;
 }
 
 /**

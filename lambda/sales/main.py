@@ -73,6 +73,7 @@ from services import (
     get_payment_request,
     get_pending_payment_request,
     get_products_info,
+    get_terminal_pairing_status,
     get_shipping_option_by_id,
     increment_coupon_usage,
     init_stripe,
@@ -1530,6 +1531,25 @@ async def delete_pairing(pin_code: str):
         raise
     except Exception as e:
         logger.error(f"Error deleting pairing: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/terminal/pairing/{pin_code}", response_model=dict)
+async def get_pairing_status(pin_code: str):
+    """
+    ターミナルペアリング状態を取得（デスクトップ側からポーリング用）
+
+    ターミナルが接続したかどうかを確認する
+    """
+    try:
+        pairing = get_terminal_pairing_status(pin_code)
+        if not pairing:
+            raise HTTPException(status_code=404, detail="Pairing not found or expired")
+        return {"pairing": pairing}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting pairing status: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

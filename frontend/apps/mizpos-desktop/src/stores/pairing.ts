@@ -76,6 +76,7 @@ interface PairingState {
 
   // ポーリング
   isPolling: boolean;
+  isPairingStatusPolling: boolean;
 
   // アクション
   registerPairing: (
@@ -93,8 +94,11 @@ interface PairingState {
   ) => Promise<PaymentRequest>;
   cancelPaymentRequest: () => Promise<void>;
   pollPaymentResult: () => Promise<PaymentRequest | null>;
+  pollPairingStatus: () => Promise<boolean>;
   startPolling: () => void;
   stopPolling: () => void;
+  startPairingStatusPolling: () => void;
+  stopPairingStatusPolling: () => void;
   clearError: () => void;
   reset: () => void;
 }
@@ -111,6 +115,7 @@ export function generateQRCodeData(pinCode: string): string {
 
 export const usePairingStore = create<PairingState>((set, get) => {
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
+  let pairingStatusPollingInterval: ReturnType<typeof setInterval> | null = null;
 
   return {
     status: "disconnected",
@@ -118,6 +123,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
     error: null,
     currentPaymentRequest: null,
     isPolling: false,
+    isPairingStatusPolling: false,
 
     /**
      * ペアリングを登録（PINコードを生成してサーバーに登録）
@@ -160,6 +166,9 @@ export const usePairingStore = create<PairingState>((set, get) => {
           pairingInfo,
         });
 
+        // ターミナル接続待ちのポーリングを開始
+        get().startPairingStatusPolling();
+
         console.log("Pairing registered with PIN:", pinCode);
         return pinCode;
       } catch (err) {
@@ -178,6 +187,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
 
       // ポーリングを停止
       get().stopPolling();
+      get().stopPairingStatusPolling();
 
       if (pairingInfo?.pinCode) {
         try {
@@ -209,8 +219,14 @@ export const usePairingStore = create<PairingState>((set, get) => {
         throw new Error("ペアリングされていません");
       }
 
+      console.log("[Desktop] Creating payment request:", {
+        pin_code: pairingInfo.pinCode,
+        amount,
+        items_count: items?.length,
+      });
+
       try {
-        const { data, error } = await salesClient.POST(
+        const { data, error, response } = await salesClient.POST(
           "/terminal/payment-requests",
           {
             body: {
@@ -224,11 +240,14 @@ export const usePairingStore = create<PairingState>((set, get) => {
           },
         );
 
+        console.log("[Desktop] createPaymentRequest response status:", response?.status);
+
         if (error || !data) {
-          throw new Error("Failed to create payment request");
+          console.error("[Desktop] createPaymentRequest error:", error);
+          throw new Error(`Failed to create payment request: ${response?.status}`);
         }
 
-        const response = data as unknown as {
+        const apiResponse = data as unknown as {
           payment_request: {
             request_id: string;
             pin_code: string;
@@ -246,18 +265,18 @@ export const usePairingStore = create<PairingState>((set, get) => {
         };
 
         const paymentRequest: PaymentRequest = {
-          requestId: response.payment_request.request_id,
-          pinCode: response.payment_request.pin_code,
-          amount: response.payment_request.amount,
-          currency: response.payment_request.currency,
-          description: response.payment_request.description,
-          saleId: response.payment_request.sale_id,
-          items: response.payment_request.items,
-          status: response.payment_request.status,
-          paymentIntentId: response.payment_request.payment_intent_id,
-          errorMessage: response.payment_request.error_message,
-          createdAt: new Date(response.payment_request.created_at),
-          updatedAt: new Date(response.payment_request.updated_at),
+          requestId: apiResponse.payment_request.request_id,
+          pinCode: apiResponse.payment_request.pin_code,
+          amount: apiResponse.payment_request.amount,
+          currency: apiResponse.payment_request.currency,
+          description: apiResponse.payment_request.description,
+          saleId: apiResponse.payment_request.sale_id,
+          items: apiResponse.payment_request.items,
+          status: apiResponse.payment_request.status,
+          paymentIntentId: apiResponse.payment_request.payment_intent_id,
+          errorMessage: apiResponse.payment_request.error_message,
+          createdAt: new Date(apiResponse.payment_request.created_at),
+          updatedAt: new Date(apiResponse.payment_request.updated_at),
         };
 
         set({
@@ -310,7 +329,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
       }
 
       try {
-        const { data, error } = await salesClient.GET(
+        const { data, error, response: httpResponse } = await salesClient.GET(
           "/terminal/payment-requests/{request_id}",
           {
             params: { path: { request_id: currentPaymentRequest.requestId } },
@@ -318,10 +337,11 @@ export const usePairingStore = create<PairingState>((set, get) => {
         );
 
         if (error || !data) {
+          console.error("[Desktop] pollPaymentResult error:", error, "status:", httpResponse?.status);
           return null;
         }
 
-        const response = data as unknown as {
+        const apiResponse = data as unknown as {
           payment_request: {
             request_id: string;
             pin_code: string;
@@ -339,18 +359,18 @@ export const usePairingStore = create<PairingState>((set, get) => {
         };
 
         const updatedRequest: PaymentRequest = {
-          requestId: response.payment_request.request_id,
-          pinCode: response.payment_request.pin_code,
-          amount: response.payment_request.amount,
-          currency: response.payment_request.currency,
-          description: response.payment_request.description,
-          saleId: response.payment_request.sale_id,
-          items: response.payment_request.items,
-          status: response.payment_request.status,
-          paymentIntentId: response.payment_request.payment_intent_id,
-          errorMessage: response.payment_request.error_message,
-          createdAt: new Date(response.payment_request.created_at),
-          updatedAt: new Date(response.payment_request.updated_at),
+          requestId: apiResponse.payment_request.request_id,
+          pinCode: apiResponse.payment_request.pin_code,
+          amount: apiResponse.payment_request.amount,
+          currency: apiResponse.payment_request.currency,
+          description: apiResponse.payment_request.description,
+          saleId: apiResponse.payment_request.sale_id,
+          items: apiResponse.payment_request.items,
+          status: apiResponse.payment_request.status,
+          paymentIntentId: apiResponse.payment_request.payment_intent_id,
+          errorMessage: apiResponse.payment_request.error_message,
+          createdAt: new Date(apiResponse.payment_request.created_at),
+          updatedAt: new Date(apiResponse.payment_request.updated_at),
         };
 
         set({ currentPaymentRequest: updatedRequest });
@@ -402,6 +422,87 @@ export const usePairingStore = create<PairingState>((set, get) => {
     },
 
     /**
+     * ペアリング状態をポーリングで取得（ターミナル接続検知用）
+     */
+    pollPairingStatus: async () => {
+      const { pairingInfo, status } = get();
+
+      if (!pairingInfo || status !== "waiting") {
+        return false;
+      }
+
+      try {
+        const { data, error, response } = await salesClient.GET(
+          "/terminal/pairing/{pin_code}",
+          {
+            params: { path: { pin_code: pairingInfo.pinCode } },
+          },
+        );
+
+        if (error || !data) {
+          console.error("[Desktop] pollPairingStatus error:", error, "status:", response?.status);
+          return false;
+        }
+
+        const apiResponse = data as unknown as {
+          pairing: {
+            pin_code: string;
+            pos_id: string;
+            pos_name: string;
+            event_id?: string;
+            event_name?: string;
+            terminal_connected: boolean;
+            terminal_connected_at?: string;
+            created_at: string;
+            expires_at: string;
+          };
+        };
+
+        if (apiResponse.pairing.terminal_connected) {
+          console.log("[Desktop] Terminal connected!");
+          get().stopPairingStatusPolling();
+          set({ status: "connected" });
+          return true;
+        }
+
+        return false;
+      } catch (err) {
+        console.error("Failed to poll pairing status:", err);
+        return false;
+      }
+    },
+
+    /**
+     * ペアリング状態のポーリングを開始
+     */
+    startPairingStatusPolling: () => {
+      if (pairingStatusPollingInterval) {
+        return;
+      }
+
+      set({ isPairingStatusPolling: true });
+
+      pairingStatusPollingInterval = setInterval(async () => {
+        await get().pollPairingStatus();
+      }, 3000); // 3秒間隔
+
+      console.log("[Desktop] Started polling for pairing status");
+    },
+
+    /**
+     * ペアリング状態のポーリングを停止
+     */
+    stopPairingStatusPolling: () => {
+      if (pairingStatusPollingInterval) {
+        clearInterval(pairingStatusPollingInterval);
+        pairingStatusPollingInterval = null;
+      }
+
+      set({ isPairingStatusPolling: false });
+      console.log("[Desktop] Stopped pairing status polling");
+    },
+
+    /**
      * エラーをクリア
      */
     clearError: () => {
@@ -413,12 +514,14 @@ export const usePairingStore = create<PairingState>((set, get) => {
      */
     reset: () => {
       get().stopPolling();
+      get().stopPairingStatusPolling();
       set({
         status: "disconnected",
         pairingInfo: null,
         error: null,
         currentPaymentRequest: null,
         isPolling: false,
+        isPairingStatusPolling: false,
       });
     },
   };

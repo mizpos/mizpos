@@ -169,19 +169,29 @@ export function PairingProvider({ children }: PairingProviderProps) {
     }
 
     setIsPolling(true);
-    console.log('Starting payment request polling for PIN:', pinCode);
+    setError(null);
+    console.log('[Polling] Starting payment request polling for PIN:', pinCode);
+
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 5;
 
     const poll = async () => {
       try {
         const request = await getPendingPaymentRequest(pinCode);
+        consecutiveErrors = 0; // 成功したらリセット
 
         if (request && request.request_id !== currentRequestIdRef.current) {
-          console.log('New payment request received:', request);
+          console.log('[Polling] New payment request received:', request);
           currentRequestIdRef.current = request.request_id;
           setCurrentPaymentRequest(convertApiPaymentRequest(request));
         }
       } catch (err) {
-        console.error('Polling error:', err);
+        consecutiveErrors++;
+        console.error('[Polling] Error:', err, `(${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          setError('決済リクエストの取得に失敗しています。ネットワーク接続を確認してください。');
+        }
       }
     };
 

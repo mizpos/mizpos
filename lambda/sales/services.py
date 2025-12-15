@@ -1414,11 +1414,60 @@ def verify_terminal_pairing(pin_code: str) -> dict | None:
     """
     ターミナルペアリングを検証（ターミナル側から呼び出し）
 
+    検証成功時に terminal_connected フラグを True に更新する
+
     Args:
         pin_code: 6桁のPINコード
 
     Returns:
         ペアリング情報（有効な場合）、または None
+    """
+    table = get_terminal_pairing_table()
+    response = table.get_item(Key={"pin_code": pin_code})
+    item = response.get("Item")
+
+    if not item:
+        return None
+
+    # 有効期限チェック
+    expires_at = datetime.fromisoformat(item["expires_at"].replace("Z", "+00:00"))
+    if datetime.now(timezone.utc) > expires_at:
+        # 期限切れ
+        return None
+
+    # terminal_connected フラグを更新
+    connected_at = datetime.now(timezone.utc).isoformat()
+    table.update_item(
+        Key={"pin_code": pin_code},
+        UpdateExpression="SET terminal_connected = :connected, terminal_connected_at = :connected_at",
+        ExpressionAttributeValues={
+            ":connected": True,
+            ":connected_at": connected_at,
+        },
+    )
+
+    return {
+        "pin_code": item["pin_code"],
+        "pos_id": item["pos_id"],
+        "pos_name": item["pos_name"],
+        "event_id": item.get("event_id") or None,
+        "event_name": item.get("event_name") or None,
+        "created_at": item["created_at"],
+        "expires_at": item["expires_at"],
+        "terminal_connected": True,
+        "terminal_connected_at": connected_at,
+    }
+
+
+def get_terminal_pairing_status(pin_code: str) -> dict | None:
+    """
+    ターミナルペアリング状態を取得（デスクトップ側からポーリング用）
+
+    Args:
+        pin_code: 6桁のPINコード
+
+    Returns:
+        ペアリング情報（terminal_connected フラグ含む）、または None
     """
     table = get_terminal_pairing_table()
     response = table.get_item(Key={"pin_code": pin_code})
@@ -1441,6 +1490,8 @@ def verify_terminal_pairing(pin_code: str) -> dict | None:
         "event_name": item.get("event_name") or None,
         "created_at": item["created_at"],
         "expires_at": item["expires_at"],
+        "terminal_connected": item.get("terminal_connected", False),
+        "terminal_connected_at": item.get("terminal_connected_at"),
     }
 
 
