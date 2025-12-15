@@ -99,7 +99,7 @@ export default function HomeScreen() {
           <View style={styles.statusTextContainer}>
             <ThemedText type="subtitle">POS連携中</ThemedText>
             <ThemedText style={styles.statusDescription}>
-              {pairingInfo.posName} (PNR: {pairingInfo.pnr})
+              {pairingInfo.posName} (PIN: {pairingInfo.pinCode})
             </ThemedText>
           </View>
           <IconSymbol name="chevron.right" size={20} color={colors.text} />

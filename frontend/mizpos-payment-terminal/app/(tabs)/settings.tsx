@@ -137,7 +137,7 @@ export default function SettingsScreen() {
             {renderSettingItem(
               'link.circle.fill',
               '連携中のPOS',
-              `${pairingInfo.posName} (PNR: ${pairingInfo.pnr})`
+              `${pairingInfo.posName} (PIN: ${pairingInfo.pinCode})`
             )}
             {pairingInfo.eventName &&
               renderSettingItem('calendar', 'イベント', pairingInfo.eventName)}
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
           renderSettingItem(
             'qrcode.viewfinder',
             'POSとペアリング',
-            'QRコードまたはPNRで連携',
+            'QRコードまたはPINコードで連携',
             () => router.push('/pairing')
           )
         )}

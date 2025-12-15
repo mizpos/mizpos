@@ -1,7 +1,7 @@
 /**
  * ペアリングモーダル
  *
- * QRコードまたはPNRでmizpos-desktopとペアリング
+ * QRコードまたはPINコードでmizpos-desktopとペアリング
  */
 
 import { useState } from 'react';
@@ -22,7 +22,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePairing } from '@/providers';
 
-type PairingMode = 'qr' | 'pnr';
+type PairingMode = 'qr' | 'pin';
 
 export default function PairingScreen() {
   const colorScheme = useColorScheme();
@@ -30,10 +30,10 @@ export default function PairingScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const [mode, setMode] = useState<PairingMode>('qr');
-  const [pnrInput, setPnrInput] = useState('');
+  const [pinInput, setPinInput] = useState('');
   const [isScanning, setIsScanning] = useState(true);
 
-  const { isPaired, pairingInfo, pairWithQRCode, pairWithPNR, unpair, error, clearError } =
+  const { isPaired, pairingInfo, pairWithQRCode, pairWithPIN, unpair, error, clearError } =
     usePairing();
 
   // QRコードスキャン処理
@@ -51,14 +51,14 @@ export default function PairingScreen() {
     }
   };
 
-  // PNRでペアリング
-  const handlePnrPairing = async () => {
-    if (!pnrInput.trim()) {
-      Alert.alert('エラー', 'PNRを入力してください');
+  // PINコードでペアリング
+  const handlePinPairing = async () => {
+    if (!pinInput.trim()) {
+      Alert.alert('エラー', 'PINコードを入力してください');
       return;
     }
 
-    await pairWithPNR(pnrInput.trim());
+    await pairWithPIN(pinInput.trim());
     if (!error) {
       router.back();
     }
@@ -101,8 +101,8 @@ export default function PairingScreen() {
               <ThemedText style={styles.pairedInfoValue}>{pairingInfo.posName}</ThemedText>
             </View>
             <View style={styles.pairedInfoRow}>
-              <ThemedText style={styles.pairedInfoLabel}>PNR</ThemedText>
-              <ThemedText style={styles.pairedInfoValue}>{pairingInfo.pnr}</ThemedText>
+              <ThemedText style={styles.pairedInfoLabel}>PINコード</ThemedText>
+              <ThemedText style={styles.pairedInfoValue}>{pairingInfo.pinCode}</ThemedText>
             </View>
             {pairingInfo.eventName && (
               <View style={styles.pairedInfoRow}>
@@ -164,16 +164,16 @@ export default function PairingScreen() {
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, mode === 'pnr' && styles.tabActive]}
-          onPress={() => setMode('pnr')}
+          style={[styles.tab, mode === 'pin' && styles.tabActive]}
+          onPress={() => setMode('pin')}
         >
           <IconSymbol
             name="textformat.123"
             size={20}
-            color={mode === 'pnr' ? '#007AFF' : '#8E8E93'}
+            color={mode === 'pin' ? '#007AFF' : '#8E8E93'}
           />
-          <ThemedText style={[styles.tabText, mode === 'pnr' && styles.tabTextActive]}>
-            PNR入力
+          <ThemedText style={[styles.tabText, mode === 'pin' && styles.tabTextActive]}>
+            PIN入力
           </ThemedText>
         </TouchableOpacity>
       </View>
@@ -219,24 +219,24 @@ export default function PairingScreen() {
         </>
       )}
 
-      {/* PNR入力 */}
-      {mode === 'pnr' && (
-        <View style={styles.pnrContainer}>
+      {/* PIN入力 */}
+      {mode === 'pin' && (
+        <View style={styles.pinContainer}>
           <IconSymbol name="keyboard" size={48} color="#007AFF" />
-          <ThemedText type="subtitle" style={styles.pnrTitle}>
-            PNRを入力
+          <ThemedText type="subtitle" style={styles.pinTitle}>
+            PINコードを入力
           </ThemedText>
-          <ThemedText style={styles.pnrDescription}>
-            mizpos-desktop で表示される6桁のペアリング番号を入力してください
+          <ThemedText style={styles.pinDescription}>
+            mizpos-desktop で表示される6桁のPINコードを入力してください
           </ThemedText>
 
           <TextInput
-            style={[styles.pnrInput, { color: colors.text, borderColor: colors.text }]}
-            value={pnrInput}
+            style={[styles.pinInput, { color: colors.text, borderColor: colors.text }]}
+            value={pinInput}
             onChangeText={(text) => {
               // 数字のみ、6桁まで
               const filtered = text.replace(/[^0-9]/g, '').slice(0, 6);
-              setPnrInput(filtered);
+              setPinInput(filtered);
             }}
             placeholder="000000"
             placeholderTextColor="#8E8E93"
@@ -248,15 +248,15 @@ export default function PairingScreen() {
           <TouchableOpacity
             style={[
               styles.button,
-              { backgroundColor: pnrInput.length === 6 ? '#007AFF' : '#E5E5E5' },
+              { backgroundColor: pinInput.length === 6 ? '#007AFF' : '#E5E5E5' },
             ]}
-            onPress={handlePnrPairing}
-            disabled={pnrInput.length !== 6}
+            onPress={handlePinPairing}
+            disabled={pinInput.length !== 6}
           >
             <ThemedText
               style={[
                 styles.buttonText,
-                { color: pnrInput.length === 6 ? '#FFFFFF' : '#8E8E93' },
+                { color: pinInput.length === 6 ? '#FFFFFF' : '#8E8E93' },
               ]}
             >
               ペアリング
@@ -351,22 +351,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.7,
   },
-  pnrContainer: {
+  pinContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
     gap: 16,
   },
-  pnrTitle: {
+  pinTitle: {
     marginTop: 8,
   },
-  pnrDescription: {
+  pinDescription: {
     textAlign: 'center',
     opacity: 0.7,
     marginBottom: 16,
   },
-  pnrInput: {
+  pinInput: {
     width: '100%',
     maxWidth: 200,
     borderWidth: 2,

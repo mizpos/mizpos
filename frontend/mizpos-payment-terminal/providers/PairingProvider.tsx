@@ -2,7 +2,7 @@
  * Pairing Provider
  *
  * mizpos-desktopとのペアリング状態を管理
- * QRコードやPNRでペアリングし、決済リクエストを受け取る
+ * QRコードやPINコードでペアリングし、決済リクエストを受け取る
  */
 
 import React, {
@@ -21,7 +21,7 @@ import React, {
  * ペアリング情報
  */
 export interface PairingInfo {
-  pnr: string;           // ペアリング番号（6桁など）
+  pinCode: string;       // ペアリングPINコード（6桁）
   posId: string;         // POS端末ID
   posName: string;       // POS端末名
   pairedAt: Date;        // ペアリング日時
@@ -66,7 +66,7 @@ interface PairingContextValue {
 
   // ペアリング操作
   pairWithQRCode: (qrData: string) => Promise<void>;
-  pairWithPNR: (pnr: string) => Promise<void>;
+  pairWithPIN: (pinCode: string) => Promise<void>;
   unpair: () => void;
 
   // 決済リクエスト
@@ -101,7 +101,7 @@ export function PairingProvider({ children }: PairingProviderProps) {
    * QRコードからペアリング情報をパース
    *
    * QRコードのフォーマット例:
-   * mizpos://pair?pnr=123456&pos_id=xxx&pos_name=POS1&event_id=yyy&event_name=Event
+   * mizpos://pair?pin=123456&pos_id=xxx&pos_name=POS1&event_id=yyy&event_name=Event
    */
   const parseQRCode = (qrData: string): PairingInfo | null => {
     try {
@@ -113,16 +113,16 @@ export function PairingProvider({ children }: PairingProviderProps) {
       const url = new URL(qrData.replace('mizpos://', 'https://'));
       const params = url.searchParams;
 
-      const pnr = params.get('pnr');
+      const pinCode = params.get('pin');
       const posId = params.get('pos_id');
       const posName = params.get('pos_name');
 
-      if (!pnr || !posId || !posName) {
+      if (!pinCode || !posId || !posName) {
         throw new Error('Missing required parameters');
       }
 
       return {
-        pnr,
+        pinCode,
         posId,
         posName,
         pairedAt: new Date(),
@@ -148,37 +148,37 @@ export function PairingProvider({ children }: PairingProviderProps) {
     }
 
     // TODO: バックエンドでペアリング情報を検証
-    // const response = await verifyPairing(info.pnr);
+    // const response = await verifyPairing(info.pinCode);
 
     setPairingInfo(info);
     console.log('Paired with POS:', info);
   }, []);
 
   /**
-   * PNRでペアリング
+   * PINコードでペアリング
    */
-  const pairWithPNR = useCallback(async (pnr: string) => {
+  const pairWithPIN = useCallback(async (pinCode: string) => {
     setError(null);
 
-    // PNRの形式を検証
-    if (!/^\d{6}$/.test(pnr)) {
-      setError('PNRは6桁の数字で入力してください');
+    // PINコードの形式を検証
+    if (!/^\d{6}$/.test(pinCode)) {
+      setError('PINコードは6桁の数字で入力してください');
       return;
     }
 
-    // TODO: バックエンドでPNRを検証し、POS情報を取得
-    // const response = await verifyPNR(pnr);
+    // TODO: バックエンドでPINコードを検証し、POS情報を取得
+    // const response = await verifyPIN(pinCode);
 
     // 暫定的にダミー情報を設定
     const info: PairingInfo = {
-      pnr,
-      posId: `pos_${pnr}`,
-      posName: `POS Terminal ${pnr}`,
+      pinCode,
+      posId: `pos_${pinCode}`,
+      posName: `POS Terminal ${pinCode}`,
       pairedAt: new Date(),
     };
 
     setPairingInfo(info);
-    console.log('Paired with PNR:', pnr);
+    console.log('Paired with PIN:', pinCode);
   }, []);
 
   /**
@@ -240,7 +240,7 @@ export function PairingProvider({ children }: PairingProviderProps) {
     isPaired: pairingInfo !== null,
     pairingInfo,
     pairWithQRCode,
-    pairWithPNR,
+    pairWithPIN,
     unpair,
     currentPaymentRequest,
     paymentHistory,

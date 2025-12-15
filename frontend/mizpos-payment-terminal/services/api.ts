@@ -128,7 +128,7 @@ export interface CreatePaymentIntentParams {
   description?: string;
   metadata?: Record<string, string>;
   sale_id?: string;
-  pnr?: string;
+  pinCode?: string;
 }
 
 export interface PaymentIntent {
