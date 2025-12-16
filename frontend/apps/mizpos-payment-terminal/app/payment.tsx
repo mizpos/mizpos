@@ -61,20 +61,21 @@ function extractCardDetails(
   }
 
   // 方法2: chargesからカード情報を取得（フォールバック）
+  // 注意: フィールド名は cardPresentDetails（cardPresentではない）
   const charges = paymentIntent.charges;
   if (charges && charges.length > 0) {
     const charge = charges[0];
-    const cardPresent = charge?.paymentMethodDetails?.cardPresent;
+    const cardPresentDetails = charge?.paymentMethodDetails?.cardPresentDetails;
 
-    if (cardPresent) {
-      console.log('[Payment] Card details from charges[0].paymentMethodDetails.cardPresent:', cardPresent);
+    if (cardPresentDetails) {
+      console.log('[Payment] Card details from charges[0].paymentMethodDetails.cardPresentDetails:', cardPresentDetails);
       return {
-        brand: cardPresent.brand || undefined,
-        last4: cardPresent.last4 || undefined,
-        exp_month: cardPresent.expMonth || undefined,
-        exp_year: cardPresent.expYear || undefined,
-        cardholder_name: cardPresent.cardholderName || undefined,
-        funding: cardPresent.funding || undefined,
+        brand: cardPresentDetails.brand || undefined,
+        last4: cardPresentDetails.last4 || undefined,
+        exp_month: cardPresentDetails.expMonth ? Number(cardPresentDetails.expMonth) : undefined,
+        exp_year: cardPresentDetails.expYear ? Number(cardPresentDetails.expYear) : undefined,
+        cardholder_name: cardPresentDetails.cardholderName || undefined,
+        funding: cardPresentDetails.funding || undefined,
         terminal_serial_number: terminalSerialNumber,
         transaction_type: 'sale',
         payment_type: '一括',
