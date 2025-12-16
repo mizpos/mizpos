@@ -158,6 +158,9 @@ export default function PaymentScreen() {
         throw new Error(processResult.error.message);
       }
 
+      // デバッグ: processResultの構造を確認
+      console.log('[Payment] processResult.paymentIntent:', JSON.stringify(processResult.paymentIntent, null, 2));
+
       const finalPaymentIntentId = processResult.paymentIntent?.id || createResult.paymentIntent.id;
 
       // カード詳細を抽出（端末シリアル番号も含める）
