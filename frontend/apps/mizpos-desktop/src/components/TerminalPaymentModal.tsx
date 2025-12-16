@@ -210,16 +210,20 @@ export function TerminalPaymentModal({
       case "completed":
         setPaymentState("completed");
         // 完了後に親コンポーネントに通知（一度だけ）
-        if (
-          currentPaymentRequest.paymentIntentId &&
-          !hasNotifiedComplete.current
-        ) {
-          hasNotifiedComplete.current = true;
-          timeoutId = setTimeout(() => {
-            callbacksRef.current.onComplete(
-              currentPaymentRequest.paymentIntentId!,
+        if (!hasNotifiedComplete.current) {
+          if (currentPaymentRequest.paymentIntentId) {
+            hasNotifiedComplete.current = true;
+            timeoutId = setTimeout(() => {
+              callbacksRef.current.onComplete(
+                currentPaymentRequest.paymentIntentId!,
+              );
+            }, 1500);
+          } else {
+            // paymentIntentIdがまだ取得できていない場合、ポーリングを継続
+            console.warn(
+              "Payment completed but paymentIntentId is missing, waiting...",
             );
-          }, 1500);
+          }
         }
         break;
       case "cancelled":

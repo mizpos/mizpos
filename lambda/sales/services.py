@@ -1668,6 +1668,7 @@ def get_payment_request(request_id: str) -> dict | None:
             "status": item["status"],
             "payment_intent_id": item.get("payment_intent_id") or None,
             "error_message": item.get("error_message") or None,
+            "card_details": item.get("card_details") or None,
             "created_at": item["created_at"],
             "updated_at": item["updated_at"],
         }

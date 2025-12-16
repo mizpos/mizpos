@@ -454,10 +454,12 @@ export const usePairingStore = create<PairingState>((set, get) => {
         set({ currentPaymentRequest: updatedRequest });
 
         // 決済完了またはエラーの場合はポーリング停止
+        // ただし、completedでpaymentIntentIdがない場合は継続（まだデータが同期されていない可能性）
         if (
-          updatedRequest.status === "completed" ||
           updatedRequest.status === "cancelled" ||
-          updatedRequest.status === "failed"
+          updatedRequest.status === "failed" ||
+          (updatedRequest.status === "completed" &&
+            updatedRequest.paymentIntentId)
         ) {
           get().stopPolling();
         }
