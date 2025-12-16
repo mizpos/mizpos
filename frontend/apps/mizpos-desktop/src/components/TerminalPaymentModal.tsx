@@ -198,6 +198,14 @@ export function TerminalPaymentModal({
   useEffect(() => {
     if (!currentPaymentRequest) return;
 
+    // デバッグ: currentPaymentRequestの状態を確認
+    console.log("[TerminalPaymentModal] currentPaymentRequest:", {
+      status: currentPaymentRequest.status,
+      paymentIntentId: currentPaymentRequest.paymentIntentId,
+      cardDetails: currentPaymentRequest.cardDetails,
+      hasNotifiedComplete: hasNotifiedComplete.current,
+    });
+
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     switch (currentPaymentRequest.status) {
@@ -213,6 +221,7 @@ export function TerminalPaymentModal({
         if (!hasNotifiedComplete.current) {
           if (currentPaymentRequest.paymentIntentId) {
             hasNotifiedComplete.current = true;
+            console.log("[TerminalPaymentModal] Calling onComplete in 1500ms with paymentIntentId:", currentPaymentRequest.paymentIntentId);
             timeoutId = setTimeout(() => {
               callbacksRef.current.onComplete(
                 currentPaymentRequest.paymentIntentId!,
