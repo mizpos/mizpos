@@ -68,6 +68,8 @@ mod desktop_printer {
         pub funding: Option<String>,
         /// 端末シリアル番号
         pub terminal_serial_number: Option<String>,
+        /// 加盟店名（Stripeアカウント名）
+        pub merchant_name: Option<String>,
         /// 取引種別（sale/refund）
         pub transaction_type: Option<String>,
         /// 支払区分
@@ -359,11 +361,12 @@ mod desktop_printer {
             printer.jp_textln_padded("クレジット売上票", TextStyle::default().reverse().center())?;
             printer.textln("")?;
 
-            // 加盟店名（サークル名を使用）
-            if let Some(ref circle_name) = receipt.circle_name {
-                if !circle_name.is_empty() {
-                    printer.row_auto("加盟店名:", circle_name)?;
-                }
+            // 加盟店名（Stripeアカウント名を優先、なければサークル名を使用）
+            let merchant_name = card.merchant_name.as_ref()
+                .filter(|s| !s.is_empty())
+                .or(receipt.circle_name.as_ref().filter(|s| !s.is_empty()));
+            if let Some(name) = merchant_name {
+                printer.row_auto("加盟店名:", name)?;
             }
 
             // 端末番号
@@ -445,6 +448,12 @@ mod desktop_printer {
             printer.separator()?;
 
             printer.jp_textln("上記正に受領いたしました", TextStyle::default().center())?;
+
+            // 決済番号QRコード（PaymentIntent ID）
+            if let Some(ref pi_id) = receipt.payment_intent_id {
+                printer.textln("")?;
+                printer.qr_code_center(pi_id, Some(4))?;
+            }
         }
 
         printer.feed(3)?;

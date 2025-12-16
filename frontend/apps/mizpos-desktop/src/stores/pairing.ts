@@ -286,6 +286,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
               cardholder_name?: string;
               funding?: string;
               terminal_serial_number?: string;
+              merchant_name?: string;
               transaction_type?: string;
               payment_type?: string;
               transaction_at?: string;
@@ -316,6 +317,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
                 cardholderName: cd.cardholder_name,
                 funding: cd.funding,
                 terminalSerialNumber: cd.terminal_serial_number,
+                merchantName: cd.merchant_name,
                 transactionType: cd.transaction_type,
                 paymentType: cd.payment_type,
                 transactionAt: cd.transaction_at,
@@ -413,6 +415,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
               cardholder_name?: string;
               funding?: string;
               terminal_serial_number?: string;
+              merchant_name?: string;
               transaction_type?: string;
               payment_type?: string;
               transaction_at?: string;
@@ -446,6 +449,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
                 cardholderName: cd.cardholder_name,
                 funding: cd.funding,
                 terminalSerialNumber: cd.terminal_serial_number,
+                merchantName: cd.merchant_name,
                 transactionType: cd.transaction_type,
                 paymentType: cd.payment_type,
                 transactionAt: cd.transaction_at,
