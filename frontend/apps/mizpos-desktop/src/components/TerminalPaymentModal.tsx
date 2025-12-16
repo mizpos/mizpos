@@ -221,7 +221,10 @@ export function TerminalPaymentModal({
         if (!hasNotifiedComplete.current) {
           if (currentPaymentRequest.paymentIntentId) {
             hasNotifiedComplete.current = true;
-            console.log("[TerminalPaymentModal] Calling onComplete in 1500ms with paymentIntentId:", currentPaymentRequest.paymentIntentId);
+            console.log(
+              "[TerminalPaymentModal] Calling onComplete in 1500ms with paymentIntentId:",
+              currentPaymentRequest.paymentIntentId,
+            );
             timeoutId = setTimeout(() => {
               callbacksRef.current.onComplete(
                 currentPaymentRequest.paymentIntentId!,

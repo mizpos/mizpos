@@ -256,11 +256,9 @@ function RefundPage() {
       `商品数: ${sale.items.length}点\n`;
 
     if (isStripePayment && hasPaymentIntentId) {
-      confirmMessage +=
-        `\nクレジット決済のため、Stripeへの返金処理も同時に行われます。`;
+      confirmMessage += `\nクレジット決済のため、Stripeへの返金処理も同時に行われます。`;
     } else if (isStripePayment && !hasPaymentIntentId) {
-      confirmMessage +=
-        `\n⚠️ クレジット決済ですが、PaymentIntent IDが記録されていないため、\nStripe側の返金は手動で行う必要があります。`;
+      confirmMessage += `\n⚠️ クレジット決済ですが、PaymentIntent IDが記録されていないため、\nStripe側の返金は手動で行う必要があります。`;
     }
 
     confirmMessage += `\n\nこの操作は取り消せません。`;

@@ -1040,7 +1040,8 @@ def get_stripe_account_info() -> dict:
             or account.business_profile.name
             or "",
             "business_name": account.business_profile.name or "",
-            "statement_descriptor": account.settings.payments.statement_descriptor or "",
+            "statement_descriptor": account.settings.payments.statement_descriptor
+            or "",
         }
     except Exception as e:
         import logging

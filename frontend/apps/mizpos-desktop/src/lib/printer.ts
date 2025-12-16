@@ -86,7 +86,7 @@ export async function usbWelcomePrint(
   vendorId: number,
   deviceId: number,
   terminalId: string,
-  paperWidth?: number
+  paperWidth?: number,
 ): Promise<void> {
   return invoke("welcome_print", {
     vendorId,
@@ -100,7 +100,7 @@ export async function usbTextPrint(
   vendorId: number,
   deviceId: number,
   text: string,
-  paperWidth?: number
+  paperWidth?: number,
 ): Promise<void> {
   return invoke("text_print", {
     vendorId,
@@ -117,7 +117,7 @@ export async function usbPrintFullReceipt(
   vendorId: number,
   deviceId: number,
   receipt: FullReceiptData,
-  paperWidth?: number
+  paperWidth?: number,
 ): Promise<void> {
   return invoke("print_receipt", {
     vendorId,
@@ -165,14 +165,14 @@ export function isBluetoothConnected(): boolean {
   }
   const result = window.MizPosPrinter.isConnected();
   const parsed = parseAndroidResult<{ success: boolean; connected: boolean }>(
-    result
+    result,
   );
   return parsed.connected;
 }
 
 export function bluetoothWelcomePrint(
   terminalId: string,
-  paperWidth?: number
+  paperWidth?: number,
 ): PrinterResult {
   if (!window.MizPosPrinter) {
     return { success: false, error: "Bluetooth not available" };
@@ -328,7 +328,7 @@ export interface ClosingReportPrintData {
 }
 
 export function bluetoothPrintClosingReport(
-  data: ClosingReportPrintData
+  data: ClosingReportPrintData,
 ): PrinterResult {
   if (!window.MizPosPrinter) {
     return { success: false, error: "Bluetooth not available" };
@@ -344,7 +344,7 @@ export async function usbPrintClosingReport(
   vendorId: number,
   deviceId: number,
   report: ClosingReportPrintData,
-  paperWidth?: number
+  paperWidth?: number,
 ): Promise<void> {
   return invoke("print_closing_report", {
     vendorId,
@@ -421,7 +421,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         terminalId,
-        this.config.paperWidth
+        this.config.paperWidth,
       );
       return { success: true };
     } catch (e) {
@@ -444,7 +444,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         text,
-        this.config.paperWidth
+        this.config.paperWidth,
       );
       return { success: true };
     } catch (e) {
@@ -540,7 +540,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         data,
-        this.config.paperWidth
+        this.config.paperWidth,
       );
       return { success: true };
     } catch (e) {
@@ -552,7 +552,7 @@ export class UnifiedPrinter {
    * 閉局レポートを印刷
    */
   async printClosingReport(
-    data: ClosingReportPrintData
+    data: ClosingReportPrintData,
   ): Promise<PrinterResult> {
     if (this.config.platform === "android") {
       return bluetoothPrintClosingReport({
@@ -571,7 +571,7 @@ export class UnifiedPrinter {
         this.config.vendorId,
         this.config.deviceId,
         data,
-        this.config.paperWidth
+        this.config.paperWidth,
       );
       return { success: true };
     } catch (e) {
