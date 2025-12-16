@@ -422,6 +422,9 @@ export const usePairingStore = create<PairingState>((set, get) => {
         };
 
         const cd = apiResponse.payment_request.card_details;
+        // デバッグ: APIからのcard_detailsを確認
+        console.log("[pairing] API card_details:", cd);
+
         const updatedRequest: PaymentRequest = {
           requestId: apiResponse.payment_request.request_id,
           pinCode: apiResponse.payment_request.pin_code,

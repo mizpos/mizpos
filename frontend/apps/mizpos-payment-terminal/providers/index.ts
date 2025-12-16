@@ -15,3 +15,5 @@ export const { TerminalProvider, useTerminal } = isExpoGo
 
 export { PairingProvider, usePairing } from './PairingProvider';
 export type { PairingInfo, PaymentRequest, PaymentResult } from './PairingProvider';
+
+export { LocationProvider, useLocation } from './LocationProvider';

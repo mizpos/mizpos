@@ -815,6 +815,10 @@ export function CheckoutModal({
           },
         ];
 
+        // デバッグ: currentPaymentRequestの確認
+        console.log("[CheckoutModal] currentPaymentRequest:", currentPaymentRequest);
+        console.log("[CheckoutModal] currentPaymentRequest?.cardDetails:", currentPaymentRequest?.cardDetails);
+
         // cardDetailsをcurrentPaymentRequestから取得
         const cardDetails = currentPaymentRequest?.cardDetails
           ? {

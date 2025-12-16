@@ -14,7 +14,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useTerminal, usePairing } from '@/providers';
+import { useTerminal, usePairing, useLocation } from '@/providers';
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
@@ -22,6 +22,30 @@ export default function SettingsScreen() {
 
   const { isInitialized, connectedReader, disconnectReader } = useTerminal();
   const { isPaired, pairingInfo, unpair } = usePairing();
+  const { selectedLocation, clearLocation } = useLocation();
+
+  // 店舗変更
+  const handleChangeLocation = () => {
+    router.push('/location-select');
+  };
+
+  // 店舗選択をクリア
+  const handleClearLocation = () => {
+    Alert.alert(
+      '店舗設定をクリア',
+      '店舗の設定を解除しますか？次回ペアリング時に再選択が必要になります。',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'クリア',
+          style: 'destructive',
+          onPress: async () => {
+            await clearLocation();
+          },
+        },
+      ]
+    );
+  };
 
   // リーダー切断
   const handleDisconnectReader = () => {
@@ -122,6 +146,43 @@ export default function SettingsScreen() {
             'リーダーを接続',
             'Bluetooth でリーダーを検出',
             () => router.push('/reader-setup')
+          )
+        )}
+      </View>
+
+      {/* 店舗設定 */}
+      <View style={styles.section}>
+        <ThemedText type="subtitle" style={styles.sectionTitle}>
+          店舗設定
+        </ThemedText>
+
+        {selectedLocation ? (
+          <>
+            {renderSettingItem(
+              'mappin.circle.fill',
+              selectedLocation.display_name,
+              selectedLocation.address?.line1 || '住所情報なし'
+            )}
+            {renderSettingItem(
+              'arrow.triangle.2.circlepath',
+              '店舗を変更',
+              undefined,
+              handleChangeLocation
+            )}
+            {renderSettingItem(
+              'xmark.circle',
+              '店舗設定をクリア',
+              undefined,
+              handleClearLocation,
+              true
+            )}
+          </>
+        ) : (
+          renderSettingItem(
+            'mappin.slash',
+            '店舗を選択',
+            '決済に使用する店舗を設定してください',
+            handleChangeLocation
           )
         )}
       </View>
