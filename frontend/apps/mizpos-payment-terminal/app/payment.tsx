@@ -9,6 +9,7 @@ import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-nat
 import { router } from 'expo-router';
 import { PaymentIntent } from '@stripe/stripe-terminal-react-native';
 import type { CardDetails } from '@/services/api';
+import { getStripeAccountInfo } from '@/services/api';
 
 /**
  * 安全にナビゲーションで戻る
@@ -38,7 +39,8 @@ type PaymentStep = 'ready' | 'creating' | 'collecting' | 'processing' | 'complet
  */
 function extractCardDetails(
   paymentIntent: PaymentIntent.Type | null | undefined,
-  terminalSerialNumber?: string
+  terminalSerialNumber?: string,
+  merchantName?: string
 ): CardDetails | undefined {
   if (!paymentIntent) return undefined;
 
@@ -54,6 +56,7 @@ function extractCardDetails(
       cardholder_name: cardPresentDetails.cardholderName || undefined,
       funding: cardPresentDetails.funding || undefined,
       terminal_serial_number: terminalSerialNumber,
+      merchant_name: merchantName,
       transaction_type: 'sale',
       payment_type: '一括',
       transaction_at: new Date().toISOString(),
@@ -77,6 +80,7 @@ function extractCardDetails(
         cardholder_name: cardPresentDetails.cardholderName || undefined,
         funding: cardPresentDetails.funding || undefined,
         terminal_serial_number: terminalSerialNumber,
+        merchant_name: merchantName,
         transaction_type: 'sale',
         payment_type: '一括',
         transaction_at: new Date().toISOString(),
@@ -121,6 +125,16 @@ export default function PaymentScreen() {
 
       console.log('[Payment] Starting payment for amount:', currentPaymentRequest.amount);
 
+      // Stripeアカウント情報を取得（加盟店名）
+      let merchantName: string | undefined;
+      try {
+        const accountInfo = await getStripeAccountInfo();
+        merchantName = accountInfo.merchant_name || undefined;
+        console.log('[Payment] Merchant name:', merchantName);
+      } catch (err) {
+        console.warn('[Payment] Failed to get merchant name:', err);
+      }
+
       // PaymentIntentをSDKで作成
       const createResult = await createPaymentIntent(currentPaymentRequest.amount);
 
@@ -164,10 +178,11 @@ export default function PaymentScreen() {
 
       const finalPaymentIntentId = processResult.paymentIntent?.id || createResult.paymentIntent.id;
 
-      // カード詳細を抽出（端末シリアル番号も含める）
+      // カード詳細を抽出（端末シリアル番号と加盟店名を含める）
       const cardDetails = extractCardDetails(
         processResult.paymentIntent,
-        connectedReader?.serialNumber
+        connectedReader?.serialNumber,
+        merchantName
       );
 
       console.log('[Payment] Card details extracted:', cardDetails);
@@ -183,7 +198,7 @@ export default function PaymentScreen() {
       setError(err instanceof Error ? err.message : '決済処理に失敗しました');
       setStep('error');
     }
-  }, [currentPaymentRequest, createPaymentIntent, collectPaymentMethod, processPayment, completePayment]);
+  }, [currentPaymentRequest, createPaymentIntent, collectPaymentMethod, processPayment, completePayment, connectedReader?.serialNumber]);
 
   // 決済リクエストがない場合は戻る
   useEffect(() => {

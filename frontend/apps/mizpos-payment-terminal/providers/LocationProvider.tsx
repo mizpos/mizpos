@@ -42,7 +42,7 @@ const LocationContext = createContext<LocationContextValue | null>(null);
 // 定数
 // ==========================================
 
-const STORAGE_KEY = '@mizpos/selected_location';
+const STORAGE_KEY = 'mizpos_selected_location';
 
 // ==========================================
 // Provider

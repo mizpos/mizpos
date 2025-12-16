@@ -51,7 +51,7 @@ mod desktop_printer {
         pub amount: u32,
     }
 
-    /// カード詳細情報（クレジット売上表用）
+    /// カード詳細情報（クレジット売上票用）
     #[derive(Debug, Clone, Deserialize)]
     pub struct CardDetails {
         /// カードブランド（visa, mastercard等）
@@ -353,11 +353,10 @@ mod desktop_printer {
         // QRコード（レシート番号）
         printer.qr_code_center(&receipt.receipt_number, Some(6))?;
 
-        // クレジット売上表（カード詳細がある場合のみ）
+        // クレジット売上票（カード詳細がある場合のみ）
         if let Some(ref card) = receipt.card_details {
             printer.textln("")?;
-            printer.double_separator()?;
-            printer.jp_textln_padded("クレジット売上表", TextStyle::default().double().reverse().center())?;
+            printer.jp_textln_padded("クレジット売上票", TextStyle::default().reverse().center())?;
             printer.textln("")?;
 
             // 加盟店名（サークル名を使用）

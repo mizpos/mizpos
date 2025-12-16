@@ -43,6 +43,7 @@ export interface CardDetails {
   cardholderName?: string; // カード名義人
   funding?: string; // カード種別（credit, debit等）
   terminalSerialNumber?: string; // 端末シリアル番号
+  merchantName?: string; // 加盟店名（Stripeアカウント名）
   transactionType?: string; // 取引種別（sale/refund）
   paymentType?: string; // 支払区分
   transactionAt?: string; // 取引日時（ISO8601形式）

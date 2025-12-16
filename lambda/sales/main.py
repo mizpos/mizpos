@@ -1232,6 +1232,26 @@ async def create_connection_token(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@router.get("/terminal/account", response_model=dict)
+async def get_account_info():
+    """
+    Stripeアカウント情報を取得（加盟店名など）
+
+    認証不要（モバイルアプリから呼び出し）
+    """
+    try:
+        from services import get_stripe_account_info
+
+        account_info = get_stripe_account_info()
+        return {"account": account_info}
+    except stripe._error.StripeError as e:
+        logger.error(f"Stripe error getting account info: {e}")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error(f"Error getting account info: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @router.get("/terminal/locations", response_model=dict)
 async def list_locations():
     """

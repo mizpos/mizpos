@@ -65,6 +65,7 @@ export interface CardDetails {
   cardholder_name?: string;  // カード名義人
   funding?: string;  // カード種別（credit, debit等）
   terminal_serial_number?: string;  // 端末シリアル番号
+  merchant_name?: string;  // 加盟店名（Stripeアカウント名）
   transaction_type?: string;  // 取引種別（sale/refund）
   payment_type?: string;  // 支払区分
   transaction_at?: string;  // 取引日時（ISO8601形式）
@@ -259,6 +260,29 @@ export async function getLocations(): Promise<TerminalLocation[]> {
 
   const response = data as unknown as { locations: TerminalLocation[] };
   return response.locations;
+}
+
+/**
+ * Stripeアカウント情報（加盟店名など）
+ */
+export interface StripeAccountInfo {
+  merchant_name: string;
+  business_name: string;
+  statement_descriptor: string;
+}
+
+/**
+ * Stripeアカウント情報を取得
+ */
+export async function getStripeAccountInfo(): Promise<StripeAccountInfo> {
+  const { data, error } = await salesClient.GET('/terminal/account');
+
+  if (error) {
+    throw new Error('Failed to get Stripe account info');
+  }
+
+  const response = data as unknown as { account: StripeAccountInfo };
+  return response.account;
 }
 
 /**
