@@ -16,7 +16,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { useLocation } from '@/providers/LocationProvider';
 import { type TerminalLocation } from '@/services/api';
 

@@ -2,7 +2,7 @@
  * Location Provider
  *
  * Stripe Terminalの店舗（Location）選択状態を管理
- * 選択した店舗情報はAsyncStorageに永続化
+ * 選択した店舗情報はSecureStoreに永続化
  */
 
 import React, {
@@ -13,7 +13,7 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { getLocations, type TerminalLocation } from '@/services/api';
 
 // ==========================================
@@ -60,11 +60,11 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   /**
-   * AsyncStorageから保存された店舗情報を読み込み
+   * SecureStoreから保存された店舗情報を読み込み
    */
   const loadSavedLocation = useCallback(async () => {
     try {
-      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      const saved = await SecureStore.getItemAsync(STORAGE_KEY);
       if (saved) {
         const location = JSON.parse(saved) as TerminalLocation;
         setSelectedLocation(location);
@@ -109,7 +109,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
    */
   const selectLocation = useCallback(async (location: TerminalLocation) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(location));
+      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(location));
       setSelectedLocation(location);
       console.log('[Location] Selected location:', location.display_name);
     } catch (err) {
@@ -123,7 +123,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
    */
   const clearLocation = useCallback(async () => {
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await SecureStore.deleteItemAsync(STORAGE_KEY);
       setSelectedLocation(null);
       console.log('[Location] Cleared selected location');
     } catch (err) {

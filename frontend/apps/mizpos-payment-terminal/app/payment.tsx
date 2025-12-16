@@ -31,6 +31,10 @@ type PaymentStep = 'ready' | 'creating' | 'collecting' | 'processing' | 'complet
 
 /**
  * PaymentIntentからカード詳細を抽出
+ *
+ * 取得順序:
+ * 1. paymentMethod.cardPresentDetails から取得（推奨）
+ * 2. charges[0].paymentMethodDetails.cardPresent から取得（フォールバック）
  */
 function extractCardDetails(
   paymentIntent: PaymentIntent.Type | null | undefined,
@@ -38,27 +42,54 @@ function extractCardDetails(
 ): CardDetails | undefined {
   if (!paymentIntent) return undefined;
 
-  // chargesからカード情報を取得
+  // 方法1: paymentMethod.cardPresentDetails から取得（推奨）
+  const cardPresentDetails = paymentIntent.paymentMethod?.cardPresentDetails;
+  if (cardPresentDetails) {
+    console.log('[Payment] Card details from paymentMethod.cardPresentDetails:', cardPresentDetails);
+    return {
+      brand: cardPresentDetails.brand || undefined,
+      last4: cardPresentDetails.last4 || undefined,
+      exp_month: cardPresentDetails.expMonth ? Number(cardPresentDetails.expMonth) : undefined,
+      exp_year: cardPresentDetails.expYear ? Number(cardPresentDetails.expYear) : undefined,
+      cardholder_name: cardPresentDetails.cardholderName || undefined,
+      funding: cardPresentDetails.funding || undefined,
+      terminal_serial_number: terminalSerialNumber,
+      transaction_type: 'sale',
+      payment_type: '一括',
+      transaction_at: new Date().toISOString(),
+    };
+  }
+
+  // 方法2: chargesからカード情報を取得（フォールバック）
   const charges = paymentIntent.charges;
-  if (!charges || charges.length === 0) return undefined;
+  if (charges && charges.length > 0) {
+    const charge = charges[0];
+    const cardPresent = charge?.paymentMethodDetails?.cardPresent;
 
-  const charge = charges[0];
-  const cardPresent = charge?.paymentMethodDetails?.cardPresent;
+    if (cardPresent) {
+      console.log('[Payment] Card details from charges[0].paymentMethodDetails.cardPresent:', cardPresent);
+      return {
+        brand: cardPresent.brand || undefined,
+        last4: cardPresent.last4 || undefined,
+        exp_month: cardPresent.expMonth || undefined,
+        exp_year: cardPresent.expYear || undefined,
+        cardholder_name: cardPresent.cardholderName || undefined,
+        funding: cardPresent.funding || undefined,
+        terminal_serial_number: terminalSerialNumber,
+        transaction_type: 'sale',
+        payment_type: '一括',
+        transaction_at: new Date().toISOString(),
+      };
+    }
+  }
 
-  if (!cardPresent) return undefined;
+  console.warn('[Payment] No card details found in paymentIntent:', {
+    hasPaymentMethod: !!paymentIntent.paymentMethod,
+    hasCardPresentDetails: !!paymentIntent.paymentMethod?.cardPresentDetails,
+    chargesLength: paymentIntent.charges?.length || 0,
+  });
 
-  return {
-    brand: cardPresent.brand || undefined,
-    last4: cardPresent.last4 || undefined,
-    exp_month: cardPresent.expMonth || undefined,
-    exp_year: cardPresent.expYear || undefined,
-    cardholder_name: cardPresent.cardholderName || undefined,
-    funding: cardPresent.funding || undefined,
-    terminal_serial_number: terminalSerialNumber,
-    transaction_type: 'sale',
-    payment_type: '一括',
-    transaction_at: new Date().toISOString(),
-  };
+  return undefined;
 }
 
 export default function PaymentScreen() {
