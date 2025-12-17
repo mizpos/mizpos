@@ -14,7 +14,7 @@ mizpos のオンラインストアフロントエンドです。商品の閲覧�
 - **フレームワーク**: React 19
 - **ルーティング**: TanStack Router（ファイルベースルーティング）
 - **データ取得**: TanStack Query
-- **スタイリング**: Tailwind CSS
+- **スタイリング**: Panda CSS
 - **リンター/フォーマッター**: Biome
 - **テスト**: Vitest
 

@@ -2,11 +2,12 @@
 
 [![CI](https://github.com/mizpos/mizpos/actions/workflows/ci.yml/badge.svg)](https://github.com/mizpos/mizpos/actions/workflows/ci.yml)
 [![Terraform](https://github.com/mizpos/mizpos/actions/workflows/terraform-format-check.yml/badge.svg)](https://github.com/mizpos/mizpos/actions/workflows/terraform-format-check.yml)
+[![deploy-production](https://github.com/mizpos/mizpos/actions/workflows/deploy-production.yml/badge.svg)](https://github.com/mizpos/mizpos/actions/workflows/deploy-production.yml)
 
 同人誌即売会向けのサーバーレス POS システムです。完全クラウド運用で、決済端末・在庫管理・オンライン販売を統合的に管理できます。
 
 > [!IMPORTANT]
-> このドキュメント達はClaude Codeが適当に書いたので嘘が入ってるかも
+> このドキュメント達は Claude Code が適当に書いたので嘘が入ってるかも
 
 ## 特徴
 
@@ -17,12 +18,12 @@
 
 ## アプリケーション構成
 
-| アプリ | 説明 | 技術スタック |
-|--------|------|--------------|
-| [mizpos-admin](./frontend/apps/mizpos-admin) | 管理画面（商品・在庫・ユーザー管理） | React, TanStack Router |
-| [mizpos-desktop](./frontend/apps/mizpos-desktop) | POS デスクトップアプリ | Tauri, React, Rust |
-| [mizpos-payment-terminal](./frontend/apps/mizpos-payment-terminal) | 決済端末アプリ（Android） | React Native, Expo |
-| [mizpos-online-sales](./frontend/apps/mizpos-online-sales) | オンラインストア | React, TanStack Router |
+| アプリ                                                             | 説明                                 | 技術スタック           |
+| ------------------------------------------------------------------ | ------------------------------------ | ---------------------- |
+| [mizpos-admin](./frontend/apps/mizpos-admin)                       | 管理画面（商品・在庫・ユーザー管理） | React, TanStack Router |
+| [mizpos-desktop](./frontend/apps/mizpos-desktop)                   | POS デスクトップアプリ               | Tauri, React, Rust     |
+| [mizpos-payment-terminal](./frontend/apps/mizpos-payment-terminal) | 決済端末アプリ（Android）            | React Native, Expo     |
+| [mizpos-online-sales](./frontend/apps/mizpos-online-sales)         | オンラインストア                     | React, TanStack Router |
 
 ## ディレクトリ構成
 
@@ -46,20 +47,23 @@
 ## 技術スタック
 
 ### Frontend
+
 - **パッケージ管理**: pnpm + Turborepo
 - **言語**: TypeScript
 - **フレームワーク**: React 19, TanStack Router/Query
-- **スタイリング**: Tailwind CSS, Panda CSS
+- **スタイリング**: Panda CSS
 - **リンター/フォーマッター**: Biome
 - **デスクトップ**: Tauri (Rust)
 - **モバイル**: Expo (React Native)
 
 ### Backend
+
 - **言語**: Python 3.12
 - **ツール**: uv, ruff
 - **API 仕様**: OpenAPI
 
 ### Infrastructure
+
 - **IaC**: Terraform
 - **クラウド**: AWS (Lambda, DynamoDB, API Gateway, Cognito, Secrets Manager)
 - **決済**: Stripe / Stripe Terminal

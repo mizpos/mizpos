@@ -2,7 +2,7 @@
   "projectName": "mizpos-admin",
   "mode": "file-router",
   "typescript": true,
-  "tailwind": true,
+  "tailwind": false,
   "packageManager": "pnpm",
   "addOnOptions": {},
   "git": true,
