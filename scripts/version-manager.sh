@@ -39,6 +39,11 @@ init_versions() {    cat <<EOF
       "version": "1.0.0",
       "lastBuildCommit": "",
       "lastBuildTimestamp": ""
+    },
+    "mizpos-payment-terminal": {
+      "version": "1.0.0",
+      "lastBuildCommit": "",
+      "lastBuildTimestamp": ""
     }
   }
 }
