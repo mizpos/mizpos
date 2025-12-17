@@ -144,28 +144,28 @@ set_build_info() {
     # Upload to S3
     upload_versions "$bucket" "$updated"
 
-    echo "Build info updated for $app in $env environment"
+    echo "Build info updated for $app in $env environment" >&2
 }
 
 # Main
 case $1 in
     get)
         if [ -z "$2" ] || [ -z "$3" ]; then
-            echo "Usage: $0 get <app-name> <env>"
+            echo "Usage: $0 get <app-name> <env>" >&2
             exit 1
         fi
         get_version "$2" "$3"
         ;;
     increment)
         if [ -z "$2" ] || [ -z "$3" ]; then
-            echo "Usage: $0 increment <app-name> <env> [patch|minor|major]"
+            echo "Usage: $0 increment <app-name> <env> [patch|minor|major]" >&2
             exit 1
         fi
         increment_version "$2" "$3" "${4:-patch}"
         ;;
     set-build-info)
         if [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
-            echo "Usage: $0 set-build-info <app-name> <env> <commit-hash>"
+            echo "Usage: $0 set-build-info <app-name> <env> <commit-hash>" >&2
             exit 1
         fi
         set_build_info "$2" "$3" "$4"
@@ -175,7 +175,7 @@ case $1 in
         init_versions
         ;;
     *)
-        echo "Usage: $0 {get|increment|set-build-info|init} ..."
+        echo "Usage: $0 {get|increment|set-build-info|init} ..." >&2
         exit 1
         ;;
 esac
