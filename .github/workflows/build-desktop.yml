@@ -52,6 +52,8 @@ jobs:
             ENV="prod"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             ENV="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.event_name }}" == "workflow_call" ]]; then
+            ENV="${{ inputs.environment }}"
           else
             ENV="dev"
           fi
