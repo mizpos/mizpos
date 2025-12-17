@@ -47,10 +47,11 @@ jobs:
       - id: set-env
         run: |
           # Determine environment
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            ENV="${{ github.event.inputs.environment }}"
-          elif [[ "${{ github.event_name }}" == "workflow_call" ]]; then
+          # workflow_call inputs take precedence (passed from parent workflow)
+          if [[ -n "${{ inputs.environment }}" ]]; then
             ENV="${{ inputs.environment }}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
           else
             ENV="dev"
           fi
