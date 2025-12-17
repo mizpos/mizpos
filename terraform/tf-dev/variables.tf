@@ -15,5 +15,5 @@ variable "frontend_url" {
 variable "enable_custom_domain" {
   description = "Enable custom domain (requires validated ACM certificate)"
   type        = bool
-  default     = false
+  default     = true
 }
