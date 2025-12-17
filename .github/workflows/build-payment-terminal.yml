@@ -167,10 +167,28 @@ jobs:
 
           echo "Updated version to $VERSION (code: $VERSION_CODE)"
 
+      - name: Remove signingConfig from build.gradle for unsigned build
+        working-directory: frontend/apps/mizpos-payment-terminal/android
+        run: |
+          # Remove signingConfig from release buildType to generate unsigned APK
+          # Expo prebuild may add signingConfig which causes app-release.apk instead of app-release-unsigned.apk
+          sed -i '/signingConfig signingConfigs\.release/d' app/build.gradle
+          sed -i '/signingConfig signingConfigs\.debug/d' app/build.gradle
+
+          # Debug: show buildTypes block
+          echo "=== buildTypes block after modification ==="
+          sed -n '/buildTypes/,/^[[:space:]]*}/p' app/build.gradle | head -30
+
       - name: Build Android APK
         working-directory: frontend/apps/mizpos-payment-terminal/android
         run: |
           ./gradlew assembleRelease --no-daemon
+
+      - name: List build outputs
+        run: |
+          BUILD_DIR="frontend/apps/mizpos-payment-terminal/android/app/build/outputs/apk/release"
+          echo "=== APK files in $BUILD_DIR ==="
+          ls -la $BUILD_DIR || echo "Directory not found"
 
       - name: Setup Android keystore from AWS Secrets Manager
         run: |
@@ -192,8 +210,20 @@ jobs:
           BUILD_DIR="frontend/apps/mizpos-payment-terminal/android/app/build/outputs/apk/release"
           ENV="${{ needs.setup-env.outputs.environment }}"
 
+          # Find the APK file (could be app-release-unsigned.apk or app-release.apk)
+          if [ -f "$BUILD_DIR/app-release-unsigned.apk" ]; then
+            INPUT_APK="$BUILD_DIR/app-release-unsigned.apk"
+          elif [ -f "$BUILD_DIR/app-release.apk" ]; then
+            INPUT_APK="$BUILD_DIR/app-release.apk"
+          else
+            echo "ERROR: No APK file found in $BUILD_DIR"
+            ls -la $BUILD_DIR
+            exit 1
+          fi
+          echo "Using APK: $INPUT_APK"
+
           # APK signing: zipalign first, then apksigner (APK Signature Scheme v2)
-          zipalign -v 4 $BUILD_DIR/app-release-unsigned.apk \
+          zipalign -v 4 $INPUT_APK \
             $BUILD_DIR/mizpos-payment-terminal-$ENV-aligned.apk
 
           apksigner sign --ks $ANDROID_KEYSTORE_PATH \
