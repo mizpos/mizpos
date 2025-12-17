@@ -132,9 +132,38 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           VERSION_CODE=$(echo "$VERSION" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')
 
+          # Ensure VERSION_CODE is at least 1
+          if [ "$VERSION_CODE" -lt 1 ]; then
+            VERSION_CODE=1
+          fi
+
+          # Debug: show current versionCode line
+          echo "Current build.gradle versionCode lines:"
+          grep -rn "versionCode" app/ || echo "No versionCode found in app/"
+
+          # Debug: show full defaultConfig block
+          echo "=== Current defaultConfig block in app/build.gradle ==="
+          sed -n '/defaultConfig/,/}/p' app/build.gradle | head -30
+
           # Update versionName and versionCode in build.gradle
+          # Handle multiple formats: "versionCode 0", "versionCode = 0", "versionCode=0"
           sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" app/build.gradle
-          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" app/build.gradle
+          sed -i -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]+/versionCode = $VERSION_CODE/g" app/build.gradle
+          sed -i -E "s/versionCode[[:space:]]+[0-9]+/versionCode $VERSION_CODE/g" app/build.gradle
+
+          # Debug: show updated versionCode line
+          echo "=== Updated versionCode lines ==="
+          grep -rn "versionCode" app/ || echo "No versionCode found"
+
+          # Verify versionCode is not 0 - if it is, force set it
+          if grep -q "versionCode[[:space:]]*0" app/build.gradle || grep -q "versionCode[[:space:]]*=[[:space:]]*0" app/build.gradle; then
+            echo "WARNING: versionCode is still 0, forcing to $VERSION_CODE"
+            # Use awk for more reliable replacement
+            awk -v vc="$VERSION_CODE" '{gsub(/versionCode[[:space:]]*[=[:space:]]*0/, "versionCode " vc); print}' app/build.gradle > app/build.gradle.tmp
+            mv app/build.gradle.tmp app/build.gradle
+            echo "=== After forced update ==="
+            grep -n "versionCode" app/build.gradle
+          fi
 
           echo "Updated version to $VERSION (code: $VERSION_CODE)"
 
