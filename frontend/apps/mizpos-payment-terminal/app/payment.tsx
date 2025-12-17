@@ -9,6 +9,7 @@ import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-nat
 import { router } from 'expo-router';
 import { PaymentIntent } from '@stripe/stripe-terminal-react-native';
 import type { CardDetails } from '@/services/api';
+import { getStripeAccountInfo } from '@/services/api';
 
 /**
  * 安全にナビゲーションで戻る
@@ -31,34 +32,69 @@ type PaymentStep = 'ready' | 'creating' | 'collecting' | 'processing' | 'complet
 
 /**
  * PaymentIntentからカード詳細を抽出
+ *
+ * 取得順序:
+ * 1. paymentMethod.cardPresentDetails から取得（推奨）
+ * 2. charges[0].paymentMethodDetails.cardPresent から取得（フォールバック）
  */
 function extractCardDetails(
   paymentIntent: PaymentIntent.Type | null | undefined,
-  terminalSerialNumber?: string
+  terminalSerialNumber?: string,
+  merchantName?: string
 ): CardDetails | undefined {
   if (!paymentIntent) return undefined;
 
-  // chargesからカード情報を取得
+  // 方法1: paymentMethod.cardPresentDetails から取得（推奨）
+  const cardPresentDetails = paymentIntent.paymentMethod?.cardPresentDetails;
+  if (cardPresentDetails) {
+    console.log('[Payment] Card details from paymentMethod.cardPresentDetails:', cardPresentDetails);
+    return {
+      brand: cardPresentDetails.brand || undefined,
+      last4: cardPresentDetails.last4 || undefined,
+      exp_month: cardPresentDetails.expMonth ? Number(cardPresentDetails.expMonth) : undefined,
+      exp_year: cardPresentDetails.expYear ? Number(cardPresentDetails.expYear) : undefined,
+      cardholder_name: cardPresentDetails.cardholderName || undefined,
+      funding: cardPresentDetails.funding || undefined,
+      terminal_serial_number: terminalSerialNumber,
+      merchant_name: merchantName,
+      transaction_type: 'sale',
+      payment_type: '一括',
+      transaction_at: new Date().toISOString(),
+    };
+  }
+
+  // 方法2: chargesからカード情報を取得（フォールバック）
+  // 注意: フィールド名は cardPresentDetails（cardPresentではない）
   const charges = paymentIntent.charges;
-  if (!charges || charges.length === 0) return undefined;
+  if (charges && charges.length > 0) {
+    const charge = charges[0];
+    const cardPresentDetails = charge?.paymentMethodDetails?.cardPresentDetails;
 
-  const charge = charges[0];
-  const cardPresent = charge?.paymentMethodDetails?.cardPresent;
+    if (cardPresentDetails) {
+      console.log('[Payment] Card details from charges[0].paymentMethodDetails.cardPresentDetails:', cardPresentDetails);
+      return {
+        brand: cardPresentDetails.brand || undefined,
+        last4: cardPresentDetails.last4 || undefined,
+        exp_month: cardPresentDetails.expMonth ? Number(cardPresentDetails.expMonth) : undefined,
+        exp_year: cardPresentDetails.expYear ? Number(cardPresentDetails.expYear) : undefined,
+        cardholder_name: cardPresentDetails.cardholderName || undefined,
+        funding: cardPresentDetails.funding || undefined,
+        terminal_serial_number: terminalSerialNumber,
+        merchant_name: merchantName,
+        transaction_type: 'sale',
+        payment_type: '一括',
+        transaction_at: new Date().toISOString(),
+      };
+    }
+  }
 
-  if (!cardPresent) return undefined;
+  console.warn('[Payment] No card details found in paymentIntent:', {
+    hasPaymentMethod: !!paymentIntent.paymentMethod,
+    hasCardPresentDetails: !!paymentIntent.paymentMethod?.cardPresentDetails,
+    chargesLength: paymentIntent.charges?.length || 0,
+  });
 
-  return {
-    brand: cardPresent.brand || undefined,
-    last4: cardPresent.last4 || undefined,
-    exp_month: cardPresent.expMonth || undefined,
-    exp_year: cardPresent.expYear || undefined,
-    cardholder_name: cardPresent.cardholderName || undefined,
-    funding: cardPresent.funding || undefined,
-    terminal_serial_number: terminalSerialNumber,
-    transaction_type: 'sale',
-    payment_type: '一括',
-    transaction_at: new Date().toISOString(),
-  };
+  return undefined;
 }
 
 export default function PaymentScreen() {
@@ -88,6 +124,16 @@ export default function PaymentScreen() {
       setError(null);
 
       console.log('[Payment] Starting payment for amount:', currentPaymentRequest.amount);
+
+      // Stripeアカウント情報を取得（加盟店名）
+      let merchantName: string | undefined;
+      try {
+        const accountInfo = await getStripeAccountInfo();
+        merchantName = accountInfo.merchant_name || undefined;
+        console.log('[Payment] Merchant name:', merchantName);
+      } catch (err) {
+        console.warn('[Payment] Failed to get merchant name:', err);
+      }
 
       // PaymentIntentをSDKで作成
       const createResult = await createPaymentIntent(currentPaymentRequest.amount);
@@ -127,12 +173,16 @@ export default function PaymentScreen() {
         throw new Error(processResult.error.message);
       }
 
+      // デバッグ: processResultの構造を確認
+      console.log('[Payment] processResult.paymentIntent:', JSON.stringify(processResult.paymentIntent, null, 2));
+
       const finalPaymentIntentId = processResult.paymentIntent?.id || createResult.paymentIntent.id;
 
-      // カード詳細を抽出（端末シリアル番号も含める）
+      // カード詳細を抽出（端末シリアル番号と加盟店名を含める）
       const cardDetails = extractCardDetails(
         processResult.paymentIntent,
-        connectedReader?.serialNumber
+        connectedReader?.serialNumber,
+        merchantName
       );
 
       console.log('[Payment] Card details extracted:', cardDetails);
@@ -148,7 +198,7 @@ export default function PaymentScreen() {
       setError(err instanceof Error ? err.message : '決済処理に失敗しました');
       setStep('error');
     }
-  }, [currentPaymentRequest, createPaymentIntent, collectPaymentMethod, processPayment, completePayment]);
+  }, [currentPaymentRequest, createPaymentIntent, collectPaymentMethod, processPayment, completePayment, connectedReader?.serialNumber]);
 
   // 決済リクエストがない場合は戻る
   useEffect(() => {

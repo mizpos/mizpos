@@ -32,7 +32,7 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { usePairing } from "@/providers";
+import { usePairing, useLocation } from "@/providers";
 
 type PairingMode = "qr" | "pin";
 
@@ -55,6 +55,23 @@ export default function PairingScreen() {
     clearError,
   } = usePairing();
 
+  const { isLocationSelected } = useLocation();
+
+  /**
+   * ペアリング成功後の遷移処理
+   * - 店舗が未選択の場合は店舗選択画面へ
+   * - 店舗が選択済みの場合はホーム画面へ戻る
+   */
+  const navigateAfterPairing = useCallback(() => {
+    if (!isLocationSelected) {
+      // 店舗が未選択 → 店舗選択画面へ
+      router.replace("/location-select");
+    } else {
+      // 店舗が選択済み → ホーム画面へ戻る
+      safeGoBack();
+    }
+  }, [isLocationSelected]);
+
   // QRコードスキャン処理
   const handleBarCodeScanned = async ({
     data,
@@ -68,7 +85,7 @@ export default function PairingScreen() {
     try {
       await pairWithQRCode(data);
       if (!error) {
-        safeGoBack();
+        navigateAfterPairing();
       }
     } finally {
       setIsScanning(true);
@@ -84,7 +101,7 @@ export default function PairingScreen() {
 
     await pairWithPIN(pinInput.trim());
     if (!error) {
-      safeGoBack();
+      navigateAfterPairing();
     }
   };
 

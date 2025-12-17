@@ -27,6 +27,7 @@ interface Sale {
   employee_number: string;
   terminal_id?: string;
   event_id?: string;
+  stripe_payment_intent_id?: string;
 }
 
 // ページスタイル
@@ -244,19 +245,30 @@ function RefundPage() {
       return;
     }
 
-    const confirmed = await confirm(
+    // クレジット決済の場合はStripe返金も行う
+    const isStripePayment = sale.payment_method === "stripe_terminal";
+    const hasPaymentIntentId = !!sale.stripe_payment_intent_id;
+
+    let confirmMessage =
       `以下の販売を返金します：\n\n` +
-        `レシート番号: ${sale.sale_id}\n` +
-        `返金額: ¥${sale.total_amount.toLocaleString()}\n` +
-        `商品数: ${sale.items.length}点\n\n` +
-        `この操作は取り消せません。`,
-      {
-        title: "返金処理を実行しますか？",
-        kind: "warning",
-        okLabel: "返金する",
-        cancelLabel: "キャンセル",
-      },
-    );
+      `レシート番号: ${sale.sale_id}\n` +
+      `返金額: ¥${sale.total_amount.toLocaleString()}\n` +
+      `商品数: ${sale.items.length}点\n`;
+
+    if (isStripePayment && hasPaymentIntentId) {
+      confirmMessage += `\nクレジット決済のため、Stripeへの返金処理も同時に行われます。`;
+    } else if (isStripePayment && !hasPaymentIntentId) {
+      confirmMessage += `\n⚠️ クレジット決済ですが、PaymentIntent IDが記録されていないため、\nStripe側の返金は手動で行う必要があります。`;
+    }
+
+    confirmMessage += `\n\nこの操作は取り消せません。`;
+
+    const confirmed = await confirm(confirmMessage, {
+      title: "返金処理を実行しますか？",
+      kind: "warning",
+      okLabel: "返金する",
+      cancelLabel: "キャンセル",
+    });
 
     if (!confirmed) return;
 
@@ -264,6 +276,33 @@ function RefundPage() {
     setError(null);
 
     try {
+      // クレジット決済の場合は先にStripe返金を実行
+      if (isStripePayment && hasPaymentIntentId) {
+        const stripeRefundResponse = await fetch(
+          `${API_BASE_URL}/terminal/refunds`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              payment_intent_id: sale.stripe_payment_intent_id,
+              amount: sale.total_amount,
+              reason: reason || undefined,
+            }),
+          },
+        );
+
+        if (!stripeRefundResponse.ok) {
+          const errorData = await stripeRefundResponse.json();
+          setError(
+            `Stripe返金に失敗しました: ${errorData.detail || "不明なエラー"}`,
+          );
+          return;
+        }
+      }
+
+      // POS側の返金処理
       const refundItems = sale.items.map((item) => ({
         product_id: item.product_id,
         quantity: item.quantity,
@@ -293,11 +332,16 @@ function RefundPage() {
 
       const result = await response.json();
 
-      alert(
+      let successMessage =
         `返金処理が完了しました\n\n` +
-          `返金ID: ${result.refund_id}\n` +
-          `返金額: ¥${result.refund_amount.toLocaleString()}`,
-      );
+        `返金ID: ${result.refund_id}\n` +
+        `返金額: ¥${result.refund_amount.toLocaleString()}`;
+
+      if (isStripePayment && hasPaymentIntentId) {
+        successMessage += `\n\nStripeへの返金も完了しました。`;
+      }
+
+      alert(successMessage);
 
       // 返金後は画面をリセット
       setSaleId("");

@@ -198,6 +198,14 @@ export function TerminalPaymentModal({
   useEffect(() => {
     if (!currentPaymentRequest) return;
 
+    // デバッグ: currentPaymentRequestの状態を確認
+    console.log("[TerminalPaymentModal] currentPaymentRequest:", {
+      status: currentPaymentRequest.status,
+      paymentIntentId: currentPaymentRequest.paymentIntentId,
+      cardDetails: currentPaymentRequest.cardDetails,
+      hasNotifiedComplete: hasNotifiedComplete.current,
+    });
+
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     switch (currentPaymentRequest.status) {
@@ -210,16 +218,24 @@ export function TerminalPaymentModal({
       case "completed":
         setPaymentState("completed");
         // 完了後に親コンポーネントに通知（一度だけ）
-        if (
-          currentPaymentRequest.paymentIntentId &&
-          !hasNotifiedComplete.current
-        ) {
-          hasNotifiedComplete.current = true;
-          timeoutId = setTimeout(() => {
-            callbacksRef.current.onComplete(
-              currentPaymentRequest.paymentIntentId!,
+        if (!hasNotifiedComplete.current) {
+          if (currentPaymentRequest.paymentIntentId) {
+            hasNotifiedComplete.current = true;
+            console.log(
+              "[TerminalPaymentModal] Calling onComplete in 1500ms with paymentIntentId:",
+              currentPaymentRequest.paymentIntentId,
             );
-          }, 1500);
+            timeoutId = setTimeout(() => {
+              callbacksRef.current.onComplete(
+                currentPaymentRequest.paymentIntentId!,
+              );
+            }, 1500);
+          } else {
+            // paymentIntentIdがまだ取得できていない場合、ポーリングを継続
+            console.warn(
+              "Payment completed but paymentIntentId is missing, waiting...",
+            );
+          }
         }
         break;
       case "cancelled":

@@ -314,12 +314,18 @@ export function PairingProvider({ children }: PairingProviderProps) {
   const completePayment = useCallback(async (paymentIntentId: string, cardDetails?: CardDetails) => {
     if (!currentPaymentRequest) return;
 
+    // デバッグ: 送信するcardDetailsを確認
+    console.log('[PairingProvider] completePayment called with cardDetails:', cardDetails);
+
     try {
-      await updatePaymentRequestResult(currentPaymentRequest.id, {
-        status: 'completed',
+      const requestBody = {
+        status: 'completed' as const,
         payment_intent_id: paymentIntentId,
         card_details: cardDetails,
-      });
+      };
+      console.log('[PairingProvider] Sending to backend:', JSON.stringify(requestBody, null, 2));
+
+      await updatePaymentRequestResult(currentPaymentRequest.id, requestBody);
 
       const result: PaymentResult = {
         requestId: currentPaymentRequest.id,

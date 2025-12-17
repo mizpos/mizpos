@@ -43,6 +43,7 @@ export interface CardDetails {
   cardholderName?: string; // カード名義人
   funding?: string; // カード種別（credit, debit等）
   terminalSerialNumber?: string; // 端末シリアル番号
+  merchantName?: string; // 加盟店名（Stripeアカウント名）
   transactionType?: string; // 取引種別（sale/refund）
   paymentType?: string; // 支払区分
   transactionAt?: string; // 取引日時（ISO8601形式）
@@ -285,6 +286,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
               cardholder_name?: string;
               funding?: string;
               terminal_serial_number?: string;
+              merchant_name?: string;
               transaction_type?: string;
               payment_type?: string;
               transaction_at?: string;
@@ -315,6 +317,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
                 cardholderName: cd.cardholder_name,
                 funding: cd.funding,
                 terminalSerialNumber: cd.terminal_serial_number,
+                merchantName: cd.merchant_name,
                 transactionType: cd.transaction_type,
                 paymentType: cd.payment_type,
                 transactionAt: cd.transaction_at,
@@ -412,6 +415,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
               cardholder_name?: string;
               funding?: string;
               terminal_serial_number?: string;
+              merchant_name?: string;
               transaction_type?: string;
               payment_type?: string;
               transaction_at?: string;
@@ -422,6 +426,9 @@ export const usePairingStore = create<PairingState>((set, get) => {
         };
 
         const cd = apiResponse.payment_request.card_details;
+        // デバッグ: APIからのcard_detailsを確認
+        console.log("[pairing] API card_details:", cd);
+
         const updatedRequest: PaymentRequest = {
           requestId: apiResponse.payment_request.request_id,
           pinCode: apiResponse.payment_request.pin_code,
@@ -442,6 +449,7 @@ export const usePairingStore = create<PairingState>((set, get) => {
                 cardholderName: cd.cardholder_name,
                 funding: cd.funding,
                 terminalSerialNumber: cd.terminal_serial_number,
+                merchantName: cd.merchant_name,
                 transactionType: cd.transaction_type,
                 paymentType: cd.payment_type,
                 transactionAt: cd.transaction_at,
@@ -454,12 +462,25 @@ export const usePairingStore = create<PairingState>((set, get) => {
         set({ currentPaymentRequest: updatedRequest });
 
         // 決済完了またはエラーの場合はポーリング停止
+        // ただし、completedでもpaymentIntentIdまたはcardDetailsがない場合は継続
+        // （Payment Terminalからの結果がまだ同期されていない可能性）
         if (
-          updatedRequest.status === "completed" ||
           updatedRequest.status === "cancelled" ||
-          updatedRequest.status === "failed"
+          updatedRequest.status === "failed" ||
+          (updatedRequest.status === "completed" &&
+            updatedRequest.paymentIntentId &&
+            updatedRequest.cardDetails)
         ) {
           get().stopPolling();
+        } else if (
+          updatedRequest.status === "completed" &&
+          updatedRequest.paymentIntentId &&
+          !updatedRequest.cardDetails
+        ) {
+          // paymentIntentIdはあるがcardDetailsがまだない場合は継続
+          console.log(
+            "[pairing] Waiting for cardDetails, continuing polling...",
+          );
         }
 
         return updatedRequest;

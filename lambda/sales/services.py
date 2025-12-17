@@ -1021,6 +1021,39 @@ def calculate_shipping_fee(cart_items: list[CartItem]) -> int:
 # ==============================
 
 
+def get_stripe_account_info() -> dict:
+    """
+    Stripeアカウント情報を取得（加盟店名など）
+
+    Returns:
+        {
+            "merchant_name": "...",
+            "business_name": "...",
+            "statement_descriptor": "...",
+        }
+    """
+    init_stripe()
+    try:
+        account = stripe.Account.retrieve()
+        return {
+            "merchant_name": account.settings.payments.statement_descriptor
+            or account.business_profile.name
+            or "",
+            "business_name": account.business_profile.name or "",
+            "statement_descriptor": account.settings.payments.statement_descriptor
+            or "",
+        }
+    except Exception as e:
+        import logging
+
+        logging.error(f"Failed to get Stripe account info: {e}")
+        return {
+            "merchant_name": "",
+            "business_name": "",
+            "statement_descriptor": "",
+        }
+
+
 def create_terminal_connection_token(location_id: str | None = None) -> dict:
     """
     Stripe Terminal用のConnection Tokenを発行
@@ -1668,6 +1701,7 @@ def get_payment_request(request_id: str) -> dict | None:
             "status": item["status"],
             "payment_intent_id": item.get("payment_intent_id") or None,
             "error_message": item.get("error_message") or None,
+            "card_details": item.get("card_details") or None,
             "created_at": item["created_at"],
             "updated_at": item["updated_at"],
         }

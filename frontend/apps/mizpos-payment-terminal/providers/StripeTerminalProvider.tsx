@@ -13,6 +13,7 @@ import {
   PaymentIntent,
 } from '@stripe/stripe-terminal-react-native';
 import { getConnectionToken } from '@/services/api';
+import { useLocation } from './LocationProvider';
 
 // ==========================================
 // Bluetooth権限リクエスト（Android 12+）
@@ -102,6 +103,9 @@ const fetchConnectionToken = async (): Promise<string> => {
 function TerminalProviderInner({ children }: { children: ReactNode }) {
   const [discoveredReaders, setDiscoveredReaders] = useState<Reader.Type[]>([]);
 
+  // 選択された店舗情報を取得
+  const { selectedLocation } = useLocation();
+
   const {
     initialize,
     discoverReaders: sdkDiscoverReaders,
@@ -168,9 +172,11 @@ function TerminalProviderInner({ children }: { children: ReactNode }) {
         return;
       }
 
+      // 選択された店舗のlocationIdを使用してリーダーを検出
       const { error } = await sdkDiscoverReaders({
         discoveryMethod: 'bluetoothScan',
         simulated: false, // 実機のリーダーに接続
+        locationId: selectedLocation?.id, // 店舗が選択されていればそのlocationIdを使用
       });
 
       if (error) {
@@ -181,7 +187,7 @@ function TerminalProviderInner({ children }: { children: ReactNode }) {
       console.error('Error discovering readers:', err);
       setConnectionError(err instanceof Error ? err.message : 'Unknown error');
     }
-  }, [isInitialized, sdkDiscoverReaders]);
+  }, [isInitialized, sdkDiscoverReaders, selectedLocation]);
 
   // Readerに接続
   const connectReader = useCallback(
@@ -195,10 +201,13 @@ function TerminalProviderInner({ children }: { children: ReactNode }) {
         setIsConnecting(true);
         setConnectionError(null);
 
+        // 選択された店舗のlocationIdを優先、なければリーダーのlocationIdを使用
+        const locationId = selectedLocation?.id || reader.location?.id;
+
         const { error } = await sdkConnectReader(
           {
             reader,
-            locationId: reader.location?.id,
+            locationId,
           },
           'bluetoothScan'
         );
@@ -209,7 +218,7 @@ function TerminalProviderInner({ children }: { children: ReactNode }) {
           return;
         }
 
-        console.log('Connected to reader:', reader.serialNumber);
+        console.log('Connected to reader:', reader.serialNumber, 'at location:', locationId);
       } catch (err) {
         console.error('Error connecting to reader:', err);
         setConnectionError(err instanceof Error ? err.message : 'Unknown error');
@@ -217,7 +226,7 @@ function TerminalProviderInner({ children }: { children: ReactNode }) {
         setIsConnecting(false);
       }
     },
-    [isInitialized, sdkConnectReader]
+    [isInitialized, sdkConnectReader, selectedLocation]
   );
 
   // Readerから切断

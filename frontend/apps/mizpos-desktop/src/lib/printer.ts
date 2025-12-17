@@ -239,7 +239,7 @@ export interface PaymentInfo {
 }
 
 /**
- * カード詳細情報（クレジット売上表用）
+ * カード詳細情報（クレジット売上票用）
  */
 export interface CardDetailsForReceipt {
   /** カードブランド（visa, mastercard等） */

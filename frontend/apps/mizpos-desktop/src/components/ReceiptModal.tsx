@@ -188,6 +188,16 @@ export function ReceiptModal({ transaction, onClose }: ReceiptModalProps) {
   }, [onClose, isPrinting]);
 
   const handlePrint = useCallback(async () => {
+    // デバッグ: cardDetailsの確認
+    console.log(
+      "[ReceiptModal] transaction.cardDetails:",
+      transaction.cardDetails,
+    );
+    console.log(
+      "[ReceiptModal] transaction.paymentIntentId:",
+      transaction.paymentIntentId,
+    );
+
     if (!settings.printer) {
       setPrintError("プリンターが設定されていません");
       return;

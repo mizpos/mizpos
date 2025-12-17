@@ -444,6 +444,10 @@ class CardDetails(BaseModel):
     terminal_serial_number: str | None = Field(
         default=None, description="端末シリアル番号"
     )
+    # 加盟店情報
+    merchant_name: str | None = Field(
+        default=None, max_length=200, description="加盟店名（Stripeアカウント名）"
+    )
     # 取引情報
     transaction_type: str | None = Field(
         default="sale", description="取引種別（sale/refund）"
