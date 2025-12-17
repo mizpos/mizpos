@@ -110,6 +110,10 @@ jobs:
         working-directory: frontend
         run: pnpm generate-api-types
 
+      - name: Build @mizpos/api package
+        working-directory: frontend
+        run: pnpm --filter @mizpos/api build
+
       - name: Build Android APK/AAB
         working-directory: frontend/apps/mizpos-desktop
         env:

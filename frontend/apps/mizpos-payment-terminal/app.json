@@ -18,6 +18,7 @@
       }
     },
     "android": {
+      "versionCode": 1,
       "minSdkVersion": 26,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

@@ -107,6 +107,14 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "App version: $VERSION"
 
+      - name: Generate API Types
+        working-directory: frontend
+        run: pnpm generate-api-types
+
+      - name: Build @mizpos/api package
+        working-directory: frontend
+        run: pnpm --filter @mizpos/api build
+
       - name: Generate native project with expo prebuild
         working-directory: frontend/apps/mizpos-payment-terminal
         env:
