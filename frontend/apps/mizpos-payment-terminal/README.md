@@ -1,50 +1,51 @@
-# Welcome to your Expo app 👋
+# mizpos-payment-terminal
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+mizpos の決済端末アプリケーションです。[Expo](https://expo.dev/) を使用した React Native アプリで、Stripe Terminal と連携して対面決済を処理します。
 
-## Get started
+## 機能
 
-1. Install dependencies
+- Stripe Terminal（BBPOS WisePad3）との連携
+- 決済処理
+- レシート表示
 
-   ```bash
-   npm install
-   ```
+## 技術スタック
 
-2. Start the app
+- **フレームワーク**: Expo (React Native)
+- **決済**: Stripe Terminal SDK
+- **対象プラットフォーム**: Android
 
-   ```bash
-   npx expo start
-   ```
+## 前提条件
 
-In the output, you'll find options to open the app in a
+- Node.js 24.x
+- pnpm 10.x
+- Android Studio（Android ビルド用）
+- Expo CLI
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 開発
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### セットアップ
 
 ```bash
-npm run reset-project
+pnpm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 起動
 
-## Learn more
+```bash
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### Android ビルド
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+# 開発ビルド
+npx expo run:android
 
-## Join the community
+# プロダクションビルド
+eas build --platform android
+```
 
-Join our community of developers creating universal apps.
+## 対応デバイス
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **決済端末**: BBPOS WisePad3
+- **動作確認済み Android**: 8.0 以上
