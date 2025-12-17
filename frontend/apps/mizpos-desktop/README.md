@@ -13,7 +13,7 @@ mizpos の POS デスクトップアプリケーションです。[Tauri](https:
 
 - **フレームワーク**: Tauri 2.x + React
 - **言語**: TypeScript (フロントエンド), Rust (バックエンド)
-- **スタイリング**: Tailwind CSS
+- **スタイリング**: Panda CSS
 
 ## 前提条件
 

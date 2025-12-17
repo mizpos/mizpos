@@ -1,6 +1,5 @@
 import { execSync } from "node:child_process";
 import { fileURLToPath, URL } from "node:url";
-import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -27,7 +26,6 @@ export default defineConfig({
       autoCodeSplitting: true,
     }),
     viteReact(),
-    tailwindcss(),
   ],
   define: {
     __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || "0.0.0"),

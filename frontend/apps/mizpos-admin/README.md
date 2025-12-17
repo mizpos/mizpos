@@ -15,7 +15,7 @@ mizpos の管理画面アプリケーションです。商品・在庫・ユー�
 - **フレームワーク**: React 19
 - **ルーティング**: TanStack Router（ファイルベースルーティング）
 - **データ取得**: TanStack Query
-- **スタイリング**: Tailwind CSS
+- **スタイリング**: Panda CSS
 - **リンター/フォーマッター**: Biome
 - **テスト**: Vitest
 
