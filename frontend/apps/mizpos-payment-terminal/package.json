@@ -4,10 +4,16 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "start:dev": "APP_ENV=development expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
+    "android:dev": "APP_ENV=development expo run:android",
     "ios": "expo run:ios",
+    "ios:dev": "APP_ENV=development expo run:ios",
     "web": "expo start --web",
+    "web:dev": "APP_ENV=development expo start --web",
+    "prebuild": "expo prebuild",
+    "prebuild:dev": "APP_ENV=development expo prebuild",
     "lint": "expo lint"
   },
   "dependencies": {
