@@ -125,10 +125,13 @@ jobs:
       - name: Set environment variables for build
         run: |
           ENV="${{ needs.setup-env.outputs.environment }}"
-          API_GATEWAY_BASE="https://tx9l9kos3h.execute-api.ap-northeast-1.amazonaws.com"
 
           # Set API Base URL based on environment
-          echo "EXPO_PUBLIC_API_BASE_URL=${API_GATEWAY_BASE}/${ENV}/sales" >> $GITHUB_ENV
+          if [[ "$ENV" == "prod" ]]; then
+            echo "EXPO_PUBLIC_API_BASE_URL=https://api.pos.miz.cab/sales" >> $GITHUB_ENV
+          else
+            echo "EXPO_PUBLIC_API_BASE_URL=https://api.pos-stg.miz.cab/sales" >> $GITHUB_ENV
+          fi
 
           # Get Stripe Publishable Key from Secrets Manager
           SECRET_NAME="${ENV}-mizpos-stripe-api-key"
