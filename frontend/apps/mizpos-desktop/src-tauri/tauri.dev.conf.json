@@ -1,5 +1,14 @@
 {
   "build": {
     "beforeBuildCommand": "pnpm build:dev"
+  },
+  "bundle": {
+    "icon": [
+      "dev-icons/32x32.png",
+      "dev-icons/128x128.png",
+      "dev-icons/128x128@2x.png",
+      "dev-icons/icon.icns",
+      "dev-icons/icon.ico"
+    ]
   }
 }
