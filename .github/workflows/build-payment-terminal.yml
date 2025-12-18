@@ -122,6 +122,23 @@ jobs:
         working-directory: frontend
         run: pnpm --filter @mizpos/api build
 
+      - name: Set environment variables for build
+        run: |
+          ENV="${{ needs.setup-env.outputs.environment }}"
+
+          # Set API Base URL based on environment
+          if [[ "$ENV" == "prod" ]]; then
+            echo "EXPO_PUBLIC_API_BASE_URL=https://api.pos.miz.cab/sales" >> $GITHUB_ENV
+          else
+            echo "EXPO_PUBLIC_API_BASE_URL=https://api.pos-stg.miz.cab/sales" >> $GITHUB_ENV
+          fi
+
+          # Get Stripe Publishable Key from Secrets Manager
+          SECRET_NAME="${ENV}-mizpos-stripe-api-key"
+          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --query SecretString --output text)
+          PUBLISHABLE_KEY=$(echo "$SECRET_JSON" | jq -r '.publishable_key')
+          echo "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY" >> $GITHUB_ENV
+
       - name: Generate native project with expo prebuild
         working-directory: frontend/apps/mizpos-payment-terminal
         env:
