@@ -122,6 +122,15 @@ jobs:
         working-directory: frontend
         run: pnpm --filter @mizpos/api build
 
+      - name: Get Stripe Publishable Key from Secrets Manager
+        id: stripe-key
+        run: |
+          ENV="${{ needs.setup-env.outputs.environment }}"
+          SECRET_NAME="${ENV}-mizpos-stripe-api-key"
+          SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --query SecretString --output text)
+          PUBLISHABLE_KEY=$(echo "$SECRET_JSON" | jq -r '.publishable_key')
+          echo "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY" >> $GITHUB_ENV
+
       - name: Generate native project with expo prebuild
         working-directory: frontend/apps/mizpos-payment-terminal
         env:
